@@ -1,0 +1,660 @@
+import { useState, useEffect } from "react";
+import {
+  CalendarCheck, Loader2, Mail, Phone, CheckCircle2, XCircle,
+  CalendarClock, X, ChevronRight, Globe, MapPin, User,
+  Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
+  UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  fetchBookings, updateBookingStatus, autoCompleteBookings,
+  insertConsultationRecord, fetchConsultationRecords,
+  type Booking, type ConsultationRecord
+} from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+const STATUS: Record<string, { label: string; color: string }> = {
+  pending:   { label: "Aguardando pagamento", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  confirmed: { label: "Confirmado",           color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  completed: { label: "Concluído",            color: "bg-blue-50 text-blue-700 border-blue-200" },
+  no_show:   { label: "Não compareceu",       color: "bg-orange-50 text-orange-700 border-orange-200" },
+  cancelled: { label: "Cancelado",            color: "bg-red-50 text-red-600 border-red-200" },
+};
+
+const StatusPill = ({ status }: { status: string }) => {
+  const s = STATUS[status] || STATUS.pending;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${s.color}`}>
+      {s.label}
+    </span>
+  );
+};
+
+const formatDate = (d: string) =>
+  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+
+const initials = (name: string) =>
+  name?.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase() || "?";
+
+const calcBMI = (w: number, h: number) => {
+  if (!w || !h) return null;
+  const bmi = w / Math.pow(h / 100, 2);
+  return bmi.toFixed(1);
+};
+
+interface ClinicalNotes {
+  birthDate?: string; sex?: string; goal?: string; allergies?: string;
+  restrictions?: string; healthConditions?: string; medications?: string;
+  hadNutritionist?: string; howFound?: string;
+}
+
+const GOAL_LABELS: Record<string, string> = {
+  emagrecimento: "Emagrecimento", ganho_massa: "Ganho de massa", saude_geral: "Saúde geral",
+  condicao_especifica: "Condição específica", gestante: "Gestação / pós-parto", outro: "Outro",
+};
+const RESTRICT_LABELS: Record<string, string> = {
+  vegetariano: "Vegetariano", vegano: "Vegano", sem_gluten: "Sem glúten",
+  sem_lactose: "Sem lactose", outra: "Outra restrição",
+};
+const FOUND_LABELS: Record<string, string> = {
+  instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
+};
+
+type FilterTab = "confirmed" | "pending" | "completed" | "no_show" | "cancelled";
+
+const AdminAgendamentos = () => {
+  const [bookings, setBookings]   = useState<Booking[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [updating, setUpdating]   = useState<number | null>(null);
+  const [filter, setFilter]       = useState<FilterTab>("confirmed");
+  const [detail, setDetail]       = useState<string | null>(null);
+  const [records, setRecords]     = useState<ConsultationRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  // Reschedule
+  const [reschedule, setReschedule]       = useState<Booking | null>(null);
+  const [newDate, setNewDate]             = useState("");
+  const [newTime, setNewTime]             = useState("");
+  const [rescheduleMsg, setRescheduleMsg] = useState("");
+  const [rescheduling, setRescheduling]   = useState(false);
+
+  // Completion modal
+  const [completing, setCompleting]         = useState<Booking | null>(null);
+  const [compNotes, setCompNotes]           = useState("");
+  const [compWeight, setCompWeight]         = useState("");
+  const [compHeight, setCompHeight]         = useState("");
+  const [compNextReturn, setCompNextReturn] = useState("");
+  const [compNextSteps, setCompNextSteps]   = useState("");
+  const [savingRecord, setSavingRecord]     = useState(false);
+
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    setLoading(true);
+    const raw = await fetchBookings();
+    const updated = await autoCompleteBookings(raw);
+    setBookings(updated);
+    setLoading(false);
+  };
+
+  const handleStatus = async (id: number, status: string, extra?: Record<string, unknown>) => {
+    setUpdating(id);
+    const ok = await updateBookingStatus(id, status, extra);
+    if (ok) {
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status, ...extra } : b));
+      toast({ title: "Status atualizado!" });
+    } else {
+      toast({ title: "Erro ao atualizar", variant: "destructive" });
+    }
+    setUpdating(null);
+  };
+
+  const openComplete = (session: Booking) => {
+    setCompleting(session);
+    setCompNotes(""); setCompWeight(""); setCompHeight("");
+    setCompNextReturn(""); setCompNextSteps("");
+  };
+
+  const handleSaveRecord = async () => {
+    if (!completing) return;
+    setSavingRecord(true);
+    const w = compWeight ? parseFloat(compWeight) : null;
+    const h = compHeight ? parseFloat(compHeight) : null;
+    const ok = await insertConsultationRecord({
+      booking_id: completing.id,
+      booking_group_id: completing.booking_group_id,
+      client_name: completing.client_name,
+      client_email: completing.client_email,
+      notes: compNotes.trim() || null,
+      weight: w, height: h,
+      next_return_date: compNextReturn || null,
+      next_steps: compNextSteps.trim() || null,
+    } as ConsultationRecord);
+
+    if (ok) {
+      await handleStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
+      toast({ title: "Consulta concluída e prontuário salvo!" });
+      setCompleting(null);
+      if (detail) loadRecords(detail);
+    } else {
+      toast({ title: "Erro ao salvar prontuário", variant: "destructive" });
+    }
+    setSavingRecord(false);
+  };
+
+  const loadRecords = async (groupId: string) => {
+    setLoadingRecords(true);
+    setRecords(await fetchConsultationRecords(groupId));
+    setLoadingRecords(false);
+  };
+
+  const openDetail = (groupId: string) => {
+    setDetail(groupId);
+    loadRecords(groupId);
+  };
+
+  const openReschedule = (session: Booking) => {
+    setReschedule(session);
+    setNewDate(session.appointment_date || "");
+    setNewTime((session.appointment_time || "").substring(0, 5));
+    setRescheduleMsg("");
+  };
+
+  const handleReschedule = async () => {
+    if (!reschedule || !newDate || !newTime) {
+      toast({ title: "Preencha a nova data e horário", variant: "destructive" });
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/reschedule-booking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          booking_id: reschedule.id, new_date: newDate, new_time: newTime,
+          client_email: reschedule.client_email, client_name: reschedule.client_name,
+          plan_name: reschedule.plan_name, message: rescheduleMsg.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro");
+      setBookings(prev => prev.map(b =>
+        b.id === reschedule.id ? { ...b, appointment_date: newDate, appointment_time: newTime } : b
+      ));
+      toast({ title: "Reagendado!", description: "Email enviado ao paciente." });
+      setReschedule(null);
+    } catch (e) {
+      toast({ title: "Erro ao reagendar", description: e instanceof Error ? e.message : "Tente novamente", variant: "destructive" });
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
+  // Counts
+  const counts: Record<FilterTab, number> = {
+    confirmed: bookings.filter(b => b.status === "confirmed").length,
+    pending:   bookings.filter(b => b.status === "pending").length,
+    completed: bookings.filter(b => b.status === "completed").length,
+    no_show:   bookings.filter(b => b.status === "no_show").length,
+    cancelled: bookings.filter(b => b.status === "cancelled").length,
+  };
+
+  const TABS: { id: FilterTab; label: string }[] = [
+    { id: "confirmed", label: "Confirmados" },
+    { id: "pending",   label: "Pendentes" },
+    { id: "completed", label: "Concluídos" },
+    { id: "no_show",   label: "Não compareceu" },
+    { id: "cancelled", label: "Cancelados" },
+  ];
+
+  const filtered = bookings.filter(b => b.status === filter);
+  const groups: Record<string, Booking[]> = {};
+  filtered.forEach(b => {
+    if (!groups[b.booking_group_id]) groups[b.booking_group_id] = [];
+    groups[b.booking_group_id].push(b);
+  });
+  const groupEntries = Object.entries(groups).sort(([, a], [, b]) =>
+    new Date(b[0].appointment_date).getTime() - new Date(a[0].appointment_date).getTime()
+  );
+
+  // Detail
+  const allGroups: Record<string, Booking[]> = {};
+  bookings.forEach(b => {
+    if (!allGroups[b.booking_group_id]) allGroups[b.booking_group_id] = [];
+    allGroups[b.booking_group_id].push(b);
+  });
+  const detailGroup = detail ? (allGroups[detail] || []).sort((a, b) => a.session_number - b.session_number) : [];
+  const detailFirst = detailGroup[0];
+  const detailNotes: ClinicalNotes = (() => {
+    try { return JSON.parse(detailFirst?.notes || "{}"); } catch { return {}; }
+  })();
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <CalendarCheck className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
+          <p className="text-sm text-muted-foreground">Gerencie as consultas agendadas</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setFilter(t.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
+              filter === t.id
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card border-border text-muted-foreground hover:text-foreground"
+            }`}>
+            {t.label}
+            <span className="ml-1.5 opacity-60">({counts[t.id]})</span>
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        </div>
+      )}
+
+      {!loading && groupEntries.length === 0 && (
+        <div className="rounded-2xl bg-card border border-border p-14 text-center">
+          <CalendarCheck className="h-9 w-9 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado.</p>
+        </div>
+      )}
+
+      {/* Cards */}
+      {!loading && groupEntries.map(([groupId, sessions]) => {
+        const first = sessions[0];
+        const sorted = [...sessions].sort((a, b) => a.session_number - b.session_number);
+        const overallStatus = sessions.every(s => s.status === "completed") ? "completed"
+          : sessions.every(s => s.status === "confirmed") ? "confirmed"
+          : sessions.some(s => s.status === "no_show") ? "no_show"
+          : sessions.some(s => s.status === "cancelled") ? "cancelled" : "pending";
+
+        return (
+          <div key={groupId}
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+            onClick={() => openDetail(groupId)}>
+            <div className="px-5 py-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-primary">{initials(first.client_name)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-foreground truncate">{first.client_name}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs text-muted-foreground">{first.plan_name}</span>
+                  <span className="text-muted-foreground/30 text-xs">·</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
+                  </span>
+                </div>
+              </div>
+              <div className="hidden sm:flex flex-col items-end gap-1">
+                {sorted.slice(0, 2).map(s => (
+                  <span key={s.id} className="text-xs text-muted-foreground">
+                    {formatDate(s.appointment_date)} · {(s.appointment_time || "").substring(0, 5)}
+                  </span>
+                ))}
+                {sorted.length > 2 && <span className="text-xs text-muted-foreground/50">+{sorted.length - 2} sessões</span>}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <StatusPill status={overallStatus} />
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* ── Detail Modal ── */}
+      {detail && detailFirst && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setDetail(null)}>
+          <div className="w-full max-w-2xl bg-background rounded-2xl border border-border shadow-2xl overflow-y-auto flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-background z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">{initials(detailFirst.client_name)}</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">{detailFirst.client_name}</p>
+                  <p className="text-xs text-muted-foreground">{detailFirst.plan_name}</p>
+                </div>
+              </div>
+              <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 px-6 py-5 space-y-6">
+
+              {/* Contact */}
+              <section>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Contato</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 text-sm"><Mail className="h-3.5 w-3.5 text-muted-foreground" />{detailFirst.client_email}</div>
+                  {detailFirst.client_phone && <div className="flex items-center gap-2.5 text-sm"><Phone className="h-3.5 w-3.5 text-muted-foreground" />{detailFirst.client_phone}</div>}
+                  {detailNotes.birthDate && (
+                    <div className="flex items-center gap-2.5 text-sm">
+                      <Cake className="h-3.5 w-3.5 text-muted-foreground" />
+                      {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                      {detailNotes.sex && <span className="text-muted-foreground">· {detailNotes.sex}</span>}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Clinical info */}
+              {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies || detailNotes.healthConditions || detailNotes.medications) && (
+                <section>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Informações clínicas</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailNotes.goal && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Target className="h-3 w-3" />Objetivo</p>
+                        <p className="text-sm font-medium">{GOAL_LABELS[detailNotes.goal] || detailNotes.goal}</p>
+                      </div>
+                    )}
+                    {detailNotes.restrictions && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Salad className="h-3 w-3" />Restrições</p>
+                        <p className="text-sm font-medium">{RESTRICT_LABELS[detailNotes.restrictions] || detailNotes.restrictions}</p>
+                      </div>
+                    )}
+                    {detailNotes.allergies && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><HelpCircle className="h-3 w-3" />Alergias</p>
+                        <p className="text-sm font-medium">{detailNotes.allergies}</p>
+                      </div>
+                    )}
+                    {detailNotes.healthConditions && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Heart className="h-3 w-3" />Condições de saúde</p>
+                        <p className="text-sm font-medium">{detailNotes.healthConditions}</p>
+                      </div>
+                    )}
+                    {detailNotes.medications && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Pill className="h-3 w-3" />Medicamentos</p>
+                        <p className="text-sm font-medium">{detailNotes.medications}</p>
+                      </div>
+                    )}
+                    {detailNotes.hadNutritionist && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><User className="h-3 w-3" />Acomp. anterior</p>
+                        <p className="text-sm font-medium">{detailNotes.hadNutritionist === "sim" ? "Sim" : "Não"}</p>
+                      </div>
+                    )}
+                    {detailNotes.howFound && (
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><HelpCircle className="h-3 w-3" />Como nos encontrou</p>
+                        <p className="text-sm font-medium">{FOUND_LABELS[detailNotes.howFound] || detailNotes.howFound}</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Sessions */}
+              <section>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Sessões</p>
+                <div className="space-y-2">
+                  {detailGroup.map(session => (
+                    <div key={session.id} className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-muted px-2 py-0.5 rounded-lg text-muted-foreground font-medium">
+                            {session.session_number === 1 ? "Consulta" : `Retorno ${session.session_number - 1}`}
+                          </span>
+                          <StatusPill status={session.status || "pending"} />
+                        </div>
+                      </div>
+                      <p className="text-sm font-medium">{formatDate(session.appointment_date)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{(session.appointment_time || "").substring(0, 5)} · {session.type === "online" ? "Online" : "Presencial"}</p>
+
+                      <div className="flex gap-3 mt-3 pt-3 border-t border-border/50 flex-wrap">
+                        {(session.status === "confirmed" || session.status === "pending") && (
+                          <>
+                            <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
+                              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
+                              <CalendarClock className="h-3.5 w-3.5" /> Realocar
+                            </button>
+                            <button
+                              disabled={updating === session.id}
+                              onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
+                              className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium disabled:opacity-50">
+                              <ClipboardList className="h-3.5 w-3.5" /> Concluir
+                            </button>
+                            <button
+                              disabled={updating === session.id}
+                              onClick={() => handleStatus(session.id!, "no_show")}
+                              className="flex items-center gap-1.5 text-xs text-orange-500 hover:text-orange-600 font-medium disabled:opacity-50">
+                              <UserX className="h-3.5 w-3.5" /> Não compareceu
+                            </button>
+                            <button
+                              disabled={updating === session.id}
+                              onClick={() => handleStatus(session.id!, "cancelled")}
+                              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-medium disabled:opacity-50 ml-auto">
+                              <XCircle className="h-3.5 w-3.5" /> Cancelar
+                            </button>
+                          </>
+                        )}
+                        {session.status === "completed" && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Consulta realizada
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Consultation records / Prontuário */}
+              <section>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Prontuário</p>
+                {loadingRecords ? (
+                  <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                ) : records.length === 0 ? (
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center">
+                    <FileText className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Nenhum registro ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {records.map(rec => {
+                      const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
+                      return (
+                        <div key={rec.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                            {bmi && (
+                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                                IMC {bmi}
+                              </span>
+                            )}
+                          </div>
+                          {(rec.weight || rec.height) && (
+                            <div className="flex gap-4">
+                              {rec.weight && <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
+                              {rec.height && <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
+                            </div>
+                          )}
+                          {rec.notes && <p className="text-sm text-foreground leading-relaxed">{rec.notes}</p>}
+                          {rec.next_steps && (
+                            <div className="bg-muted/40 rounded-lg p-3">
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Próximos passos</p>
+                              <p className="text-sm text-foreground">{rec.next_steps}</p>
+                            </div>
+                          )}
+                          {rec.next_return_date && (
+                            <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                              <ArrowRight className="h-3 w-3" />
+                              Próximo retorno: {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Completion Modal ── */}
+      {completing && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold text-sm">Registrar consulta</h2>
+              </div>
+              <button onClick={() => setCompleting(null)} className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 bg-muted/20 border-b border-border">
+              <p className="text-sm font-medium">{completing.client_name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDate(completing.appointment_date)} às {(completing.appointment_time || "").substring(0, 5)}
+              </p>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Measurements */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Medidas</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Scale className="h-3 w-3" />Peso (kg)</label>
+                    <input type="number" step="0.1" value={compWeight} onChange={e => setCompWeight(e.target.value)}
+                      placeholder="Ex: 72.5" className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Ruler className="h-3 w-3" />Altura (cm)</label>
+                    <input type="number" step="0.1" value={compHeight} onChange={e => setCompHeight(e.target.value)}
+                      placeholder="Ex: 165" className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                </div>
+                {compWeight && compHeight && (
+                  <p className="text-xs text-blue-600 font-medium mt-2">
+                    IMC calculado: {calcBMI(parseFloat(compWeight), parseFloat(compHeight))}
+                  </p>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações da consulta</label>
+                <textarea value={compNotes} onChange={e => setCompNotes(e.target.value)} rows={4}
+                  placeholder="Descreva o que foi discutido, avaliações realizadas, condutas adotadas..."
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+              </div>
+
+              {/* Next steps */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Próximos passos / encaminhamentos</label>
+                <textarea value={compNextSteps} onChange={e => setCompNextSteps(e.target.value)} rows={3}
+                  placeholder="Ex: Plano alimentar enviado, retorno em 30 dias, exames solicitados..."
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+              </div>
+
+              {/* Next return */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Data do próximo retorno <span className="text-muted-foreground/50 normal-case font-normal">(opcional)</span></label>
+                <input type="date" value={compNextReturn} min={new Date().toISOString().split("T")[0]}
+                  onChange={e => setCompNextReturn(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+            </div>
+
+            <div className="flex gap-2 px-6 pb-5">
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCompleting(null)} disabled={savingRecord}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 rounded-xl gap-2" onClick={handleSaveRecord} disabled={savingRecord}>
+                {savingRecord ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+                Salvar prontuário
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reschedule Modal ── */}
+      {reschedule && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold text-sm">Realocar consulta</h2>
+              </div>
+              <button onClick={() => setReschedule(null)} className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-6 py-4 bg-muted/20 border-b border-border">
+              <p className="text-sm font-medium">{reschedule.client_name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{reschedule.plan_name} · {reschedule.client_email}</p>
+              <p className="text-xs text-muted-foreground mt-1">Atual: <span className="font-medium text-foreground">{formatDate(reschedule.appointment_date)} às {(reschedule.appointment_time || "").substring(0, 5)}</span></p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Nova data</label>
+                  <input type="date" value={newDate} min={new Date().toISOString().split("T")[0]}
+                    onChange={e => setNewDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Novo horário</label>
+                  <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Mensagem ao paciente <span className="opacity-50">(opcional)</span></label>
+                <textarea value={rescheduleMsg} onChange={e => setRescheduleMsg(e.target.value)} rows={3}
+                  placeholder="Ex: Precisamos reagendar devido a um imprevisto..."
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+              </div>
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                Um email será enviado automaticamente ao paciente.
+              </p>
+            </div>
+            <div className="flex gap-2 px-6 pb-5">
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setReschedule(null)} disabled={rescheduling}>Cancelar</Button>
+              <Button className="flex-1 rounded-xl gap-2" onClick={handleReschedule} disabled={rescheduling || !newDate || !newTime}>
+                {rescheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminAgendamentos;

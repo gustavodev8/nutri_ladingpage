@@ -12,10 +12,15 @@ const HeroSection = () => {
       <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
 
-      {/* Mobile-only decorative blobs */}
-      <div className="lg:hidden absolute -top-10 -right-10 w-56 h-56 bg-primary/20 rounded-full blur-3xl" />
-      <div className="lg:hidden absolute top-40 -left-16 w-48 h-48 bg-primary/15 rounded-full blur-2xl" />
-      <div className="lg:hidden absolute bottom-10 right-0 w-40 h-40 bg-accent/20 rounded-full blur-3xl" />
+      {/* Mobile-only decorative blobs — top area */}
+      <div className="lg:hidden absolute -top-10 -right-10 w-56 h-56 bg-primary/20 rounded-full blur-3xl blob-float-1" />
+      <div className="lg:hidden absolute top-40 -left-16 w-48 h-48 bg-primary/15 rounded-full blur-2xl blob-float-2" />
+
+      {/* Mobile-only decorative blobs — bottom area */}
+      <div className="lg:hidden absolute bottom-10 -right-8 w-52 h-52 bg-primary/22 rounded-full blur-3xl blob-float-3" />
+      <div className="lg:hidden absolute bottom-28 -left-12 w-56 h-56 bg-primary/18 rounded-full blur-3xl blob-float-4" />
+      <div className="lg:hidden absolute bottom-0 left-1/3 w-60 h-48 bg-accent/20 rounded-full blur-3xl blob-float-5" />
+      <div className="lg:hidden absolute bottom-16 left-1/2 w-44 h-44 bg-primary/12 rounded-full blur-2xl blob-float-6" />
 
       <div className="container mx-auto px-4 relative z-10 py-8 lg:py-0">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
@@ -40,33 +45,21 @@ const HeroSection = () => {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
-                asChild
                 size="lg"
                 className="bg-primary hover:bg-primary/90 text-base sm:text-lg px-6 sm:px-8 shadow-lg"
+                onClick={() => document.getElementById("consultas")?.scrollIntoView({ behavior: "smooth" })}
               >
-                <a
-                  href={whatsappUrl("Olá! Gostaria de agendar uma consulta online.")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Video className="mr-2 h-5 w-5" />
-                  {hero.cta1Text}
-                </a>
+                <Video className="mr-2 h-5 w-5" />
+                {hero.cta1Text}
               </Button>
               <Button
-                asChild
                 size="lg"
                 variant="outline"
                 className="text-base sm:text-lg px-6 sm:px-8 border-primary text-primary hover:bg-primary/5"
+                onClick={() => document.getElementById("consultas")?.scrollIntoView({ behavior: "smooth" })}
               >
-                <a
-                  href={whatsappUrl("Olá! Gostaria de agendar uma consulta presencial.")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Calendar className="mr-2 h-5 w-5" />
-                  {hero.cta2Text}
-                </a>
+                <Calendar className="mr-2 h-5 w-5" />
+                {hero.cta2Text}
               </Button>
             </div>
 

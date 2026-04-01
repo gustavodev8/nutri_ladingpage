@@ -38,9 +38,13 @@ const AdminPrecos = () => {
           name: "Novo Plano",
           desc: "Descrição do plano",
           price: "R$ 0",
+          priceAmount: 0,
           badge: "",
           popular: false,
           whatsappMessage: "Olá! Tenho interesse neste plano.",
+          sessionCount: 1,
+          returnCount: 0,
+          consultationType: "both" as const,
         },
       ],
     }));
@@ -142,6 +146,18 @@ const AdminPrecos = () => {
                   <Input value={plan.price} onChange={(e) => setPlan(i, "price", e.target.value)} />
                 </div>
                 <div className="space-y-2">
+                  <Label>Valor numérico (para cobrança)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={plan.priceAmount ?? 0}
+                    onChange={(e) => setPlan(i, "priceAmount", Number(e.target.value))}
+                    placeholder="ex: 250.00"
+                  />
+                  <p className="text-xs text-muted-foreground">Usado para processar o pagamento. Ex: 250 ou 150.50</p>
+                </div>
+                <div className="space-y-2">
                   <Label>Badge (ex: Mais Escolhido)</Label>
                   <Input
                     value={plan.badge}
@@ -155,6 +171,36 @@ const AdminPrecos = () => {
                     value={plan.whatsappMessage}
                     onChange={(e) => setPlan(i, "whatsappMessage", e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nº de consultas</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={plan.sessionCount ?? 1}
+                    onChange={(e) => setPlan(i, "sessionCount", Math.max(1, Number(e.target.value)))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nº de retornos</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={plan.returnCount ?? 0}
+                    onChange={(e) => setPlan(i, "returnCount", Math.max(0, Number(e.target.value)))}
+                  />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Tipo de consulta</Label>
+                  <select
+                    value={plan.consultationType ?? "both"}
+                    onChange={(e) => setPlan(i, "consultationType", e.target.value as "both" | "online" | "presencial")}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="both">Ambos</option>
+                    <option value="online">Somente Online</option>
+                    <option value="presencial">Somente Presencial</option>
+                  </select>
                 </div>
               </div>
             </div>

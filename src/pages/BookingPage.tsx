@@ -1,0 +1,774 @@
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link, Navigate } from "react-router-dom";
+import {
+  ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
+  CheckCircle2, Loader2, ChevronLeft, ChevronRight,
+  Copy, Check, X, QrCode, CreditCard
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useContent } from "@/contexts/ContentContext";
+import { fetchAvailabilitySlots, fetchBookingsForDate, insertBooking, confirmBookingsByGroupId, type Booking } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
+
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY as string;
+
+function toLocalISO(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function generateGroupId() {
+  return `booking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+interface SessionSlot { date: Date | null; time: string | null; }
+type PayTab = "pix" | "card";
+type Stage = "idle" | "loading" | "pix_qr" | "card_form" | "approved" | "error";
+
+declare global {
+  interface Window { MercadoPago: unknown; }
+}
+
+const BookingPage = () => {
+  const { planIndex } = useParams<{ planIndex: string }>();
+  const { content, whatsappUrl } = useContent();
+  const { loja, identity } = content;
+
+  const idx = Number(planIndex);
+  const plan = loja.plans[idx];
+  if (!plan) return <Navigate to="/" replace />;
+
+  const totalSessions = (plan.sessionCount || 1) + (plan.returnCount || 0);
+
+  // Wizard state
+  // If plan already defines a single type, skip the selection step
+  // Also infer from plan name as fallback
+  const inferredType: "online" | "presencial" | null =
+    plan.consultationType === "online" || plan.consultationType === "presencial"
+      ? plan.consultationType
+      : /online/i.test(plan.name)
+        ? "online"
+        : /presencial/i.test(plan.name)
+          ? "presencial"
+          : null;
+  const planType = inferredType;
+
+  const [step, setStep] = useState(planType ? 1 : 0);
+  const [consultationType, setConsultationType] = useState<"online" | "presencial" | null>(planType);
+  const [availSlots, setAvailSlots] = useState<Array<{ id: number; date: string; start_time: string; type: string }>>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [sessions, setSessions] = useState<SessionSlot[]>([]);
+  const [currentSessionIdx, setCurrentSessionIdx] = useState(0);
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+  const [loadingBooked, setLoadingBooked] = useState(false);
+
+  // Personal info
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [sex, setSex] = useState("");
+
+  // Clinical info
+  const [goal, setGoal] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const [restrictions, setRestrictions] = useState("");
+  const [healthConditions, setHealthConditions] = useState("");
+  const [medications, setMedications] = useState("");
+  const [hadNutritionist, setHadNutritionist] = useState("");
+  const [howFound, setHowFound] = useState("");
+
+  // Payment
+  const [payTab, setPayTab] = useState<PayTab>("pix");
+  const [stage, setStage] = useState<Stage>("idle");
+  const [pixData, setPixData] = useState<{ payment_id: number; qr_code: string; qr_code_base64: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [bookingGroupId] = useState(generateGroupId);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const brickRendered = useRef(false);
+
+  useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
+
+  // Load available slots only when consultationType changes (step 0 → 1)
+  useEffect(() => {
+    if (!consultationType) return;
+    setLoadingSlots(true);
+    fetchAvailabilitySlots().then(data => {
+      setAvailSlots(data.filter(s => s.type === consultationType));
+      setLoadingSlots(false);
+    });
+    setSessions(Array(totalSessions).fill(null).map(() => ({ date: null, time: null })));
+    setCurrentSessionIdx(0);
+  }, [consultationType]);
+
+  // Load MP SDK when reaching payment step
+  useEffect(() => {
+    if (step !== 3) return;
+    if (document.getElementById("mp-sdk")) return;
+    const script = document.createElement("script");
+    script.id = "mp-sdk";
+    script.src = "https://sdk.mercadopago.com/js/v2";
+    document.head.appendChild(script);
+  }, [step]);
+
+  // Render Payment Brick when card tab active
+  useEffect(() => {
+    if (step !== 3 || payTab !== "card" || stage !== "idle") return;
+    if (brickRendered.current) return;
+    if (!plan.priceAmount || plan.priceAmount <= 0) return; // guard: no amount
+
+    const tryRender = (attempts = 0) => {
+      // Wait for both: MercadoPago SDK and the div in the DOM
+      const mpReady = !!(window as unknown as Record<string, unknown>).MercadoPago;
+      const divReady = !!document.getElementById("mp-payment-brick");
+      if (!mpReady || !divReady) {
+        if (attempts < 30) setTimeout(() => tryRender(attempts + 1), 300);
+        return;
+      }
+      brickRendered.current = true;
+      const mp = new (window as unknown as Record<string, new(key: string, opts: object) => unknown>).MercadoPago(MP_PUBLIC_KEY, { locale: "pt-BR" });
+      const builder = (mp as unknown as Record<string, unknown>).bricks();
+      (builder as unknown as Record<string, (type: string, id: string, config: object) => void>).create("payment", "mp-payment-brick", {
+        initialization: {
+          amount: plan.priceAmount,
+          payer: { email: clientEmail },
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: "all",
+            debitCard: "all",
+          },
+          visual: { hideFormTitle: true, style: { theme: "default" } },
+        },
+        callbacks: {
+          onReady: () => { console.log("MP Brick ready ✓"); },
+          onError: (err: unknown) => {
+            console.error("MP Brick error:", err);
+            brickRendered.current = false;
+            toast({ title: "Erro ao carregar formulário de cartão. Tente usar o Pix.", variant: "destructive" });
+          },
+          onSubmit: async ({ formData }: { formData: Record<string, unknown> }) => {
+            setStage("loading");
+            try {
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  paymentMethod: "card",
+                  formData,
+                  amount: plan.priceAmount,
+                  customerEmail: clientEmail,
+                  customerName: clientName,
+                  planName: plan.name,
+                  bookingGroupId,
+                }),
+              });
+              const data = await res.json();
+              if (data.status === "approved") {
+                const saved = await saveBookings("confirmed");
+                if (!saved) toast({ title: "Pagamento aprovado, mas erro ao salvar agendamento. Entre em contato.", variant: "destructive" });
+                setStage("approved");
+              } else {
+                throw new Error(data.error || "Pagamento não aprovado");
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "Erro no pagamento";
+              setStage("error");
+              toast({ title: msg, variant: "destructive" });
+            }
+          },
+        },
+      });
+    };
+    setTimeout(() => tryRender(0), 300);
+  }, [step, payTab, stage]);
+
+  // When switching tab, reset brick rendered flag
+  const handlePayTabChange = (tab: PayTab) => {
+    setPayTab(tab);
+    if (tab === "card") brickRendered.current = false;
+  };
+
+  const handleDateSelect = async (date: Date) => {
+    const newSessions = [...sessions];
+    newSessions[currentSessionIdx] = { date, time: null };
+    setSessions(newSessions);
+    setLoadingBooked(true);
+    const booked = await fetchBookingsForDate(toLocalISO(date), consultationType!);
+    setBookedTimes(booked.map(b => (b as unknown as { appointment_time: string }).appointment_time.substring(0, 5)));
+    setLoadingBooked(false);
+  };
+
+  const handleTimeSelect = (time: string) => {
+    const newSessions = [...sessions];
+    newSessions[currentSessionIdx] = { ...newSessions[currentSessionIdx], time };
+    setSessions(newSessions);
+  };
+
+  const canSelectDate = (date: Date) => {
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+    if (date < todayMidnight) return false;
+    return availSlots.some(s => s.date === toLocalISO(date));
+  };
+
+  const getTimesForDate = (date: Date | null) => {
+    if (!date) return [];
+    return availSlots.filter(s => s.date === toLocalISO(date)).map(s => s.start_time.substring(0, 5)).sort();
+  };
+
+  const saveBookings = async (status = "pending"): Promise<boolean> => {
+    let allOk = true;
+    for (let i = 0; i < sessions.length; i++) {
+      const s = sessions[i];
+      if (!s.date || !s.time) continue;
+      const notes = JSON.stringify({
+        birthDate, sex, goal, allergies, restrictions,
+        healthConditions, medications, hadNutritionist, howFound,
+      });
+      const booking: Booking = {
+        booking_group_id: bookingGroupId,
+        session_number: i + 1,
+        total_sessions: totalSessions,
+        client_name: clientName,
+        client_email: clientEmail,
+        client_phone: clientPhone,
+        plan_name: plan.name,
+        plan_index: idx,
+        appointment_date: toLocalISO(s.date),
+        appointment_time: s.time,
+        type: consultationType!,
+        status,
+        notes,
+      };
+      const ok = await insertBooking(booking);
+      if (!ok) allOk = false;
+    }
+    return allOk;
+  };
+
+  const handlePixPayment = async () => {
+    if (!plan.priceAmount || plan.priceAmount <= 0) {
+      toast({ title: "Preço não configurado para este plano.", variant: "destructive" });
+      return;
+    }
+    setStage("loading");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentMethod: "pix",
+          amount: plan.priceAmount,
+          customerEmail: clientEmail,
+          customerName: clientName,
+          planName: plan.name,
+          bookingGroupId,
+        }),
+      });
+      const data = await res.json();
+      if (!data.qr_code) throw new Error(data.error || "Erro ao gerar Pix");
+      const saved = await saveBookings("pending");
+      if (!saved) {
+        toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
+      }
+      setPixData({ payment_id: data.payment_id, qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
+      setStage("pix_qr");
+      startPolling(data.payment_id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro";
+      setStage("error");
+      toast({ title: msg, variant: "destructive" });
+    }
+  };
+
+  const startPolling = (paymentId: number) => {
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/check-payment-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payment_id: paymentId }),
+        });
+        const data = await res.json();
+        if (data.status === "approved") {
+          clearInterval(pollingRef.current!);
+          await confirmBookingsByGroupId(bookingGroupId);
+          setStage("approved");
+        }
+      } catch (_) {}
+    }, 3000);
+  };
+
+  const handleCopy = () => {
+    if (!pixData?.qr_code) return;
+    navigator.clipboard.writeText(pixData.qr_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  // Calendar
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); };
+  const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); };
+
+  const currentSession = sessions[currentSessionIdx];
+  const availTimes = getTimesForDate(currentSession?.date || null);
+  const allPicked = sessions.every(s => s.date && s.time);
+  const todayISO = toLocalISO(new Date());
+
+  // ── SUCCESS ──
+  if (stage === "approved") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <PageHeader brand={identity.brandName} />
+        <main className="flex-1 flex items-center justify-center py-12 px-4">
+          <div className="max-w-sm w-full bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+            <div className="h-1.5 bg-primary w-full" />
+            <div className="px-8 py-10 flex flex-col items-center text-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-display text-2xl font-bold text-foreground">Consulta confirmada!</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">Pagamento aprovado. Um email de confirmação foi enviado para</p>
+                <p className="text-sm font-semibold bg-muted px-3 py-1.5 rounded-lg inline-block">{clientEmail}</p>
+              </div>
+              <div className="w-full text-left space-y-1.5 bg-primary/5 border border-primary/10 rounded-xl p-4">
+                {sessions.map((s, i) => s.date && s.time && (
+                  <div key={i} className="flex justify-between text-xs gap-2">
+                    <span className="text-muted-foreground">{i === 0 ? "Consulta" : `Retorno ${i}`}</span>
+                    <span className="font-medium">{s.date.toLocaleDateString("pt-BR")} · {s.time}</span>
+                  </div>
+                ))}
+              </div>
+              <Button asChild variant="outline" size="sm" className="rounded-full gap-2 w-full">
+                <Link to="/"><ArrowLeft className="h-3.5 w-3.5" />Voltar ao início</Link>
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <PageHeader brand={identity.brandName} />
+
+      <main className="flex-1 py-10 px-4">
+        <div className="max-w-lg mx-auto space-y-6">
+
+          {/* Plan title */}
+          <div className="text-center space-y-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">Agendar consulta</p>
+            <h1 className="font-display text-2xl font-bold text-foreground">{plan.name}</h1>
+            <p className="text-sm text-muted-foreground">{totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}</p>
+          </div>
+
+          {/* Steps indicator */}
+          {(() => {
+            const steps = planType
+              ? ["Datas", "Dados", "Clínico", "Pagamento"]
+              : ["Tipo", "Datas", "Dados", "Clínico", "Pagamento"];
+            const displayStep = planType ? step - 1 : step;
+            return (
+              <div className="flex items-center justify-center gap-1">
+                {steps.map((label, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                      i < displayStep ? "bg-primary text-primary-foreground" :
+                      i === displayStep ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
+                      "bg-muted text-muted-foreground"
+                    }`}>{i < displayStep ? "✓" : i + 1}</div>
+                    <span className={`text-xs hidden sm:block ${i === displayStep ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</span>
+                    {i < steps.length - 1 && <div className={`h-px w-4 mx-1 ${i < displayStep ? "bg-primary" : "bg-border"}`} />}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* ── STEP 0: Type ── */}
+          {step === 0 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-center">Como prefere a consulta?</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: "online" as const, label: "Online", sub: "Google Meet / Zoom", icon: Globe },
+                  { id: "presencial" as const, label: "Presencial", sub: "No consultório", icon: MapPin },
+                ].filter(t => !plan.consultationType || plan.consultationType === "both" || plan.consultationType === t.id)
+                 .map(({ id, label, sub, icon: Icon }) => (
+                  <button key={id} onClick={() => setConsultationType(id)}
+                    className={`rounded-2xl border p-5 text-left transition-all ${consultationType === id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border bg-card hover:border-primary/30"}`}>
+                    <Icon className={`h-6 w-6 mb-3 ${consultationType === id ? "text-primary" : "text-muted-foreground"}`} />
+                    <p className="font-semibold text-sm">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+                  </button>
+                ))}
+              </div>
+              <Button className="w-full rounded-full gap-2" disabled={!consultationType} onClick={() => setStep(1)}>
+                Continuar <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* ── STEP 1: Dates ── */}
+          {step === 1 && (
+            <div className="space-y-4">
+              {totalSessions > 1 && (
+                <div className="flex gap-2 flex-wrap">
+                  {sessions.map((s, i) => (
+                    <button key={i} onClick={() => setCurrentSessionIdx(i)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                        currentSessionIdx === i ? "bg-primary text-primary-foreground border-primary" :
+                        s.date && s.time ? "bg-primary/10 text-primary border-primary/20" :
+                        "bg-card border-border text-muted-foreground"
+                      }`}>
+                      {i === 0 ? "Consulta" : `Retorno ${i}`}{s.date && s.time ? " ✓" : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {loadingSlots ? (
+                <div className="flex items-center justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+              ) : (
+                <>
+                  {/* Calendar */}
+                  <div className="bg-card border border-border rounded-2xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button>
+                      <span className="text-sm font-semibold">{MONTHS_PT[calMonth]} {calYear}</span>
+                      <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-muted"><ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 mb-1">
+                      {["D","S","T","Q","Q","S","S"].map((d, i) => (
+                        <div key={i} className="text-center text-xs text-muted-foreground py-1">{d}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
+                      {Array(daysInMonth).fill(null).map((_, i) => {
+                        const day = i + 1;
+                        const dateISO = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                        const date = new Date(calYear, calMonth, day);
+                        const canSelect = canSelectDate(date);
+                        const isSelected = currentSession?.date && toLocalISO(currentSession.date) === dateISO;
+                        const isToday = dateISO === todayISO;
+                        return (
+                          <button key={day} disabled={!canSelect} onClick={() => handleDateSelect(date)}
+                            className={`h-9 w-full rounded-lg text-xs font-medium transition-all ${
+                              !canSelect ? "text-muted-foreground/25 cursor-not-allowed" :
+                              isSelected ? "bg-primary text-primary-foreground font-bold shadow-sm" :
+                              isToday ? "bg-primary/10 text-primary font-bold" :
+                              "hover:bg-muted text-foreground"
+                            }`}>
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Time slots */}
+                  {currentSession?.date && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {currentSession.date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+                      </p>
+                      {loadingBooked ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Verificando...
+                        </div>
+                      ) : availTimes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3">Sem horários disponíveis neste dia. Escolha outra data.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {availTimes.map(time => {
+                            const isBooked = bookedTimes.includes(time);
+                            const isSelected = currentSession.time === time;
+                            return (
+                              <button key={time}
+                                disabled={isBooked}
+                                onClick={() => !isBooked && handleTimeSelect(time)}
+                                className={`relative px-4 py-2 rounded-xl text-sm font-medium border transition-all overflow-hidden ${
+                                  isBooked
+                                    ? "bg-muted/30 border-border/40 text-muted-foreground/30 cursor-not-allowed"
+                                    : isSelected
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-card border-border hover:border-primary/50 hover:shadow-sm"
+                                }`}>
+                                {isBooked && (
+                                  <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span className="absolute w-full h-px bg-muted-foreground/25 rotate-[-18deg]" />
+                                  </span>
+                                )}
+                                <span className={isBooked ? "opacity-30" : ""}>{time}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                {!planType && (
+                  <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4" /></Button>
+                )}
+                <Button className="flex-1 rounded-full gap-2" disabled={!allPicked} onClick={() => setStep(2)}>Continuar <ArrowRight className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2: Personal info ── */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                {[
+                  { id: "name", label: "Nome completo", icon: User, value: clientName, set: setClientName, type: "text", placeholder: "Seu nome completo" },
+                  { id: "email", label: "Email", icon: Mail, value: clientEmail, set: setClientEmail, type: "email", placeholder: "seu@email.com" },
+                  { id: "phone", label: "WhatsApp (opcional)", icon: Phone, value: clientPhone, set: setClientPhone, type: "tel", placeholder: "(11) 99999-9999" },
+                ].map(({ id, label, icon: Icon, value, set, type, placeholder }) => (
+                  <div key={id} className="space-y-1.5">
+                    <Label htmlFor={id} className="text-sm font-medium">{label}</Label>
+                    <div className="relative">
+                      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id={id} type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder} className="pl-9 rounded-xl" />
+                    </div>
+                  </div>
+                ))}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="birthDate" className="text-sm font-medium">Data de nascimento</Label>
+                    <Input id="birthDate" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sex" className="text-sm font-medium">Sexo biológico</Label>
+                    <select id="sex" value={sex} onChange={e => setSex(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="">Selecionar</option>
+                      <option value="feminino">Feminino</option>
+                      <option value="masculino">Masculino</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <Button className="w-full rounded-full gap-2" disabled={!clientName.trim() || !clientEmail.trim()} onClick={() => setStep(3)}>
+                Continuar <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* ── STEP 3: Clinical info ── */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-4 py-3">
+                Essas informações ajudam a nutricionista a se preparar melhor para a sua consulta.
+              </p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Objetivo principal</Label>
+                  <select value={goal} onChange={e => setGoal(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="">Selecionar objetivo</option>
+                    <option value="emagrecimento">Emagrecimento</option>
+                    <option value="ganho_massa">Ganho de massa muscular</option>
+                    <option value="saude_geral">Saúde geral e bem-estar</option>
+                    <option value="condicao_especifica">Tratar condição específica</option>
+                    <option value="gestante">Gestação / pós-parto</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Restrições alimentares</Label>
+                  <select value={restrictions} onChange={e => setRestrictions(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="">Nenhuma</option>
+                    <option value="vegetariano">Vegetariano</option>
+                    <option value="vegano">Vegano</option>
+                    <option value="sem_gluten">Sem glúten</option>
+                    <option value="sem_lactose">Sem lactose</option>
+                    <option value="outra">Outra</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Alergias alimentares <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Input value={allergies} onChange={e => setAllergies(e.target.value)}
+                    placeholder="Ex: amendoim, frutos do mar..." className="rounded-xl" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Condições de saúde <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Input value={healthConditions} onChange={e => setHealthConditions(e.target.value)}
+                    placeholder="Ex: diabetes, hipertensão, hipotireoidismo..." className="rounded-xl" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Medicamentos em uso <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Input value={medications} onChange={e => setMedications(e.target.value)}
+                    placeholder="Ex: metformina, levotiroxina..." className="rounded-xl" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Já fez acompanhamento nutricional?</Label>
+                    <select value={hadNutritionist} onChange={e => setHadNutritionist(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="">Selecionar</option>
+                      <option value="nao">Não</option>
+                      <option value="sim">Sim</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Como nos encontrou?</Label>
+                    <select value={howFound} onChange={e => setHowFound(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="">Selecionar</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="indicacao">Indicação</option>
+                      <option value="google">Google</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <Button className="w-full rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
+                Continuar <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* ── STEP 4: Payment ── */}
+          {step === 4 && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-muted/40 rounded-2xl px-4 py-3 flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">{plan.name}</span>
+                <span className="font-bold text-primary">{plan.price}</span>
+              </div>
+
+              {/* PIX QR stage */}
+              {stage === "pix_qr" && pixData && (
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+                  <p className="font-semibold text-sm text-center">Escaneie o QR Code ou copie o código</p>
+                  {pixData.qr_code_base64 && (
+                    <div className="flex justify-center">
+                      <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="QR Pix" className="w-48 h-48 rounded-xl border p-2 bg-white" />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-muted rounded-xl px-3 py-2 text-xs font-mono truncate text-muted-foreground">{pixData.qr_code}</div>
+                    <Button size="sm" variant={copied ? "default" : "outline"} className="rounded-xl shrink-0 gap-1.5" onClick={handleCopy}>
+                      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied ? "Copiado" : "Copiar"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 py-2 bg-primary/5 rounded-xl">
+                    <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-primary" /></span>
+                    <span className="text-sm text-primary font-medium">Aguardando pagamento...</span>
+                  </div>
+                  <button onClick={() => { if (pollingRef.current) clearInterval(pollingRef.current); setStage("idle"); setPixData(null); }}
+                    className="w-full text-xs text-muted-foreground flex items-center justify-center gap-1 hover:text-foreground">
+                    <X className="h-3 w-3" /> Cancelar
+                  </button>
+                </div>
+              )}
+
+              {/* Payment method tabs (idle/error/loading) */}
+              {(stage === "idle" || stage === "error" || stage === "loading") && (
+                <>
+                  <div className="flex gap-2">
+                    {([
+                      { id: "pix" as const, label: "Pix", icon: QrCode },
+                      { id: "card" as const, label: "Cartão de crédito", icon: CreditCard },
+                    ]).map(({ id, label, icon: Icon }) => (
+                      <button key={id} onClick={() => handlePayTabChange(id)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                          payTab === id ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"
+                        }`}>
+                        <Icon className="h-4 w-4" />{label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Pix tab */}
+                  {payTab === "pix" && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground text-center">Clique para gerar o QR Code Pix. A confirmação será enviada ao seu email após o pagamento.</p>
+                      <Button className="w-full rounded-full gap-2" onClick={handlePixPayment} disabled={stage === "loading"}>
+                        {stage === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />Gerando Pix...</> : <><QrCode className="h-4 w-4" />Gerar QR Code Pix</>}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Card tab */}
+                  {payTab === "card" && (
+                    <div>
+                      {(!plan.priceAmount || plan.priceAmount <= 0) ? (
+                        <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3 text-center">
+                          Pagamento por cartão não configurado para este plano. Use o Pix ou entre em contato.
+                        </p>
+                      ) : (
+                        <>
+                          {stage === "loading" && (
+                            <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground text-sm">
+                              <Loader2 className="h-4 w-4 animate-spin" /> Processando pagamento...
+                            </div>
+                          )}
+                          <div id="mp-payment-brick" className={stage === "loading" ? "hidden" : ""} />
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {stage === "error" && (
+                    <p className="text-xs text-destructive text-center">Ocorreu um erro. Tente novamente.</p>
+                  )}
+                </>
+              )}
+
+              <Button variant="outline" size="sm" className="rounded-full gap-2 w-full" onClick={() => setStep(3)}>
+                <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <footer className="border-t border-border/50 py-5">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} {identity.brandName} · {identity.doctorName}</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+const PageHeader = ({ brand }: { brand: string }) => (
+  <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+    <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Voltar
+      </Link>
+      <span className="font-display font-bold text-primary text-sm">{brand}</span>
+      <div className="w-16" />
+    </div>
+  </header>
+);
+
+export default BookingPage;

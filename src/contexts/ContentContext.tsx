@@ -97,9 +97,13 @@ export interface SiteContent {
       name: string;
       desc: string;
       price: string;
+      priceAmount: number;
       badge: string;
       popular: boolean;
       whatsappMessage: string;
+      sessionCount: number;
+      returnCount: number;
+      consultationType: 'online' | 'presencial' | 'both';
     }[];
   };
   produtosDigitais: {
@@ -111,8 +115,10 @@ export interface SiteContent {
       longDesc: string;
       details: string[];
       price: string;
+      priceAmount: number;
       badge: string;
       imageUrl: string;
+      pdfUrl: string;
       whatsappMessage: string;
     }[];
   };
@@ -280,41 +286,61 @@ export const DEFAULT_CONTENT: SiteContent = {
         name: "Consulta Avulsa Online",
         desc: "Consulta completa + plano alimentar personalizado + 1 retorno",
         price: "R$ 250",
+        priceAmount: 0,
         badge: "",
         popular: false,
         whatsappMessage: "Olá! Gostaria de agendar uma Consulta Avulsa Online.",
+        sessionCount: 1,
+        returnCount: 0,
+        consultationType: "both",
       },
       {
         name: "Consulta Avulsa Presencial",
         desc: "Consulta completa com bioimpedância + plano alimentar + 1 retorno",
         price: "R$ 300",
+        priceAmount: 0,
         badge: "",
         popular: false,
         whatsappMessage: "Olá! Gostaria de agendar uma Consulta Avulsa Presencial.",
+        sessionCount: 2,
+        returnCount: 1,
+        consultationType: "both",
       },
       {
         name: "Pacote Mensal",
         desc: "4 consultas (1x por semana) + plano alimentar + ajustes semanais",
         price: "R$ 800",
+        priceAmount: 0,
         badge: "Mais Escolhido",
         popular: true,
         whatsappMessage: "Olá! Tenho interesse no Pacote Mensal.",
+        sessionCount: 3,
+        returnCount: 2,
+        consultationType: "both",
       },
       {
         name: "Pacote Trimestral",
         desc: "12 consultas + plano alimentar + acompanhamento completo por 3 meses",
         price: "R$ 2.100",
+        priceAmount: 0,
         badge: "Melhor Custo-Benefício",
         popular: false,
         whatsappMessage: "Olá! Tenho interesse no Pacote Trimestral.",
+        sessionCount: 4,
+        returnCount: 3,
+        consultationType: "both",
       },
       {
         name: "Acompanhamento VIP",
         desc: "Atendimento semanal + suporte ilimitado por WhatsApp + plano alimentar dinâmico",
         price: "R$ 1.200/mês",
+        priceAmount: 0,
         badge: "",
         popular: false,
         whatsappMessage: "Olá! Tenho interesse no Acompanhamento VIP.",
+        sessionCount: 4,
+        returnCount: 4,
+        consultationType: "both",
       },
     ],
   },
@@ -335,8 +361,10 @@ export const DEFAULT_CONTENT: SiteContent = {
           "Acesso imediato após o pagamento",
         ],
         price: "R$ 47",
+        priceAmount: 0,
         badge: "",
         imageUrl: "",
+        pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de comprar o Guia Completo de Reeducação Alimentar.",
       },
       {
@@ -352,8 +380,10 @@ export const DEFAULT_CONTENT: SiteContent = {
           "Acesso imediato após o pagamento",
         ],
         price: "R$ 37",
+        priceAmount: 0,
         badge: "",
         imageUrl: "",
+        pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de comprar as 30 Receitas Fit.",
       },
       {
@@ -369,8 +399,10 @@ export const DEFAULT_CONTENT: SiteContent = {
           "Acesso imediato após o pagamento",
         ],
         price: "R$ 47",
+        priceAmount: 0,
         badge: "",
         imageUrl: "",
+        pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de comprar o e-book de Nutrição Esportiva.",
       },
       {
@@ -386,8 +418,10 @@ export const DEFAULT_CONTENT: SiteContent = {
           "1 ajuste incluso após o envio",
         ],
         price: "R$ 97",
+        priceAmount: 0,
         badge: "",
         imageUrl: "",
+        pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de pedir uma Dieta Personalizada Express.",
       },
       {
@@ -403,8 +437,10 @@ export const DEFAULT_CONTENT: SiteContent = {
           "Economia de até R$ 44 em relação à compra separada",
         ],
         price: "R$ 120",
+        priceAmount: 0,
         badge: "Oferta Especial",
         imageUrl: "",
+        pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de comprar o Combo E-book + Dieta.",
       },
     ],

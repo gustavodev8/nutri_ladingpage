@@ -2,11 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreditCard, QrCode, Link as LinkIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
 
 const ShopSection = () => {
-  const { content, whatsappUrl } = useContent();
+  const { content } = useContent();
   const { loja } = content;
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
 
@@ -49,18 +50,8 @@ const ShopSection = () => {
                 <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{plan.desc}</p>
                 <p className="text-3xl font-extrabold text-primary">{plan.price}</p>
-                <Button
-                  asChild
-                  variant={plan.popular ? "default" : "outline"}
-                  className="rounded-full"
-                >
-                  <a
-                    href={whatsappUrl(plan.whatsappMessage)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Agendar pelo WhatsApp
-                  </a>
+                <Button asChild variant={plan.popular ? "default" : "outline"} className="rounded-full">
+                  <Link to={`/agendar/${i}`}>Agendar consulta</Link>
                 </Button>
               </CardContent>
             </Card>

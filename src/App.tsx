@@ -11,6 +11,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 // Public pages
 import Index from "./pages/Index";
 import ProdutoPage from "./pages/ProdutoPage";
+import BookingPage from "./pages/BookingPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentPending from "./pages/PaymentPending";
+import PaymentFailure from "./pages/PaymentFailure";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -32,6 +36,9 @@ import AdminModalidades from "./pages/admin/AdminModalidades";
 import AdminProdutosDigitais from "./pages/admin/AdminProdutosDigitais";
 import AdminResultados from "./pages/admin/AdminResultados";
 import AdminSenha from "./pages/admin/AdminSenha";
+import AdminPagamentos from "./pages/admin/AdminPagamentos";
+import AdminDisponibilidade from "./pages/admin/AdminDisponibilidade";
+import AdminAgendamentos from "./pages/admin/AdminAgendamentos";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +56,14 @@ const App = () => (
 
               {/* Product detail pages */}
               <Route path="/produto/:id" element={<ProdutoPage />} />
+
+              {/* Booking page */}
+              <Route path="/agendar/:planIndex" element={<BookingPage />} />
+
+              {/* Payment status pages */}
+              <Route path="/pagamento/sucesso" element={<PaymentSuccess />} />
+              <Route path="/pagamento/pendente" element={<PaymentPending />} />
+              <Route path="/pagamento/erro" element={<PaymentFailure />} />
 
               {/* Admin login */}
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -77,6 +92,9 @@ const App = () => (
                 <Route path="produtos" element={<AdminProdutosDigitais />} />
                 <Route path="resultados" element={<AdminResultados />} />
                 <Route path="senha" element={<AdminSenha />} />
+                <Route path="pagamentos" element={<AdminPagamentos />} />
+                <Route path="disponibilidade" element={<AdminDisponibilidade />} />
+                <Route path="agendamentos" element={<AdminAgendamentos />} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>

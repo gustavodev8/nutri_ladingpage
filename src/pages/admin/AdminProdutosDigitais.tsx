@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import AdminFormWrapper from "@/components/admin/AdminFormWrapper";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { useContent, type SiteContent } from "@/contexts/ContentContext";
+import { uploadPdf } from "@/lib/supabase";
 
 type Item = SiteContent["produtosDigitais"]["items"][number];
 type ProdutosContent = SiteContent["produtosDigitais"];
@@ -14,6 +15,7 @@ type ProdutosContent = SiteContent["produtosDigitais"];
 const AdminProdutosDigitais = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<ProdutosContent>(content.produtosDigitais);
+  const [pdfUploading, setPdfUploading] = useState<Record<number, boolean>>({});
 
   const setHeader = (key: "sectionTitle" | "sectionSubtitle", value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -27,6 +29,15 @@ const AdminProdutosDigitais = () => {
     });
   };
 
+  const handlePdfUpload = async (index: number, file: File) => {
+    setPdfUploading((prev) => ({ ...prev, [index]: true }));
+    const url = await uploadPdf(file);
+    if (url) {
+      setItem(index, "pdfUrl", url);
+    }
+    setPdfUploading((prev) => ({ ...prev, [index]: false }));
+  };
+
   const addItem = () => {
     setForm((p) => ({
       ...p,
@@ -38,8 +49,10 @@ const AdminProdutosDigitais = () => {
           longDesc: "",
           details: [],
           price: "R$ 0",
+          priceAmount: 0,
           badge: "",
           imageUrl: "",
+          pdfUrl: "",
           whatsappMessage: "Olá! Gostaria de comprar este produto.",
         },
       ],
@@ -112,6 +125,52 @@ const AdminProdutosDigitais = () => {
                     onChange={(url) => setItem(i, "imageUrl", url)}
                   />
                 </div>
+
+                {/* PDF Upload */}
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>PDF do produto (enviado ao comprador por email)</Label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePdfUpload(i, file);
+                        }}
+                      />
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-background hover:bg-muted/50 transition-colors text-sm font-medium text-foreground">
+                        {pdfUploading[i] ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            Enviando PDF...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-primary" />
+                            {item.pdfUrl ? "Trocar PDF" : "Fazer upload do PDF"}
+                          </>
+                        )}
+                      </div>
+                    </label>
+                    {item.pdfUrl && (
+                      <a
+                        href={item.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Ver PDF atual
+                      </a>
+                    )}
+                  </div>
+                  {item.pdfUrl && (
+                    <p className="text-xs text-muted-foreground truncate max-w-full">{item.pdfUrl}</p>
+                  )}
+                </div>
+
                 <div className="sm:col-span-2 space-y-2">
                   <Label>Nome do produto</Label>
                   <Input value={item.name} onChange={(e) => setItem(i, "name", e.target.value)} />
@@ -121,7 +180,7 @@ const AdminProdutosDigitais = () => {
                   <Input value={item.desc} onChange={(e) => setItem(i, "desc", e.target.value)} />
                 </div>
                 <div className="sm:col-span-2 space-y-2">
-                  <Label>Descrição completa (aparece na página do produto)</Label>
+                  <Label>Descrição longa (página do produto)</Label>
                   <Textarea
                     rows={3}
                     value={item.longDesc ?? ""}
@@ -150,6 +209,18 @@ const AdminProdutosDigitais = () => {
                   <Input value={item.price} onChange={(e) => setItem(i, "price", e.target.value)} />
                 </div>
                 <div className="space-y-2">
+                  <Label>Valor numérico para Mercado Pago (ex: 47)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.priceAmount ?? 0}
+                    onChange={(e) => setItem(i, "priceAmount", Number(e.target.value))}
+                    placeholder="47"
+                  />
+                  <p className="text-xs text-muted-foreground">Usado no checkout. Use ponto para centavos (ex: 47.90).</p>
+                </div>
+                <div className="space-y-2">
                   <Label>Badge (ex: Oferta Especial)</Label>
                   <Input
                     value={item.badge}
@@ -157,7 +228,7 @@ const AdminProdutosDigitais = () => {
                     placeholder="Deixe em branco para ocultar"
                   />
                 </div>
-                <div className="sm:col-span-2 space-y-2">
+                <div className="space-y-2">
                   <Label>Mensagem WhatsApp</Label>
                   <Input
                     value={item.whatsappMessage}

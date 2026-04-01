@@ -20,6 +20,9 @@ import {
   KeyRound,
   Globe,
   Loader2,
+  ReceiptText,
+  CalendarDays,
+  CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +37,9 @@ const NAV_ITEMS = [
   { to: "/admin/modalidades", icon: Globe, label: "Modalidades" },
   { to: "/admin/precos", icon: ShoppingBag, label: "Loja de Consultas" },
   { to: "/admin/produtos", icon: BookOpen, label: "Produtos Digitais" },
+  { to: "/admin/disponibilidade", icon: CalendarDays, label: "Disponibilidade" },
+  { to: "/admin/agendamentos", icon: CalendarCheck, label: "Agendamentos" },
+  { to: "/admin/pagamentos", icon: ReceiptText, label: "Logs de Pagamento" },
   { to: "/admin/resultados", icon: TrendingUp, label: "Resultados" },
   { to: "/admin/horarios", icon: Clock, label: "Horários" },
   { to: "/admin/depoimentos", icon: MessageSquareQuote, label: "Depoimentos" },
