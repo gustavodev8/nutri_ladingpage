@@ -24,6 +24,17 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const scrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setIsOpen(false);
+    const id = href.replace("#", "");
+    const el = document.getElementById(id);
+    if (!el) return;
+    const navbarHeight = 80;
+    const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
+    window.scrollTo({ top, behavior: "smooth" });
+  };
+
   const agendarUrl = whatsappUrl("Olá! Gostaria de agendar uma consulta.");
 
   return (
@@ -33,7 +44,7 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between h-16 lg:h-20">
-        <a href="#" className="flex items-center gap-2">
+        <a href="#" onClick={(e) => scrollTo(e, "#")} className="flex items-center gap-2">
           <Leaf className="h-7 w-7 text-primary" />
           <span className="font-display text-xl font-bold text-foreground">
             {content.identity.brandName}
@@ -45,6 +56,7 @@ const Navbar = () => {
             <a
               key={l.href}
               href={l.href}
+              onClick={(e) => scrollTo(e, l.href)}
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
             >
               {l.label}
@@ -73,8 +85,8 @@ const Navbar = () => {
               <a
                 key={l.href}
                 href={l.href}
+                onClick={(e) => scrollTo(e, l.href)}
                 className="text-sm font-medium text-muted-foreground hover:text-primary py-2"
-                onClick={() => setIsOpen(false)}
               >
                 {l.label}
               </a>
