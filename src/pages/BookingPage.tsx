@@ -27,7 +27,7 @@ function generateGroupId() {
   return `booking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-interface SessionSlot { date: Date | null; time: string | null; }
+interface SessionSlot { date: Date | null; time: string | null; type: "online" | "presencial" | null; }
 type PayTab = "pix" | "card";
 type Stage = "idle" | "loading" | "pix_qr" | "card_form" | "approved" | "error";
 
@@ -102,10 +102,10 @@ const BookingPage = () => {
     if (!consultationType) return;
     setLoadingSlots(true);
     fetchAvailabilitySlots().then(data => {
-      setAvailSlots(data.filter(s => s.type === consultationType));
+      setAvailSlots(data);
       setLoadingSlots(false);
     });
-    setSessions(Array(totalSessions).fill(null).map(() => ({ date: null, time: null })));
+    setSessions(Array(totalSessions).fill(null).map(() => ({ date: null, time: null, type: consultationType })));
     setCurrentSessionIdx(0);
   }, [consultationType]);
 
@@ -202,7 +202,7 @@ const BookingPage = () => {
     newSessions[currentSessionIdx] = { date, time: null };
     setSessions(newSessions);
     setLoadingBooked(true);
-    const booked = await fetchBookingsForDate(toLocalISO(date), consultationType!);
+    const booked = await fetchBookingsForDate(toLocalISO(date), sessions[currentSessionIdx]?.type || consultationType!);
     setBookedTimes(booked.map(b => (b as unknown as { appointment_time: string }).appointment_time.substring(0, 5)));
     setLoadingBooked(false);
   };
@@ -216,12 +216,20 @@ const BookingPage = () => {
   const canSelectDate = (date: Date) => {
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
     if (date < todayMidnight) return false;
-    return availSlots.some(s => s.date === toLocalISO(date));
+    const sessionType = sessions[currentSessionIdx]?.type || consultationType;
+    return availSlots.some(s => s.date === toLocalISO(date) && s.type === sessionType);
   };
 
   const getTimesForDate = (date: Date | null) => {
     if (!date) return [];
-    return availSlots.filter(s => s.date === toLocalISO(date)).map(s => s.start_time.substring(0, 5)).sort();
+    const sessionType = sessions[currentSessionIdx]?.type || consultationType;
+    return availSlots.filter(s => s.date === toLocalISO(date) && s.type === sessionType).map(s => s.start_time.substring(0, 5)).sort();
+  };
+
+  const handleSessionTypeChange = (type: "online" | "presencial") => {
+    const newSessions = [...sessions];
+    newSessions[currentSessionIdx] = { date: null, time: null, type };
+    setSessions(newSessions);
   };
 
   const saveBookings = async (status = "pending"): Promise<boolean> => {
@@ -244,7 +252,7 @@ const BookingPage = () => {
         plan_index: idx,
         appointment_date: toLocalISO(s.date),
         appointment_time: s.time,
-        type: consultationType!,
+        type: (s.type || consultationType)!,
         status,
         notes,
       };
@@ -346,7 +354,7 @@ const BookingPage = () => {
                 {sessions.map((s, i) => s.date && s.time && (
                   <div key={i} className="flex justify-between text-xs gap-2">
                     <span className="text-muted-foreground">{i === 0 ? "Consulta" : `Retorno ${i}`}</span>
-                    <span className="font-medium">{s.date.toLocaleDateString("pt-BR")} · {s.time}</span>
+                    <span className="font-medium">{s.date.toLocaleDateString("pt-BR")} · {s.time} · {s.type === "online" ? "Online" : "Presencial"}</span>
                   </div>
                 ))}
               </div>
@@ -438,6 +446,24 @@ const BookingPage = () => {
                   ))}
                 </div>
               )}
+
+              {/* Per-session type toggle */}
+              <div className="flex gap-2">
+                {[
+                  { id: "online" as const, label: "Online", icon: Globe },
+                  { id: "presencial" as const, label: "Presencial", icon: MapPin },
+                ].filter(t => !planType || planType === "both" || planType === t.id)
+                 .map(({ id, label, icon: Icon }) => (
+                  <button key={id} onClick={() => handleSessionTypeChange(id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                      sessions[currentSessionIdx]?.type === id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                    }`}>
+                    <Icon className="h-3.5 w-3.5" />{label}
+                  </button>
+                ))}
+              </div>
 
               {loadingSlots ? (
                 <div className="flex items-center justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
