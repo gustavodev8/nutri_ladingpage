@@ -35,16 +35,23 @@ const Index = () => {
     <div className="min-h-screen">
       <Navbar />
       <main>
+        {/* 1. Gancho — quem é e por que confiar */}
         <HeroSection />
+        {/* 2. Credibilidade — 10 anos, 7 países, 7 mil pacientes */}
         <AboutSection />
+        {/* 3. O que oferece — serviços detalhados */}
         <ServicesSection />
+        {/* 4. Como funciona — online vs presencial */}
         <ModalitiesSection />
+        {/* 5. Planos e preços — conversão */}
         <ShopSection />
-        <DigitalProductsSection />
+        {/* 6. Prova social — antes e depois */}
         <ResultsSection />
-        <ScheduleSection />
+        {/* 7. Depoimentos — confiança */}
         <TestimonialsSection />
+        {/* 8. Dúvidas — FAQ */}
         <FAQSection />
+        {/* 9. CTA final */}
         <CTASection />
       </main>
       <Footer />

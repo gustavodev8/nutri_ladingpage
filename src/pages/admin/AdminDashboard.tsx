@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -11,8 +12,11 @@ import {
   Megaphone,
   KeyRound,
   ExternalLink,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { useContent } from "@/contexts/ContentContext";
+import { toast } from "@/hooks/use-toast";
 
 const CARDS = [
   { to: "/admin/perfil", icon: User, label: "Perfil & Identidade", desc: "Nome, CRN, especialidade, WhatsApp" },
@@ -30,7 +34,16 @@ const CARDS = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { content } = useContent();
+  const { content, resetContent } = useContent();
+  const [resetting, setResetting] = useState(false);
+
+  const handleReset = async () => {
+    if (!confirm("Isso vai substituir TODO o conteúdo do site pelos dados do Dr. Fillipe David. Confirmar?")) return;
+    setResetting(true);
+    await resetContent();
+    toast({ title: "✅ Conteúdo atualizado!", description: "Dados do Dr. Fillipe David aplicados com sucesso." });
+    setResetting(false);
+  };
 
   return (
     <div className="space-y-8">
@@ -42,6 +55,23 @@ const AdminDashboard = () => {
         <p className="text-muted-foreground text-sm">
           Gerencie o conteúdo do site <span className="font-medium text-foreground">{content.identity.brandName}</span>.
         </p>
+      </div>
+
+      {/* Reset to Fillipe data */}
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
+        <RefreshCw className="h-5 w-5 text-amber-600 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-amber-900">Aplicar dados reais do Dr. Fillipe David</p>
+          <p className="text-xs text-amber-700">Substitui todos os textos de exemplo pelos dados reais: bio, planos, preços e FAQ.</p>
+        </div>
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 disabled:opacity-50 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          {resetting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Aplicar agora
+        </button>
       </div>
 
       {/* Quick preview */}
