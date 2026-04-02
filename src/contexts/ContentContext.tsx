@@ -238,10 +238,10 @@ export const DEFAULT_CONTENT: SiteContent = {
   testimonials: {
     title: "O que dizem meus pacientes",
     items: [
-      { name: "Maria S.", initials: "MS", text: "A Dra. Ana mudou minha vida! Perdi 15kg de forma saudável e sem sofrimento. O plano alimentar é totalmente personalizado e delicioso." },
+      { name: "Maria S.", initials: "MS", text: "O Dr. Fillipe mudou minha vida! Perdi 15kg de forma saudável e sem sofrimento. O plano alimentar é totalmente personalizado e delicioso." },
       { name: "João P.", initials: "JP", text: "Excelente profissional! Me ajudou a melhorar minha performance nos treinos com um plano alimentar específico para ciclismo." },
-      { name: "Carla M.", initials: "CM", text: "As consultas online são super práticas. Mesmo morando em outro estado, tenho um acompanhamento incrível. Super recomendo!" },
-      { name: "Roberto L.", initials: "RL", text: "Consegui controlar minha diabetes com a ajuda da Dra. Ana. Meus exames nunca estiveram tão bons. Gratidão!" },
+      { name: "Carla M.", initials: "CM", text: "As consultas online são super práticas. Mesmo morando em outro estado, tenho um acompanhamento incrível com o Dr. Fillipe. Super recomendo!" },
+      { name: "Roberto L.", initials: "RL", text: "Consegui controlar minha diabetes com a ajuda do Dr. Fillipe. Meus exames nunca estiveram tão bons. Gratidão!" },
       { name: "Fernanda A.", initials: "FA", text: "Adorei a abordagem sem restrições. Aprendi a comer bem de verdade. Minha relação com a comida mudou completamente." },
     ],
   },
