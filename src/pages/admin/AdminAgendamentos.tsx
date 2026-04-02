@@ -100,6 +100,17 @@ const AdminAgendamentos = () => {
     setLoading(false);
   };
 
+  const handleChangeType = async (session: Booking) => {
+    const newType = session.type === "online" ? "presencial" : "online";
+    const ok = await updateBookingStatus(session.id!, session.status!, { type: newType });
+    if (ok) {
+      setBookings(prev => prev.map(b => b.id === session.id ? { ...b, type: newType } : b));
+      toast({ title: `Modalidade alterada para ${newType === "online" ? "Online" : "Presencial"}` });
+    } else {
+      toast({ title: "Erro ao alterar modalidade", variant: "destructive" });
+    }
+  };
+
   const handleStatus = async (id: number, status: string, extra?: Record<string, unknown>) => {
     setUpdating(id);
     const ok = await updateBookingStatus(id, status, extra);
@@ -431,6 +442,12 @@ const AdminAgendamentos = () => {
                             <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
                               className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
                               <CalendarClock className="h-3.5 w-3.5" /> Realocar
+                            </button>
+                            <button
+                              onClick={() => handleChangeType(session)}
+                              className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-700 font-medium">
+                              {session.type === "online" ? <MapPin className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                              {session.type === "online" ? "→ Presencial" : "→ Online"}
                             </button>
                             <button
                               disabled={updating === session.id}
