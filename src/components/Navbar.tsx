@@ -22,6 +22,7 @@ const NAV_LINKS: NavLink[] = [
 const Navbar = () => {
   const { content } = useContent();
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,7 +34,18 @@ const Navbar = () => {
   }, []);
 
   // Close mobile menu on route change
-  useEffect(() => { setIsOpen(false); }, [location.pathname]);
+  useEffect(() => { closeMenu(); }, [location.pathname]);
+
+  const closeMenu = () => {
+    if (!isOpen) return;
+    setIsClosing(true);
+    setTimeout(() => { setIsOpen(false); setIsClosing(false); }, 180);
+  };
+
+  const toggleMenu = () => {
+    if (isOpen) closeMenu();
+    else setIsOpen(true);
+  };
 
   const scrollToAnchor = (id: string) => {
     const el = document.getElementById(id);
@@ -44,7 +56,7 @@ const Navbar = () => {
 
   const handleNavClick = (link: NavLink, e: React.MouseEvent) => {
     e.preventDefault();
-    setIsOpen(false);
+    closeMenu();
 
     if (link.type === "page") {
       navigate(link.href);
@@ -72,7 +84,7 @@ const Navbar = () => {
   };
 
   const handleAgendarClick = () => {
-    setIsOpen(false);
+    closeMenu();
     navigate("/consultas");
   };
 
@@ -113,16 +125,17 @@ const Navbar = () => {
         </nav>
 
         <button
-          className="lg:hidden text-foreground"
-          onClick={() => setIsOpen(!isOpen)}
+          className="lg:hidden text-foreground relative w-6 h-6"
+          onClick={toggleMenu}
           aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
         >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          <Menu className={`absolute inset-0 h-6 w-6 transition-all duration-200 ${isOpen ? "rotate-90 opacity-0 scale-75" : "rotate-0 opacity-100 scale-100"}`} />
+          <X className={`absolute inset-0 h-6 w-6 transition-all duration-200 ${isOpen ? "rotate-0 opacity-100 scale-100" : "-rotate-90 opacity-0 scale-75"}`} />
         </button>
       </div>
 
-      {isOpen && (
-        <div className="lg:hidden bg-card/98 backdrop-blur-md border-t border-border">
+      {(isOpen || isClosing) && (
+        <div className={`lg:hidden bg-card/98 backdrop-blur-md border-t border-border ${isClosing ? "animate-menu-up" : "animate-menu-down"}`}>
           <nav className="container mx-auto px-4 py-4 flex flex-col gap-3">
             {NAV_LINKS.map((l) => (
               <a
