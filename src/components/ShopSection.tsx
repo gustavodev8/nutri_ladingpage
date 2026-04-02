@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CreditCard, QrCode, Link as LinkIcon } from "lucide-react";
+import { CreditCard, QrCode, Link as LinkIcon, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
@@ -12,8 +12,22 @@ const ShopSection = () => {
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
 
   return (
-    <section id="consultas" className="py-20 bg-green-light">
-      <div ref={ref} className="container mx-auto px-4">
+    <section id="consultas" className="py-20 bg-green-light relative">
+
+      {/* Overlay "Em desenvolvimento" */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-light/80 backdrop-blur-[2px] rounded-none">
+        <div className="flex flex-col items-center gap-3 text-center px-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Wrench className="h-6 w-6 text-primary" />
+          </div>
+          <p className="text-lg font-bold text-foreground">Em desenvolvimento</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Em breve você poderá agendar sua consulta diretamente por aqui.
+          </p>
+        </div>
+      </div>
+
+      <div ref={ref} className="container mx-auto px-4 select-none pointer-events-none">
         <div
           className={`text-center max-w-2xl mx-auto mb-12 transition-[opacity,transform] duration-700 ease-smooth ${
             isVisible ? "opacity-100 translate-y-0" : hiddenClass
