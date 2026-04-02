@@ -10,6 +10,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 // Public pages
 import Index from "./pages/Index";
+import ConsultasPage from "./pages/ConsultasPage";
+import ResultadosPage from "./pages/ResultadosPage";
 import ProdutoPage from "./pages/ProdutoPage";
 import BookingPage from "./pages/BookingPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -53,6 +55,10 @@ const App = () => (
             <Routes>
               {/* Landing page */}
               <Route path="/" element={<Index />} />
+
+              {/* Public pages */}
+              <Route path="/consultas" element={<ConsultasPage />} />
+              <Route path="/resultados" element={<ResultadosPage />} />
 
               {/* Product detail pages */}
               <Route path="/produto/:id" element={<ProdutoPage />} />

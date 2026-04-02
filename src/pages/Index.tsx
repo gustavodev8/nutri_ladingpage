@@ -4,11 +4,7 @@ import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import ServicesSection from "@/components/ServicesSection";
 import ModalitiesSection from "@/components/ModalitiesSection";
-import ShopSection from "@/components/ShopSection";
 import DigitalProductsSection from "@/components/DigitalProductsSection";
-import ResultsSection from "@/components/ResultsSection";
-import ScheduleSection from "@/components/ScheduleSection";
-import TestimonialsSection from "@/components/TestimonialsSection";
 import FAQSection from "@/components/FAQSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
@@ -41,17 +37,13 @@ const Index = () => {
         <AboutSection />
         {/* 3. O que oferece — serviços detalhados */}
         <ServicesSection />
-        {/* 4. Como funciona — online vs presencial */}
+        {/* 4. Como atende — online vs presencial */}
         <ModalitiesSection />
-        {/* 5. Planos e preços — conversão */}
-        <ShopSection />
-        {/* 6. Prova social — antes e depois */}
-        <ResultsSection />
-        {/* 7. Depoimentos — confiança */}
-        <TestimonialsSection />
-        {/* 8. Dúvidas — FAQ */}
+        {/* 5. Ebooks e materiais digitais */}
+        <DigitalProductsSection />
+        {/* 6. Perguntas frequentes */}
         <FAQSection />
-        {/* 9. CTA final */}
+        {/* 7. CTA final */}
         <CTASection />
       </main>
       <Footer />

@@ -1,21 +1,30 @@
 import { useState, useEffect } from "react";
 import { Menu, X, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
 
-const NAV_LINKS = [
-  { href: "#sobre", label: "Sobre" },
-  { href: "#servicos", label: "Serviços" },
-  { href: "#atendimento", label: "Atendimento" },
-  { href: "#resultados", label: "Resultados" },
-  { href: "#depoimentos", label: "Depoimentos" },
-  { href: "#faq", label: "FAQ" },
+interface NavLink {
+  href: string;
+  label: string;
+  type: "page" | "anchor";
+}
+
+const NAV_LINKS: NavLink[] = [
+  { href: "#sobre",       label: "Sobre",       type: "anchor" },
+  { href: "#servicos",    label: "Serviços",     type: "anchor" },
+  { href: "#atendimento", label: "Atendimento",  type: "anchor" },
+  { href: "/consultas",   label: "Consultas",    type: "page" },
+  { href: "/resultados",  label: "Resultados",   type: "page" },
+  { href: "#faq",         label: "FAQ",          type: "anchor" },
 ];
 
 const Navbar = () => {
   const { content } = useContent();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -23,16 +32,51 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const scrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
-    setIsOpen(false);
-    const id = href.replace("#", "");
+  // Close mobile menu on route change
+  useEffect(() => { setIsOpen(false); }, [location.pathname]);
+
+  const scrollToAnchor = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const navbarHeight = 80;
-    const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
+    const top = el.getBoundingClientRect().top + window.scrollY - 80;
     window.scrollTo({ top, behavior: "smooth" });
   };
+
+  const handleNavClick = (link: NavLink, e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsOpen(false);
+
+    if (link.type === "page") {
+      navigate(link.href);
+      return;
+    }
+
+    // anchor link
+    const id = link.href.replace("#", "");
+    if (location.pathname === "/") {
+      scrollToAnchor(id);
+    } else {
+      // navigate home first, then scroll after render
+      navigate("/");
+      setTimeout(() => scrollToAnchor(id), 300);
+    }
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate("/");
+    }
+  };
+
+  const handleAgendarClick = () => {
+    setIsOpen(false);
+    navigate("/consultas");
+  };
+
+  const isActivePage = (href: string) => location.pathname === href;
 
   return (
     <header
@@ -41,7 +85,7 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between h-16 lg:h-20">
-        <a href="#" onClick={(e) => scrollTo(e, "#")} className="flex items-center gap-2">
+        <a href="/" onClick={handleLogoClick} className="flex items-center gap-2">
           <Leaf className="h-7 w-7 text-primary" />
           <span className="font-display text-xl font-bold text-foreground">
             {content.identity.brandName}
@@ -53,13 +97,17 @@ const Navbar = () => {
             <a
               key={l.href}
               href={l.href}
-              onClick={(e) => scrollTo(e, l.href)}
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => handleNavClick(l, e)}
+              className={`text-sm font-medium transition-colors ${
+                l.type === "page" && isActivePage(l.href)
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              }`}
             >
               {l.label}
             </a>
           ))}
-          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={(e) => scrollTo(e as unknown as React.MouseEvent<HTMLAnchorElement>, "#consultas")}>
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={handleAgendarClick}>
             Agendar Consulta
           </Button>
         </nav>
@@ -80,13 +128,17 @@ const Navbar = () => {
               <a
                 key={l.href}
                 href={l.href}
-                onClick={(e) => scrollTo(e, l.href)}
-                className="text-sm font-medium text-muted-foreground hover:text-primary py-2"
+                onClick={(e) => handleNavClick(l, e)}
+                className={`text-sm font-medium py-2 ${
+                  l.type === "page" && isActivePage(l.href)
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-primary"
+                }`}
               >
                 {l.label}
               </a>
             ))}
-            <Button className="mt-2 bg-primary hover:bg-primary/90" onClick={(e) => scrollTo(e as unknown as React.MouseEvent<HTMLAnchorElement>, "#consultas")}>
+            <Button className="mt-2 bg-primary hover:bg-primary/90" onClick={handleAgendarClick}>
               Agendar Consulta
             </Button>
           </nav>

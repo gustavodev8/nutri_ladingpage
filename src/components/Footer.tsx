@@ -1,14 +1,17 @@
 import { Leaf, Instagram, Phone, Facebook } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
 
-const NAV_LINKS = [
-  { href: "#sobre", label: "Sobre" },
-  { href: "#servicos", label: "Serviços" },
-  { href: "#atendimento", label: "Atendimento" },
-  { href: "#valores", label: "Valores" },
-  { href: "#horarios", label: "Horários" },
-  { href: "#depoimentos", label: "Depoimentos" },
-  { href: "#faq", label: "FAQ" },
+const PAGE_LINKS = [
+  { href: "/", label: "Início" },
+  { href: "/consultas", label: "Consultas & Planos" },
+  { href: "/resultados", label: "Resultados" },
+];
+
+const ANCHOR_LINKS = [
+  { href: "/#sobre", label: "Sobre o Dr. Fillipe" },
+  { href: "/#servicos", label: "Serviços" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 const Footer = () => {
@@ -32,16 +35,19 @@ const Footer = () => {
               {identity.crn}
             </p>
             <p className="text-sm">
-              {contact.address} — {contact.neighborhood}
-              <br />
-              {contact.city} — CEP {contact.cep}
+              {contact.city}
             </p>
           </div>
 
           <div className="space-y-4">
             <h4 className="font-bold text-primary-foreground">Navegação</h4>
             <nav className="flex flex-col gap-2">
-              {NAV_LINKS.map((l) => (
+              {PAGE_LINKS.map((l) => (
+                <Link key={l.href} to={l.href} className="text-sm hover:text-accent transition-colors">
+                  {l.label}
+                </Link>
+              ))}
+              {ANCHOR_LINKS.map((l) => (
                 <a key={l.href} href={l.href} className="text-sm hover:text-accent transition-colors">
                   {l.label}
                 </a>
