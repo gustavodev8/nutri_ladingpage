@@ -37,12 +37,15 @@ const AdminDashboard = () => {
   const { content, resetContent } = useContent();
   const [resetting, setResetting] = useState(false);
 
-  const handleReset = async () => {
+  const handleReset = () => {
     if (!confirm("Isso vai substituir TODO o conteúdo do site pelos dados do Dr. Fillipe David. Confirmar?")) return;
     setResetting(true);
-    await resetContent();
-    toast({ title: "✅ Conteúdo atualizado!", description: "Dados do Dr. Fillipe David aplicados com sucesso." });
-    setResetting(false);
+    // defer o trabalho pesado para fora do evento de clique (evita travar a UI)
+    setTimeout(async () => {
+      await resetContent();
+      toast({ title: "✅ Conteúdo atualizado!", description: "Dados do Dr. Fillipe David aplicados com sucesso." });
+      setResetting(false);
+    }, 50);
   };
 
   return (
