@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#7c3aed"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
-    font-family="Georgia, serif" font-size="26" font-weight="700" fill="white" letter-spacing="1">FD</text>
+  <rect width="64" height="64" rx="14" fill="#2d6a4f"/>
+  <!-- folha estilizada -->
+  <path d="M32 10 C32 10 14 22 14 36 C14 46 22 54 32 54 C42 54 50 46 50 36 C50 22 32 10 32 10Z" fill="#52b788"/>
+  <path d="M32 10 C32 10 32 30 32 54" stroke="#2d6a4f" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M32 28 C32 28 22 24 18 30" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M32 38 C32 38 42 34 46 40" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round" fill="none"/>
 </svg>
