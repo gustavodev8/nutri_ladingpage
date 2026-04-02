@@ -252,7 +252,7 @@ export const DEFAULT_CONTENT: SiteContent = {
       { q: "Preciso de pedido médico?", a: "Não é necessário pedido médico para consultar com nutricionista. Porém, se você tiver exames recentes, traga-os para a consulta — isso nos ajuda a fazer uma avaliação mais completa." },
       { q: "Quanto tempo dura a consulta?", a: "A primeira consulta dura em média 50 minutos, onde fazemos uma anamnese completa. As consultas de retorno duram aproximadamente 30 minutos." },
       { q: "O plano alimentar é personalizado?", a: "Sim! Cada plano alimentar é 100% personalizado de acordo com seus objetivos, preferências alimentares, rotina, condições de saúde e orçamento. Nada de dietas genéricas." },
-      { q: "Aceita convênio?", a: "Atualmente não trabalhamos com convênios. Porém, muitos planos de saúde oferecem reembolso para consultas com nutricionista. Emitimos nota fiscal para que você solicite o reembolso." },
+      { q: "Aceita convênio?", a: "Não. Atendemos somente particular." },
       { q: "Como funciona o acompanhamento por WhatsApp?", a: "Nos pacotes mensal e trimestral, você tem acesso ao suporte por WhatsApp para tirar dúvidas do dia a dia, enviar fotos de refeições e receber orientações rápidas." },
     ],
   },
