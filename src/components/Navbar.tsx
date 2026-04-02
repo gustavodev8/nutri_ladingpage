@@ -14,7 +14,7 @@ const NAV_LINKS = [
 ];
 
 const Navbar = () => {
-  const { content, whatsappUrl } = useContent();
+  const { content } = useContent();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,8 +34,6 @@ const Navbar = () => {
     const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
     window.scrollTo({ top, behavior: "smooth" });
   };
-
-  const agendarUrl = whatsappUrl("Olá! Gostaria de agendar uma consulta.");
 
   return (
     <header
@@ -62,10 +60,8 @@ const Navbar = () => {
               {l.label}
             </a>
           ))}
-          <Button asChild size="sm" className="bg-primary hover:bg-primary/90">
-            <a href={agendarUrl} target="_blank" rel="noopener noreferrer">
-              Agendar Consulta
-            </a>
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={(e) => scrollTo(e as unknown as React.MouseEvent<HTMLAnchorElement>, "#consultas")}>
+            Agendar Consulta
           </Button>
         </nav>
 
@@ -91,10 +87,8 @@ const Navbar = () => {
                 {l.label}
               </a>
             ))}
-            <Button asChild className="mt-2 bg-primary hover:bg-primary/90">
-              <a href={agendarUrl} target="_blank" rel="noopener noreferrer">
-                Agendar Consulta
-              </a>
+            <Button className="mt-2 bg-primary hover:bg-primary/90" onClick={(e) => scrollTo(e as unknown as React.MouseEvent<HTMLAnchorElement>, "#consultas")}>
+              Agendar Consulta
             </Button>
           </nav>
         </div>
