@@ -1,13 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, ArrowRight, MessageCircle } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
 
 const DigitalProductsSection = () => {
-  const { content, whatsappUrl } = useContent();
+  const { content } = useContent();
   const { produtosDigitais } = content;
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
 
@@ -59,29 +59,16 @@ const DigitalProductsSection = () => {
                 <h3 className="font-bold text-base text-foreground">{item.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.desc}</p>
                 <p className="text-2xl font-extrabold text-primary">{item.price}</p>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    asChild
-                    variant={item.badge ? "default" : "outline"}
-                    className="rounded-full gap-2"
-                  >
-                    <Link to={`/produto/${i}`}>
-                      Saiba mais
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full gap-1.5 text-primary hover:bg-primary/5 text-xs"
-                  >
-                    <a href={whatsappUrl(item.whatsappMessage)} target="_blank" rel="noopener noreferrer">
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      Comprar pelo WhatsApp
-                    </a>
-                  </Button>
-                </div>
+                <Button
+                  asChild
+                  variant={item.badge ? "default" : "outline"}
+                  className="rounded-full gap-2"
+                >
+                  <Link to={`/produto/${i}`}>
+                    Saiba mais
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ))}
