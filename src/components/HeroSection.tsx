@@ -1,10 +1,12 @@
 import { Calendar, Video } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useContent } from "@/contexts/ContentContext";
 
 const HeroSection = () => {
   const { content, whatsappUrl } = useContent();
   const { hero, identity } = content;
+  const navigate = useNavigate();
 
   return (
     <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
@@ -47,7 +49,7 @@ const HeroSection = () => {
               <Button
                 size="lg"
                 className="bg-primary hover:bg-primary/90 text-base sm:text-lg px-6 sm:px-8 shadow-lg"
-                onClick={() => document.getElementById("consultas")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => navigate("/consultas")}
               >
                 <Video className="mr-2 h-5 w-5" />
                 {hero.cta1Text}
@@ -56,7 +58,7 @@ const HeroSection = () => {
                 size="lg"
                 variant="outline"
                 className="text-base sm:text-lg px-6 sm:px-8 border-primary text-primary hover:bg-primary/5"
-                onClick={() => document.getElementById("consultas")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => navigate("/consultas")}
               >
                 <Calendar className="mr-2 h-5 w-5" />
                 {hero.cta2Text}
