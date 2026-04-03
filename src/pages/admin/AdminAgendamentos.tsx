@@ -3,7 +3,8 @@ import {
   CalendarCheck, Loader2, Mail, Phone, CheckCircle2, XCircle,
   CalendarClock, X, ChevronRight, Globe, MapPin, User,
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
-  UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight
+  UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
+  Send, Paperclip, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,22 @@ const calcBMI = (w: number, h: number) => {
   return bmi.toFixed(1);
 };
 
+const MAX_ATTACH_BYTES = 10 * 1024 * 1024; // 10 MB total
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+};
+
 interface ClinicalNotes {
   birthDate?: string; sex?: string; goal?: string; allergies?: string;
   restrictions?: string; healthConditions?: string; medications?: string;
@@ -80,6 +97,14 @@ const AdminAgendamentos = () => {
   const [newTime, setNewTime]             = useState("");
   const [rescheduleMsg, setRescheduleMsg] = useState("");
   const [rescheduling, setRescheduling]   = useState(false);
+
+  // Send material modal
+  interface AttachmentFile { name: string; base64: string; size: number; type: string }
+  const [sendTarget, setSendTarget]         = useState<Booking | null>(null);
+  const [sendSubject, setSendSubject]       = useState("");
+  const [sendBody, setSendBody]             = useState("");
+  const [sendFiles, setSendFiles]           = useState<AttachmentFile[]>([]);
+  const [sending, setSending]               = useState(false);
 
   // Completion modal
   const [completing, setCompleting]         = useState<Booking | null>(null);
@@ -165,6 +190,69 @@ const AdminAgendamentos = () => {
   const openDetail = (groupId: string) => {
     setDetail(groupId);
     loadRecords(groupId);
+  };
+
+  const openSendMaterial = (booking: Booking) => {
+    setSendTarget(booking);
+    setSendSubject("");
+    setSendBody("");
+    setSendFiles([]);
+  };
+
+  const handleAddFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = ""; // reset input so same file can be re-added
+    if (!picked.length) return;
+
+    // Validate total size
+    const current = sendFiles.reduce((acc, f) => acc + f.size, 0);
+    const incoming = picked.reduce((acc, f) => acc + f.size, 0);
+    if (current + incoming > MAX_ATTACH_BYTES) {
+      toast({ title: "Tamanho total ultrapassa 10 MB", variant: "destructive" });
+      return;
+    }
+
+    const converted = await Promise.all(
+      picked.map(async (file) => ({
+        name: file.name,
+        base64: await fileToBase64(file),
+        size: file.size,
+        type: file.type,
+      }))
+    );
+    setSendFiles(prev => [...prev, ...converted]);
+  };
+
+  const handleSendMaterial = async () => {
+    if (!sendTarget || !sendSubject.trim() || !sendBody.trim()) {
+      toast({ title: "Preencha assunto e mensagem", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-material`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          to: sendTarget.client_email,
+          client_name: sendTarget.client_name,
+          subject: sendSubject.trim(),
+          body: sendBody.trim(),
+          attachments: sendFiles.map(f => ({ filename: f.name, content: f.base64 })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao enviar");
+      toast({ title: "Email enviado!", description: `Para ${sendTarget.client_email}` });
+      setSendTarget(null);
+    } catch (e) {
+      toast({ title: "Erro ao enviar email", description: e instanceof Error ? e.message : "Tente novamente", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
   };
 
   const openReschedule = (session: Booking) => {
@@ -345,12 +433,21 @@ const AdminAgendamentos = () => {
                   {detailFirst.type === "online" ? "Online" : "Presencial"}
                 </p>
               </div>
-              <button
-                onClick={() => setDetail(null)}
-                className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Enviar material
+                </button>
+                <button
+                  onClick={() => setDetail(null)}
+                  className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Two-column body */}
@@ -682,6 +779,126 @@ const AdminAgendamentos = () => {
               <Button className="flex-1 rounded-md gap-2" onClick={handleSaveRecord} disabled={savingRecord}>
                 {savingRecord ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
                 Salvar prontuário
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Send Material Modal ── */}
+      {sendTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-card rounded-lg border border-border shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-2">
+                <Send className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold text-sm">Enviar material ao paciente</h2>
+              </div>
+              <button
+                onClick={() => setSendTarget(null)}
+                className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Patient strip */}
+            <div className="px-6 py-3 bg-muted/20 border-b border-border shrink-0">
+              <p className="text-sm font-medium text-foreground">{sendTarget.client_name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{sendTarget.client_email}</p>
+            </div>
+
+            {/* Form */}
+            <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+
+              {/* Subject */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Assunto</label>
+                <input
+                  type="text"
+                  value={sendSubject}
+                  onChange={e => setSendSubject(e.target.value)}
+                  placeholder="Ex: Seu protocolo alimentar personalizado"
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                />
+              </div>
+
+              {/* Body */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Mensagem</label>
+                <textarea
+                  value={sendBody}
+                  onChange={e => setSendBody(e.target.value)}
+                  rows={5}
+                  placeholder={`Olá, ${sendTarget.client_name.split(" ")[0]}!\n\nSegue em anexo o seu protocolo alimentar. Qualquer dúvida, estou à disposição.\n\nAbraços,`}
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40"
+                />
+              </div>
+
+              {/* Attachments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Anexos</label>
+                  {sendFiles.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {formatBytes(sendFiles.reduce((a, f) => a + f.size, 0))} / 10 MB
+                    </span>
+                  )}
+                </div>
+
+                {/* File list */}
+                {sendFiles.length > 0 && (
+                  <div className="border border-border rounded-md divide-y divide-border/60">
+                    {sendFiles.map((f, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card">
+                        <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">{f.name}</p>
+                          <p className="text-xs text-muted-foreground">{formatBytes(f.size)}</p>
+                        </div>
+                        <button
+                          onClick={() => setSendFiles(prev => prev.filter((_, idx) => idx !== i))}
+                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <label className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border hover:border-primary/50 hover:bg-muted/30 cursor-pointer transition-colors group">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                    Adicionar arquivo — PDF, DOCX, XLSX, imagem (máx. 10 MB total)
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.zip"
+                    onChange={handleAddFiles}
+                  />
+                </label>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-6 pb-5 pt-2 shrink-0 border-t border-border">
+              <Button variant="outline" className="flex-1 rounded-md" onClick={() => setSendTarget(null)} disabled={sending}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 rounded-md gap-2"
+                onClick={handleSendMaterial}
+                disabled={sending || !sendSubject.trim() || !sendBody.trim()}
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Enviar
               </Button>
             </div>
           </div>
