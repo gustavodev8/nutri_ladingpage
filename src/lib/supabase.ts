@@ -198,6 +198,20 @@ export async function updateBookingStatus(id: number, status: string, extra?: Re
   return !error;
 }
 
+/** Deleta bookings com status 'pending' criados há mais de 24h */
+export async function autoExpirePendingBookings(bookings: Booking[]): Promise<Booking[]> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const toExpire = bookings.filter(b => {
+    if (b.status !== 'pending') return false;
+    const created = new Date(b.created_at || 0);
+    return created < cutoff;
+  });
+  for (const b of toExpire) {
+    await supabase.from('bookings').delete().eq('id', b.id!);
+  }
+  return bookings.filter(b => !toExpire.some(e => e.id === b.id));
+}
+
 export async function autoCompleteBookings(bookings: Booking[]): Promise<Booking[]> {
   const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
   const toComplete = bookings.filter(b => {

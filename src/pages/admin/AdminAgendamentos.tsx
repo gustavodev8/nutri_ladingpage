@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  fetchBookings, updateBookingStatus, autoCompleteBookings,
+  fetchBookings, updateBookingStatus, autoCompleteBookings, autoExpirePendingBookings,
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords,
   type Booking, type ConsultationRecord
@@ -130,8 +130,9 @@ const AdminAgendamentos = () => {
 
   const load = async () => {
     setLoading(true);
-    const raw = await fetchBookings();
-    const updated = await autoCompleteBookings(raw);
+    const raw      = await fetchBookings();
+    const active   = await autoExpirePendingBookings(raw);
+    const updated  = await autoCompleteBookings(active);
     setBookings(updated);
     setLoading(false);
   };
