@@ -200,11 +200,14 @@ const AdminAgendamentos = () => {
         return;
       }
 
-      // 2. Marca sessão como concluída (sem o toast intermediário "Status atualizado!")
-      await updateBookingStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
-      setBookings(prev =>
-        prev.map(b => b.id === completing.id ? { ...b, status: "completed" } : b)
-      );
+      // 2. Marca sessão como concluída — checa o retorno
+      const statusOk = await updateBookingStatus(completing.id!, "completed", {
+        completed_at: new Date().toISOString(),
+      });
+      if (!statusOk) {
+        toast({ title: "Erro ao atualizar status da consulta", variant: "destructive" });
+        return;
+      }
 
       // 3. Se há data de retorno, cria novo agendamento
       let returnCreated = false;
@@ -227,11 +230,17 @@ const AdminAgendamentos = () => {
         returnCreated = await insertBooking(returnSession);
       }
 
-      // 4. Fecha modais, vai para aba Concluídos e recarrega lista
+      // 4. Atualiza estado local imediatamente, depois recarrega em background
+      const completingId = completing.id!;
+      setBookings(prev =>
+        prev.map(b => b.id === completingId ? { ...b, status: "completed" } : b)
+      );
       setCompleting(null);
       setDetail(null);
       setFilter("completed");
-      await load();
+
+      // load() sem await — não bloqueia a navegação
+      load();
 
       toast({
         title: "Consulta concluída!",
