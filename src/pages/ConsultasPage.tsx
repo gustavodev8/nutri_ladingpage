@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MessageCircle, CheckCircle2, CalendarCheck, ClipboardList, TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  MessageCircle, CheckCircle2, CalendarCheck, ClipboardList, TrendingUp,
+  Check, X, QrCode, CreditCard,
+} from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
@@ -28,6 +30,19 @@ const STEPS = [
     title: "4. Acompanhamento contínuo",
     desc: "A cada 21 dias revisamos e ajustamos o protocolo. Resultados reais vêm da continuidade — não de uma única consulta.",
   },
+];
+
+// Feature matrix por plano — índice alinhado com loja.plans do ContentContext
+const PLAN_FEATURES: { label: string; included: boolean[] }[] = [
+  { label: "Cardápio 100% personalizado",    included: [true,  true,  true,  true,  true]  },
+  { label: "Avaliação de bioimpedância",      included: [false, true,  true,  true,  true]  },
+  { label: "Consulta por videochamada",       included: [true,  false, true,  true,  true]  },
+  { label: "Consulta presencial 1h",          included: [false, true,  true,  true,  true]  },
+  { label: "Acesso ao grupo VIP",             included: [true,  true,  true,  true,  true]  },
+  { label: "Treino com personal trainer",     included: [false, false, true,  true,  true]  },
+  { label: "E-books gratuitos",               included: [false, false, true,  true,  true]  },
+  { label: "Suporte de psicólogo",            included: [false, false, false, true,  true]  },
+  { label: "Plataforma de cursos gratuita",   included: [false, false, false, false, true]  },
 ];
 
 const ConsultasPage = () => {
@@ -61,7 +76,7 @@ const ConsultasPage = () => {
         </div>
       </section>
 
-      {/* Planos */}
+      {/* Planos — estilo Smart Fit */}
       <section className="py-16 lg:py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -74,43 +89,120 @@ const ConsultasPage = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {loja.plans.map((plan, i) => (
-              <div
-                key={i}
-                className={`relative rounded-2xl border p-6 flex flex-col gap-4 transition-all hover:shadow-lg hover:-translate-y-1 duration-300 ${
-                  plan.popular
-                    ? "border-primary shadow-lg ring-2 ring-primary/20 bg-card"
-                    : "border-border/60 bg-card"
-                }`}
-              >
-                {plan.badge && (
-                  <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
-                    {plan.badge}
-                  </span>
-                )}
-                <div>
-                  <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{plan.desc}</p>
+            {loja.plans.map((plan, i) => {
+              const isDark = plan.popular;
+              return (
+                <div
+                  key={i}
+                  className={`relative rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 overflow-hidden
+                    ${isDark
+                      ? "bg-[#0f2318] text-white shadow-2xl shadow-primary/20"
+                      : "bg-card border border-border/70 shadow-sm hover:shadow-md"
+                    }`}
+                >
+                  {/* Badge no topo */}
+                  {plan.badge && (
+                    <div className={`px-6 pt-4 pb-0`}>
+                      <span className={`inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
+                        ${isDark ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                        {plan.badge}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Corpo do card */}
+                  <div className="p-6 flex flex-col flex-1 gap-5">
+                    {/* Nome e descrição */}
+                    <div>
+                      <h3 className={`font-bold text-xl ${isDark ? "text-white" : "text-foreground"}`}>
+                        {plan.name}
+                      </h3>
+                      <p className={`text-sm mt-1 leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+                        {plan.desc}
+                      </p>
+                    </div>
+
+                    {/* Preço */}
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-white/40" : "text-muted-foreground/70"}`}>
+                        A PARTIR DE
+                      </p>
+                      <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
+                        {plan.price}
+                      </p>
+                      <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                        {plan.sessionCount > 1 ? `${plan.sessionCount} encontros` : "consulta avulsa"}
+                      </p>
+                    </div>
+
+                    {/* Botão */}
+                    <Link
+                      to={`/agendar/${i}`}
+                      className={`w-full py-3 rounded-full text-sm font-bold text-center transition-all duration-200
+                        ${isDark
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-foreground text-background hover:bg-foreground/90"
+                        }`}
+                    >
+                      Contratar agora
+                    </Link>
+
+                    {/* Link WhatsApp */}
+                    <a
+                      href={whatsappUrl(plan.whatsappMessage)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-xs text-center -mt-2 hover:underline ${isDark ? "text-white/50 hover:text-white/80" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Tirar dúvidas no WhatsApp →
+                    </a>
+
+                    {/* Divisória */}
+                    <hr className={isDark ? "border-white/10" : "border-border/60"} />
+
+                    {/* Features */}
+                    <ul className="flex flex-col gap-3">
+                      {PLAN_FEATURES.map(({ label, included }) => {
+                        const ok = included[i] ?? false;
+                        return (
+                          <li key={label} className="flex items-center gap-2.5">
+                            {ok ? (
+                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-primary/20" : "bg-primary/10"}`}>
+                                <Check className="w-3 h-3 text-primary" strokeWidth={3} />
+                              </span>
+                            ) : (
+                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-muted"}`}>
+                                <X className={`w-3 h-3 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`} strokeWidth={3} />
+                              </span>
+                            )}
+                            <span className={`text-sm leading-tight
+                              ${!ok
+                                ? isDark ? "text-white/25 line-through" : "text-muted-foreground/40 line-through"
+                                : isDark ? "text-white/80" : "text-foreground/80"
+                              }`}>
+                              {label}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
-                <p className="text-3xl font-extrabold text-primary">{plan.price}</p>
-                <p className="text-xs text-muted-foreground -mt-3">{plan.sessionCount > 1 ? `${plan.sessionCount} encontros` : "consulta avulsa"}</p>
-                <Button
-                  asChild
-                  variant={plan.popular ? "default" : "outline"}
-                  className="rounded-full mt-auto"
-                >
-                  <Link to={`/agendar/${i}`}>Agendar agora</Link>
-                </Button>
-                <a
-                  href={whatsappUrl(plan.whatsappMessage)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-center text-primary hover:underline"
-                >
-                  Tirar dúvidas no WhatsApp →
-                </a>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          {/* Formas de pagamento */}
+          <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-primary" /> Pix
+            </span>
+            <span className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" /> Cartão de crédito/débito
+            </span>
+            <span className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-primary" /> Link de pagamento
+            </span>
           </div>
         </div>
       </section>
