@@ -408,8 +408,8 @@ const AdminAgendamentos = () => {
 
   // Counts
   const counts: Record<FilterTab, number> = {
-    confirmed: bookings.filter(b => b.status === "confirmed" && (b.session_number ?? 1) === 1).length,
-    pending:   bookings.filter(b => b.status === "pending"   && (b.session_number ?? 1) === 1).length,
+    confirmed: bookings.filter(b => b.status === "confirmed").length,
+    pending:   bookings.filter(b => b.status === "pending").length,
     retornos:  bookings.filter(b => (b.session_number ?? 1) > 1).length,
     completed: bookings.filter(b => b.status === "completed").length,
     no_show:   bookings.filter(b => b.status === "no_show").length,
@@ -427,7 +427,7 @@ const AdminAgendamentos = () => {
 
   const filtered = filter === "retornos"
     ? bookings.filter(b => (b.session_number ?? 1) > 1)
-    : bookings.filter(b => b.status === filter && (b.session_number ?? 1) === 1);
+    : bookings.filter(b => b.status === filter);
   const groups: Record<string, Booking[]> = {};
   filtered.forEach(b => {
     if (!groups[b.booking_group_id]) groups[b.booking_group_id] = [];
