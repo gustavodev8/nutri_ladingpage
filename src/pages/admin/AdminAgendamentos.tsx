@@ -81,7 +81,7 @@ const FOUND_LABELS: Record<string, string> = {
   instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
 };
 
-type FilterTab = "confirmed" | "pending" | "completed" | "no_show" | "cancelled";
+type FilterTab = "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
 
 const AdminAgendamentos = () => {
   const [bookings, setBookings]   = useState<Booking[]>([]);
@@ -408,8 +408,9 @@ const AdminAgendamentos = () => {
 
   // Counts
   const counts: Record<FilterTab, number> = {
-    confirmed: bookings.filter(b => b.status === "confirmed").length,
-    pending:   bookings.filter(b => b.status === "pending").length,
+    confirmed: bookings.filter(b => b.status === "confirmed" && (b.session_number ?? 1) === 1).length,
+    pending:   bookings.filter(b => b.status === "pending"   && (b.session_number ?? 1) === 1).length,
+    retornos:  bookings.filter(b => (b.session_number ?? 1) > 1).length,
     completed: bookings.filter(b => b.status === "completed").length,
     no_show:   bookings.filter(b => b.status === "no_show").length,
     cancelled: bookings.filter(b => b.status === "cancelled").length,
@@ -418,12 +419,15 @@ const AdminAgendamentos = () => {
   const TABS: { id: FilterTab; label: string }[] = [
     { id: "confirmed", label: "Confirmados" },
     { id: "pending",   label: "Pendentes" },
+    { id: "retornos",  label: "Retornos" },
     { id: "completed", label: "Concluídos" },
     { id: "no_show",   label: "Não compareceu" },
     { id: "cancelled", label: "Cancelados" },
   ];
 
-  const filtered = bookings.filter(b => b.status === filter);
+  const filtered = filter === "retornos"
+    ? bookings.filter(b => (b.session_number ?? 1) > 1)
+    : bookings.filter(b => b.status === filter && (b.session_number ?? 1) === 1);
   const groups: Record<string, Booking[]> = {};
   filtered.forEach(b => {
     if (!groups[b.booking_group_id]) groups[b.booking_group_id] = [];
