@@ -235,6 +235,7 @@ const AdminAgendamentos = () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           to: sendTarget.client_email,
@@ -244,8 +245,15 @@ const AdminAgendamentos = () => {
           attachments: sendFiles.map(f => ({ filename: f.name, content: f.base64 })),
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao enviar");
+
+      let data: Record<string, string> = {};
+      try { data = await res.json(); } catch { /* empty body */ }
+
+      if (!res.ok) {
+        const msg = data.error || data.message || data.msg || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
       toast({ title: "Email enviado!", description: `Para ${sendTarget.client_email}` });
       setSendTarget(null);
     } catch (e) {
