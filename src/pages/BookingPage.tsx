@@ -111,7 +111,7 @@ const BookingPage = () => {
 
   // Load MP SDK when reaching payment step
   useEffect(() => {
-    if (step !== 3) return;
+    if (step !== 4) return;
     if (document.getElementById("mp-sdk")) return;
     const script = document.createElement("script");
     script.id = "mp-sdk";
@@ -121,7 +121,7 @@ const BookingPage = () => {
 
   // Render Payment Brick when card tab active
   useEffect(() => {
-    if (step !== 3 || payTab !== "card" || stage !== "idle") return;
+    if (step !== 4 || payTab !== "card" || stage !== "idle") return;
     if (brickRendered.current) return;
     if (!MP_PUBLIC_KEY) return;             // guard: MP not configured
     if (!plan.priceAmount || plan.priceAmount <= 0) return; // guard: no amount
