@@ -3,7 +3,7 @@ import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
-  Copy, Check, X, QrCode, CreditCard
+  Copy, Check, X, QrCode, CreditCard, MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +123,7 @@ const BookingPage = () => {
   useEffect(() => {
     if (step !== 3 || payTab !== "card" || stage !== "idle") return;
     if (brickRendered.current) return;
+    if (!MP_PUBLIC_KEY) return;             // guard: MP not configured
     if (!plan.priceAmount || plan.priceAmount <= 0) return; // guard: no amount
 
     const tryRender = (attempts = 0) => {
@@ -745,7 +746,29 @@ const BookingPage = () => {
                   {/* Card tab */}
                   {payTab === "card" && (
                     <div>
-                      {(!plan.priceAmount || plan.priceAmount <= 0) ? (
+                      {/* MP não configurado → redirecionar para WhatsApp */}
+                      {!MP_PUBLIC_KEY ? (
+                        <div className="bg-muted/40 border border-border rounded-2xl p-5 space-y-3 text-center">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm text-foreground">Pagamento via link de cartão</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              Enviaremos um link de pagamento seguro diretamente no WhatsApp para você pagar com cartão de crédito em até 12×.
+                            </p>
+                          </div>
+                          <a
+                            href={whatsappUrl(`Olá Dr. Fillipe! Gostaria de pagar o ${plan.name} (${plan.price}) com cartão de crédito. Pode me enviar o link de pagamento?`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Solicitar link de pagamento
+                          </a>
+                        </div>
+                      ) : (!plan.priceAmount || plan.priceAmount <= 0) ? (
                         <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3 text-center">
                           Pagamento por cartão não configurado para este plano. Use o Pix ou entre em contato.
                         </p>
