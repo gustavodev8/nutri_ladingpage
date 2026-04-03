@@ -4,12 +4,13 @@ import {
   CalendarClock, X, ChevronRight, Globe, MapPin, User,
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
   UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
-  Send, Paperclip, Trash2,
+  Send, Paperclip, Trash2, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   fetchBookings, updateBookingStatus, autoCompleteBookings,
-  insertBooking, insertConsultationRecord, fetchConsultationRecords,
+  insertBooking, insertConsultationRecord, updateConsultationRecord,
+  deleteConsultationRecord, fetchConsultationRecords,
   type Booking, type ConsultationRecord
 } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
@@ -90,6 +91,16 @@ const AdminAgendamentos = () => {
   const [detail, setDetail]       = useState<string | null>(null);
   const [records, setRecords]     = useState<ConsultationRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
+
+  // Prontuário — edição / exclusão inline
+  const [editingRecordId, setEditingRecordId]   = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId]   = useState<number | null>(null);
+  const [editNotes, setEditNotes]               = useState("");
+  const [editNextSteps, setEditNextSteps]       = useState("");
+  const [editNextReturn, setEditNextReturn]     = useState("");
+  const [editWeight, setEditWeight]             = useState("");
+  const [editHeight, setEditHeight]             = useState("");
+  const [savingEdit, setSavingEdit]             = useState(false);
 
   // Reschedule
   const [reschedule, setReschedule]       = useState<Booking | null>(null);
@@ -238,6 +249,48 @@ const AdminAgendamentos = () => {
     setLoadingRecords(true);
     setRecords(await fetchConsultationRecords(groupId));
     setLoadingRecords(false);
+  };
+
+  const openEditRecord = (rec: ConsultationRecord) => {
+    setEditingRecordId(rec.id!);
+    setConfirmDeleteId(null);
+    setEditNotes(rec.notes || "");
+    setEditNextSteps(rec.next_steps || "");
+    setEditNextReturn(rec.next_return_date || "");
+    setEditWeight(rec.weight ? String(rec.weight) : "");
+    setEditHeight(rec.height ? String(rec.height) : "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRecordId || !detail) return;
+    setSavingEdit(true);
+    const ok = await updateConsultationRecord(editingRecordId, {
+      notes: editNotes.trim() || null,
+      next_steps: editNextSteps.trim() || null,
+      next_return_date: editNextReturn || null,
+      weight: editWeight ? parseFloat(editWeight) : null,
+      height: editHeight ? parseFloat(editHeight) : null,
+    });
+    if (ok) {
+      toast({ title: "Registro atualizado." });
+      setEditingRecordId(null);
+      await loadRecords(detail);
+    } else {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+    setSavingEdit(false);
+  };
+
+  const handleDeleteRecord = async (id: number) => {
+    if (!detail) return;
+    const ok = await deleteConsultationRecord(id);
+    if (ok) {
+      toast({ title: "Registro excluído." });
+      setConfirmDeleteId(null);
+      await loadRecords(detail);
+    } else {
+      toast({ title: "Erro ao excluir", variant: "destructive" });
+    }
   };
 
   const openDetail = (groupId: string) => {
@@ -710,9 +763,13 @@ const AdminAgendamentos = () => {
                     <div className="space-y-3">
                       {records.map(rec => {
                         const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
+                        const isEditing = editingRecordId === rec.id;
+                        const isConfirmingDelete = confirmDeleteId === rec.id;
+
                         return (
                           <div key={rec.id} className="border border-border rounded-md overflow-hidden">
-                            {/* Record header row */}
+
+                            {/* Record header */}
                             <div className="px-4 py-2.5 bg-muted/30 border-b border-border flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-semibold text-foreground">
@@ -727,30 +784,142 @@ const AdminAgendamentos = () => {
                                   {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                {rec.weight && <span className="flex items-center gap-1"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
-                                {rec.height && <span className="flex items-center gap-1"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
-                                {bmi && <span className="font-semibold text-foreground">IMC {bmi}</span>}
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-1">
+                                {!isEditing && !isConfirmingDelete && (
+                                  <>
+                                    {rec.weight && <span className="flex items-center gap-1 text-xs text-muted-foreground mr-2"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
+                                    {rec.height && <span className="flex items-center gap-1 text-xs text-muted-foreground mr-2"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
+                                    {bmi && <span className="text-xs font-semibold text-foreground mr-3">IMC {bmi}</span>}
+                                    <button
+                                      onClick={() => openEditRecord(rec)}
+                                      className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => { setConfirmDeleteId(rec.id!); setEditingRecordId(null); }}
+                                      className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                )}
+                                {isConfirmingDelete && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Excluir registro?</span>
+                                    <button
+                                      onClick={() => handleDeleteRecord(rec.id!)}
+                                      className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors"
+                                    >
+                                      Sim
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      Não
+                                    </button>
+                                  </div>
+                                )}
+                                {isEditing && (
+                                  <span className="text-xs text-primary font-medium">Editando…</span>
+                                )}
                               </div>
                             </div>
-                            {/* Record body */}
-                            <div className="px-4 py-3 space-y-2.5 bg-card">
-                              {rec.notes && (
-                                <p className="text-sm text-foreground/90 leading-relaxed">{rec.notes}</p>
-                              )}
-                              {rec.next_steps && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">Próximos passos</p>
-                                  <p className="text-sm text-foreground/80">{rec.next_steps}</p>
+
+                            {/* Record body — view mode */}
+                            {!isEditing && !isConfirmingDelete && (
+                              <div className="px-4 py-3 space-y-2.5 bg-card">
+                                {rec.notes && (
+                                  <p className="text-sm text-foreground/90 leading-relaxed">{rec.notes}</p>
+                                )}
+                                {rec.next_steps && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">Próximos passos</p>
+                                    <p className="text-sm text-foreground/80">{rec.next_steps}</p>
+                                  </div>
+                                )}
+                                {rec.next_return_date && (
+                                  <p className="text-xs text-primary font-medium flex items-center gap-1">
+                                    <ArrowRight className="h-3 w-3" />
+                                    Retorno: {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                                  </p>
+                                )}
+                                {!rec.notes && !rec.next_steps && !rec.next_return_date && (
+                                  <p className="text-xs text-muted-foreground italic">Sem observações.</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Record body — edit mode */}
+                            {isEditing && (
+                              <div className="px-4 py-4 space-y-3 bg-card">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground flex items-center gap-1"><Scale className="h-3 w-3" />Peso (kg)</label>
+                                    <input
+                                      type="number" step="0.1" value={editWeight}
+                                      onChange={e => setEditWeight(e.target.value)}
+                                      placeholder="Ex: 72.5"
+                                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Altura (cm)</label>
+                                    <input
+                                      type="number" step="0.1" value={editHeight}
+                                      onChange={e => setEditHeight(e.target.value)}
+                                      placeholder="Ex: 165"
+                                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                    />
+                                  </div>
                                 </div>
-                              )}
-                              {rec.next_return_date && (
-                                <p className="text-xs text-primary font-medium flex items-center gap-1">
-                                  <ArrowRight className="h-3 w-3" />
-                                  Retorno: {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                                </p>
-                              )}
-                            </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">Observações</label>
+                                  <textarea
+                                    value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3}
+                                    className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40"
+                                    placeholder="Observações da consulta…"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">Próximos passos</label>
+                                  <textarea
+                                    value={editNextSteps} onChange={e => setEditNextSteps(e.target.value)} rows={2}
+                                    className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40"
+                                    placeholder="Encaminhamentos, plano enviado…"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">Próximo retorno</label>
+                                  <input
+                                    type="date" value={editNextReturn}
+                                    onChange={e => setEditNextReturn(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                  />
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <Button
+                                    variant="outline" size="sm" className="flex-1 rounded-md text-xs h-8"
+                                    onClick={() => setEditingRecordId(null)} disabled={savingEdit}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm" className="flex-1 rounded-md text-xs h-8 gap-1.5"
+                                    onClick={handleSaveEdit} disabled={savingEdit}
+                                  >
+                                    {savingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                    Salvar
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
                           </div>
                         );
                       })}

@@ -234,6 +234,27 @@ export async function insertConsultationRecord(record: ConsultationRecord): Prom
   return true;
 }
 
+export async function updateConsultationRecord(
+  id: number,
+  updates: Partial<ConsultationRecord>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('consultation_records')
+    .update(updates)
+    .eq('id', id);
+  if (error) { console.error('updateConsultationRecord error:', error); return false; }
+  return true;
+}
+
+export async function deleteConsultationRecord(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('consultation_records')
+    .delete()
+    .eq('id', id);
+  if (error) { console.error('deleteConsultationRecord error:', error); return false; }
+  return true;
+}
+
 export async function fetchConsultationRecords(booking_group_id: string): Promise<ConsultationRecord[]> {
   const { data, error } = await supabase
     .from('consultation_records')
