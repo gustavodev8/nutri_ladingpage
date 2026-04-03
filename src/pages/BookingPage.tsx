@@ -179,7 +179,22 @@ const BookingPage = () => {
                 if (!saved) toast({ title: "Pagamento aprovado, mas erro ao salvar agendamento. Entre em contato.", variant: "destructive" });
                 setStage("approved");
               } else {
-                throw new Error(data.error || "Pagamento não aprovado");
+                // Traduz status_detail do MP para mensagem amigável
+                const detailMessages: Record<string, string> = {
+                  cc_rejected_insufficient_amount:   "Saldo insuficiente no cartão.",
+                  cc_rejected_bad_filled_card_number:"Número do cartão incorreto.",
+                  cc_rejected_bad_filled_date:       "Data de vencimento incorreta.",
+                  cc_rejected_bad_filled_security_code: "Código de segurança incorreto.",
+                  cc_rejected_call_for_authorize:    "Ligue para o banco para autorizar.",
+                  cc_rejected_high_risk:             "Transação recusada por segurança. Tente outro cartão.",
+                  rejected_by_bank:                  "Recusado pelo banco. Tente outro cartão.",
+                  cc_rejected_card_disabled:         "Cartão desativado. Entre em contato com o banco.",
+                  cc_rejected_duplicated_payment:    "Pagamento duplicado detectado.",
+                  pending_waiting_payment:           "Pagamento pendente. Aguarde a confirmação.",
+                };
+                const detail = data.status_detail as string | undefined;
+                const friendlyMsg = (detail && detailMessages[detail]) || data.error || `Pagamento não aprovado${detail ? ` (${detail})` : ""}.`;
+                throw new Error(friendlyMsg);
               }
             } catch (e) {
               const msg = e instanceof Error ? e.message : "Erro no pagamento";
