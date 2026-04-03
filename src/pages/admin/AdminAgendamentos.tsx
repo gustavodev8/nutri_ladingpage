@@ -200,10 +200,8 @@ const AdminAgendamentos = () => {
         return;
       }
 
-      // 2. Marca sessão como concluída — checa o retorno
-      const statusOk = await updateBookingStatus(completing.id!, "completed", {
-        completed_at: new Date().toISOString(),
-      });
+      // 2. Marca sessão como concluída — sem completed_at (coluna não existe no banco)
+      const statusOk = await updateBookingStatus(completing.id!, "completed");
       if (!statusOk) {
         toast({ title: "Erro ao atualizar status da consulta", variant: "destructive" });
         return;
