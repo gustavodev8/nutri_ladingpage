@@ -330,207 +330,267 @@ const AdminAgendamentos = () => {
 
       {/* ── Detail Modal ── */}
       {detail && detailFirst && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setDetail(null)}>
-          <div className="w-full max-w-2xl bg-background rounded-2xl border border-border shadow-2xl overflow-y-auto flex flex-col max-h-[90vh]"
-            onClick={e => e.stopPropagation()}>
-
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-background z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">{initials(detailFirst.client_name)}</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">{detailFirst.client_name}</p>
-                  <p className="text-xs text-muted-foreground">{detailFirst.plan_name}</p>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDetail(null)}>
+          <div
+            className="w-full max-w-3xl bg-background rounded-lg border border-border shadow-2xl flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="font-semibold text-base text-foreground leading-none">{detailFirst.client_name}</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {detailFirst.plan_name}
+                  <span className="mx-1.5 text-border">·</span>
+                  {detailFirst.type === "online" ? "Online" : "Presencial"}
+                </p>
               </div>
-              <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+              <button
+                onClick={() => setDetail(null)}
+                className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 px-6 py-5 space-y-6">
+            {/* Two-column body */}
+            <div className="flex flex-1 min-h-0 divide-x divide-border">
 
-              {/* Contact */}
-              <section>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Contato</p>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2.5 text-sm"><Mail className="h-3.5 w-3.5 text-muted-foreground" />{detailFirst.client_email}</div>
-                  {detailFirst.client_phone && <div className="flex items-center gap-2.5 text-sm"><Phone className="h-3.5 w-3.5 text-muted-foreground" />{detailFirst.client_phone}</div>}
-                  {detailNotes.birthDate && (
-                    <div className="flex items-center gap-2.5 text-sm">
-                      <Cake className="h-3.5 w-3.5 text-muted-foreground" />
-                      {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
-                      {detailNotes.sex && <span className="text-muted-foreground">· {detailNotes.sex}</span>}
+              {/* ── Left: patient info ── */}
+              <div className="w-60 shrink-0 overflow-y-auto p-5 space-y-5">
+
+                {/* Contact */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2.5">Paciente</p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 text-sm text-foreground/80">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                      <span className="break-all leading-snug">{detailFirst.client_email}</span>
                     </div>
-                  )}
-                </div>
-              </section>
-
-              {/* Clinical info */}
-              {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies || detailNotes.healthConditions || detailNotes.medications) && (
-                <section>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Informações clínicas</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {detailNotes.goal && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Target className="h-3 w-3" />Objetivo</p>
-                        <p className="text-sm font-medium">{GOAL_LABELS[detailNotes.goal] || detailNotes.goal}</p>
+                    {detailFirst.client_phone && (
+                      <div className="flex items-center gap-2 text-sm text-foreground/80">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {detailFirst.client_phone}
                       </div>
                     )}
-                    {detailNotes.restrictions && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Salad className="h-3 w-3" />Restrições</p>
-                        <p className="text-sm font-medium">{RESTRICT_LABELS[detailNotes.restrictions] || detailNotes.restrictions}</p>
-                      </div>
-                    )}
-                    {detailNotes.allergies && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><HelpCircle className="h-3 w-3" />Alergias</p>
-                        <p className="text-sm font-medium">{detailNotes.allergies}</p>
-                      </div>
-                    )}
-                    {detailNotes.healthConditions && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Heart className="h-3 w-3" />Condições de saúde</p>
-                        <p className="text-sm font-medium">{detailNotes.healthConditions}</p>
-                      </div>
-                    )}
-                    {detailNotes.medications && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><Pill className="h-3 w-3" />Medicamentos</p>
-                        <p className="text-sm font-medium">{detailNotes.medications}</p>
-                      </div>
-                    )}
-                    {detailNotes.hadNutritionist && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><User className="h-3 w-3" />Acomp. anterior</p>
-                        <p className="text-sm font-medium">{detailNotes.hadNutritionist === "sim" ? "Sim" : "Não"}</p>
-                      </div>
-                    )}
-                    {detailNotes.howFound && (
-                      <div className="bg-muted/40 rounded-xl p-3">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><HelpCircle className="h-3 w-3" />Como nos encontrou</p>
-                        <p className="text-sm font-medium">{FOUND_LABELS[detailNotes.howFound] || detailNotes.howFound}</p>
+                    {detailNotes.birthDate && (
+                      <div className="flex items-center gap-2 text-sm text-foreground/80">
+                        <Cake className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                        {detailNotes.sex && <span className="text-muted-foreground">· {detailNotes.sex}</span>}
                       </div>
                     )}
                   </div>
-                </section>
-              )}
+                </div>
 
-              {/* Sessions */}
-              <section>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Sessões</p>
-                <div className="space-y-2">
-                  {detailGroup.map(session => (
-                    <div key={session.id} className="rounded-xl border border-border bg-card p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-muted px-2 py-0.5 rounded-lg text-muted-foreground font-medium">
-                            {session.session_number === 1 ? "Consulta" : `Retorno ${session.session_number - 1}`}
-                          </span>
-                          <StatusPill status={session.status || "pending"} />
+                {/* Clinical ficha */}
+                {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
+                  detailNotes.healthConditions || detailNotes.medications ||
+                  detailNotes.hadNutritionist || detailNotes.howFound) && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2.5">Ficha clínica</p>
+                    <dl className="space-y-3">
+                      {detailNotes.goal && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <Target className="h-3 w-3" />Objetivo
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">
+                            {GOAL_LABELS[detailNotes.goal] || detailNotes.goal}
+                          </dd>
                         </div>
-                      </div>
-                      <p className="text-sm font-medium">{formatDate(session.appointment_date)}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{(session.appointment_time || "").substring(0, 5)} · {session.type === "online" ? "Online" : "Presencial"}</p>
+                      )}
+                      {detailNotes.restrictions && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <Salad className="h-3 w-3" />Restrições
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">
+                            {RESTRICT_LABELS[detailNotes.restrictions] || detailNotes.restrictions}
+                          </dd>
+                        </div>
+                      )}
+                      {detailNotes.allergies && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <HelpCircle className="h-3 w-3" />Alergias
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">{detailNotes.allergies}</dd>
+                        </div>
+                      )}
+                      {detailNotes.healthConditions && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <Heart className="h-3 w-3" />Condições
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">{detailNotes.healthConditions}</dd>
+                        </div>
+                      )}
+                      {detailNotes.medications && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <Pill className="h-3 w-3" />Medicamentos
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">{detailNotes.medications}</dd>
+                        </div>
+                      )}
+                      {detailNotes.hadNutritionist && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <User className="h-3 w-3" />Acomp. anterior
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">
+                            {detailNotes.hadNutritionist === "sim" ? "Sim" : "Não"}
+                          </dd>
+                        </div>
+                      )}
+                      {detailNotes.howFound && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5">
+                            <HelpCircle className="h-3 w-3" />Como encontrou
+                          </dt>
+                          <dd className="text-sm font-medium text-foreground pl-4">
+                            {FOUND_LABELS[detailNotes.howFound] || detailNotes.howFound}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                )}
+              </div>
 
-                      <div className="flex gap-3 mt-3 pt-3 border-t border-border/50 flex-wrap">
+              {/* ── Right: sessions + prontuário ── */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-6">
+
+                {/* Sessions */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2.5">
+                    Sessões <span className="font-normal normal-case tracking-normal opacity-60">({detailGroup.length})</span>
+                  </p>
+                  <div className="border border-border rounded-md overflow-hidden divide-y divide-border/70">
+                    {detailGroup.map(session => (
+                      <div key={session.id} className="px-4 py-3 bg-card">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-semibold text-foreground shrink-0">
+                              {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
+                            </span>
+                            <StatusPill status={session.status || "pending"} />
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-medium text-foreground">{formatDate(session.appointment_date)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(session.appointment_time || "").substring(0, 5)}
+                              <span className="mx-1 opacity-40">·</span>
+                              {session.type === "online" ? "Online" : "Presencial"}
+                            </p>
+                          </div>
+                        </div>
+
                         {(session.status === "confirmed" || session.status === "pending") && (
-                          <>
-                            <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
-                              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
-                              <CalendarClock className="h-3.5 w-3.5" /> Realocar
+                          <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-border/40 flex-wrap">
+                            <button
+                              onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
+                              className="text-xs text-muted-foreground hover:text-blue-600 font-medium transition-colors"
+                            >
+                              Realocar
                             </button>
                             <button
                               onClick={() => handleChangeType(session)}
-                              className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-700 font-medium">
-                              {session.type === "online" ? <MapPin className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                              {session.type === "online" ? "→ Presencial" : "→ Online"}
+                              className="text-xs text-muted-foreground hover:text-violet-600 font-medium transition-colors"
+                            >
+                              → {session.type === "online" ? "Presencial" : "Online"}
                             </button>
                             <button
                               disabled={updating === session.id}
                               onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
-                              className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium disabled:opacity-50">
-                              <ClipboardList className="h-3.5 w-3.5" /> Concluir
+                              className="text-xs text-muted-foreground hover:text-emerald-600 font-medium transition-colors disabled:opacity-40"
+                            >
+                              Concluir
                             </button>
                             <button
                               disabled={updating === session.id}
                               onClick={() => handleStatus(session.id!, "no_show")}
-                              className="flex items-center gap-1.5 text-xs text-orange-500 hover:text-orange-600 font-medium disabled:opacity-50">
-                              <UserX className="h-3.5 w-3.5" /> Não compareceu
+                              className="text-xs text-muted-foreground hover:text-orange-500 font-medium transition-colors disabled:opacity-40"
+                            >
+                              Não compareceu
                             </button>
                             <button
                               disabled={updating === session.id}
                               onClick={() => handleStatus(session.id!, "cancelled")}
-                              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-medium disabled:opacity-50 ml-auto">
-                              <XCircle className="h-3.5 w-3.5" /> Cancelar
+                              className="text-xs text-muted-foreground hover:text-red-500 font-medium transition-colors disabled:opacity-40 ml-auto"
+                            >
+                              Cancelar
                             </button>
-                          </>
+                          </div>
                         )}
+
                         {session.status === "completed" && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Consulta realizada
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/40">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                            <span className="text-xs text-muted-foreground">Realizada</span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </section>
 
-              {/* Consultation records / Prontuário */}
-              <section>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Prontuário</p>
-                {loadingRecords ? (
-                  <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-                ) : records.length === 0 ? (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center">
-                    <FileText className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">Nenhum registro ainda.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {records.map(rec => {
-                      const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
-                      return (
-                        <div key={rec.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </span>
-                            {bmi && (
-                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
-                                IMC {bmi}
+                {/* Prontuário */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2.5">Prontuário</p>
+                  {loadingRecords ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : records.length === 0 ? (
+                    <div className="border border-border/50 rounded-md px-4 py-6 text-center">
+                      <FileText className="h-5 w-5 text-muted-foreground/20 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">Nenhum registro ainda.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {records.map(rec => {
+                        const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
+                        return (
+                          <div key={rec.id} className="border border-border rounded-md overflow-hidden">
+                            {/* Record header row */}
+                            <div className="px-4 py-2.5 bg-muted/30 border-b border-border flex items-center justify-between">
+                              <span className="text-xs font-medium text-foreground">
+                                {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                               </span>
-                            )}
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                {rec.weight && <span className="flex items-center gap-1"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
+                                {rec.height && <span className="flex items-center gap-1"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
+                                {bmi && <span className="font-semibold text-foreground">IMC {bmi}</span>}
+                              </div>
+                            </div>
+                            {/* Record body */}
+                            <div className="px-4 py-3 space-y-2.5 bg-card">
+                              {rec.notes && (
+                                <p className="text-sm text-foreground/90 leading-relaxed">{rec.notes}</p>
+                              )}
+                              {rec.next_steps && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground mb-1">Próximos passos</p>
+                                  <p className="text-sm text-foreground/80">{rec.next_steps}</p>
+                                </div>
+                              )}
+                              {rec.next_return_date && (
+                                <p className="text-xs text-primary font-medium flex items-center gap-1">
+                                  <ArrowRight className="h-3 w-3" />
+                                  Retorno: {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          {(rec.weight || rec.height) && (
-                            <div className="flex gap-4">
-                              {rec.weight && <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
-                              {rec.height && <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
-                            </div>
-                          )}
-                          {rec.notes && <p className="text-sm text-foreground leading-relaxed">{rec.notes}</p>}
-                          {rec.next_steps && (
-                            <div className="bg-muted/40 rounded-lg p-3">
-                              <p className="text-xs font-medium text-muted-foreground mb-1">Próximos passos</p>
-                              <p className="text-sm text-foreground">{rec.next_steps}</p>
-                            </div>
-                          )}
-                          {rec.next_return_date && (
-                            <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                              <ArrowRight className="h-3 w-3" />
-                              Próximo retorno: {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
@@ -538,78 +598,88 @@ const AdminAgendamentos = () => {
 
       {/* ── Completion Modal ── */}
       {completing && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-card rounded-lg border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-primary" />
                 <h2 className="font-semibold text-sm">Registrar consulta</h2>
               </div>
-              <button onClick={() => setCompleting(null)} className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+              <button onClick={() => setCompleting(null)} className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="px-6 py-4 bg-muted/20 border-b border-border">
-              <p className="text-sm font-medium">{completing.client_name}</p>
+            {/* Patient strip */}
+            <div className="px-6 py-3 bg-muted/20 border-b border-border">
+              <p className="text-sm font-medium text-foreground">{completing.client_name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {formatDate(completing.appointment_date)} às {(completing.appointment_time || "").substring(0, 5)}
               </p>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-5">
               {/* Measurements */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Medidas</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-3">Medidas</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Scale className="h-3 w-3" />Peso (kg)</label>
+                    <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Scale className="h-3 w-3" />Peso (kg)
+                    </label>
                     <input type="number" step="0.1" value={compWeight} onChange={e => setCompWeight(e.target.value)}
-                      placeholder="Ex: 72.5" className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      placeholder="Ex: 72.5"
+                      className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Ruler className="h-3 w-3" />Altura (cm)</label>
+                    <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Ruler className="h-3 w-3" />Altura (cm)
+                    </label>
                     <input type="number" step="0.1" value={compHeight} onChange={e => setCompHeight(e.target.value)}
-                      placeholder="Ex: 165" className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      placeholder="Ex: 165"
+                      className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
                   </div>
                 </div>
                 {compWeight && compHeight && (
-                  <p className="text-xs text-blue-600 font-medium mt-2">
-                    IMC calculado: {calcBMI(parseFloat(compWeight), parseFloat(compHeight))}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    IMC calculado: <span className="font-semibold text-foreground">{calcBMI(parseFloat(compWeight), parseFloat(compHeight))}</span>
                   </p>
                 )}
               </div>
 
               {/* Notes */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações da consulta</label>
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Observações da consulta</label>
                 <textarea value={compNotes} onChange={e => setCompNotes(e.target.value)} rows={4}
                   placeholder="Descreva o que foi discutido, avaliações realizadas, condutas adotadas..."
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40" />
               </div>
 
               {/* Next steps */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Próximos passos / encaminhamentos</label>
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Próximos passos</label>
                 <textarea value={compNextSteps} onChange={e => setCompNextSteps(e.target.value)} rows={3}
                   placeholder="Ex: Plano alimentar enviado, retorno em 30 dias, exames solicitados..."
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40" />
               </div>
 
               {/* Next return */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Data do próximo retorno <span className="text-muted-foreground/50 normal-case font-normal">(opcional)</span></label>
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+                  Próximo retorno <span className="normal-case font-normal tracking-normal opacity-60">(opcional)</span>
+                </label>
                 <input type="date" value={compNextReturn} min={new Date().toISOString().split("T")[0]}
                   onChange={e => setCompNextReturn(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
               </div>
             </div>
 
             <div className="flex gap-2 px-6 pb-5">
-              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCompleting(null)} disabled={savingRecord}>
+              <Button variant="outline" className="flex-1 rounded-md" onClick={() => setCompleting(null)} disabled={savingRecord}>
                 Cancelar
               </Button>
-              <Button className="flex-1 rounded-xl gap-2" onClick={handleSaveRecord} disabled={savingRecord}>
+              <Button className="flex-1 rounded-md gap-2" onClick={handleSaveRecord} disabled={savingRecord}>
                 {savingRecord ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
                 Salvar prontuário
               </Button>
@@ -620,49 +690,60 @@ const AdminAgendamentos = () => {
 
       {/* ── Reschedule Modal ── */}
       {reschedule && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-card rounded-lg border border-border shadow-2xl w-full max-w-md">
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <CalendarClock className="h-4 w-4 text-primary" />
                 <h2 className="font-semibold text-sm">Realocar consulta</h2>
               </div>
-              <button onClick={() => setReschedule(null)} className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+              <button onClick={() => setReschedule(null)} className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-6 py-4 bg-muted/20 border-b border-border">
-              <p className="text-sm font-medium">{reschedule.client_name}</p>
+
+            {/* Patient strip */}
+            <div className="px-6 py-3 bg-muted/20 border-b border-border">
+              <p className="text-sm font-medium text-foreground">{reschedule.client_name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{reschedule.plan_name} · {reschedule.client_email}</p>
-              <p className="text-xs text-muted-foreground mt-1">Atual: <span className="font-medium text-foreground">{formatDate(reschedule.appointment_date)} às {(reschedule.appointment_time || "").substring(0, 5)}</span></p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Atual: <span className="font-medium text-foreground">{formatDate(reschedule.appointment_date)} às {(reschedule.appointment_time || "").substring(0, 5)}</span>
+              </p>
             </div>
+
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Nova data</label>
+                  <label className="text-xs text-muted-foreground">Nova data</label>
                   <input type="date" value={newDate} min={new Date().toISOString().split("T")[0]}
                     onChange={e => setNewDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Novo horário</label>
+                  <label className="text-xs text-muted-foreground">Novo horário</label>
                   <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Mensagem ao paciente <span className="opacity-50">(opcional)</span></label>
+                <label className="text-xs text-muted-foreground">
+                  Mensagem ao paciente <span className="opacity-50">(opcional)</span>
+                </label>
                 <textarea value={rescheduleMsg} onChange={e => setRescheduleMsg(e.target.value)} rows={3}
                   placeholder="Ex: Precisamos reagendar devido a um imprevisto..."
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40" />
+                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40" />
               </div>
-              <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+              <p className="text-xs text-muted-foreground bg-muted/30 border border-border/50 rounded-md px-3 py-2">
                 Um email será enviado automaticamente ao paciente.
               </p>
             </div>
+
             <div className="flex gap-2 px-6 pb-5">
-              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setReschedule(null)} disabled={rescheduling}>Cancelar</Button>
-              <Button className="flex-1 rounded-xl gap-2" onClick={handleReschedule} disabled={rescheduling || !newDate || !newTime}>
+              <Button variant="outline" className="flex-1 rounded-md" onClick={() => setReschedule(null)} disabled={rescheduling}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 rounded-md gap-2" onClick={handleReschedule} disabled={rescheduling || !newDate || !newTime}>
                 {rescheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
                 Confirmar
               </Button>
