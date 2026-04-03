@@ -157,66 +157,81 @@ const AdminAgendamentos = () => {
   const handleSaveRecord = async () => {
     if (!completing) return;
     setSavingRecord(true);
-    const w = compWeight ? parseFloat(compWeight) : null;
-    const h = compHeight ? parseFloat(compHeight) : null;
 
-    // 1. Salva o prontuário com session_number para identificação
-    const ok = await insertConsultationRecord({
-      booking_id: completing.id,
-      booking_group_id: completing.booking_group_id,
-      session_number: completing.session_number,
-      client_name: completing.client_name,
-      client_email: completing.client_email,
-      notes: compNotes.trim() || null,
-      weight: w, height: h,
-      next_return_date: compNextReturn || null,
-      next_steps: compNextSteps.trim() || null,
-    } as ConsultationRecord);
+    try {
+      const w = compWeight ? parseFloat(compWeight) : null;
+      const h = compHeight ? parseFloat(compHeight) : null;
 
-    if (!ok) {
-      toast({ title: "Erro ao salvar prontuário", variant: "destructive" });
-      setSavingRecord(false);
-      return;
-    }
-
-    // 2. Marca sessão como concluída
-    await handleStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
-
-    // 3. Se há data de retorno, cria novo agendamento de retorno
-    if (compNextReturn) {
-      const returnSession: Booking = {
+      // 1. Tenta salvar prontuário com session_number; se a coluna ainda não
+      //    existir no banco, tenta novamente sem ela para não bloquear o fluxo.
+      const recordPayload: ConsultationRecord = {
+        booking_id: completing.id,
         booking_group_id: completing.booking_group_id,
-        session_number: completing.session_number + 1,
-        total_sessions: completing.total_sessions,
+        session_number: completing.session_number,
         client_name: completing.client_name,
         client_email: completing.client_email,
-        client_phone: completing.client_phone,
-        plan_name: completing.plan_name,
-        plan_index: completing.plan_index,
-        appointment_date: compNextReturn,
-        appointment_time: completing.appointment_time,
-        type: completing.type,
-        status: "confirmed",
-        notes: completing.notes, // mantém ficha clínica original
+        notes: compNotes.trim() || null,
+        weight: w, height: h,
+        next_return_date: compNextReturn || null,
+        next_steps: compNextSteps.trim() || null,
       };
-      const returnOk = await insertBooking(returnSession);
+
+      let ok = await insertConsultationRecord(recordPayload);
+      if (!ok) {
+        // Fallback: tenta sem session_number (coluna pode não existir ainda)
+        const { session_number: _drop, ...payloadWithout } = recordPayload;
+        ok = await insertConsultationRecord(payloadWithout as ConsultationRecord);
+      }
+
+      if (!ok) {
+        toast({ title: "Erro ao salvar prontuário", variant: "destructive" });
+        return;
+      }
+
+      // 2. Marca sessão como concluída (sem o toast intermediário "Status atualizado!")
+      await updateBookingStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
+      setBookings(prev =>
+        prev.map(b => b.id === completing.id ? { ...b, status: "completed" } : b)
+      );
+
+      // 3. Se há data de retorno, cria novo agendamento
+      let returnCreated = false;
+      if (compNextReturn) {
+        const returnSession: Booking = {
+          booking_group_id: completing.booking_group_id,
+          session_number: completing.session_number + 1,
+          total_sessions: completing.total_sessions,
+          client_name: completing.client_name,
+          client_email: completing.client_email,
+          client_phone: completing.client_phone,
+          plan_name: completing.plan_name,
+          plan_index: completing.plan_index,
+          appointment_date: compNextReturn,
+          appointment_time: completing.appointment_time,
+          type: completing.type,
+          status: "confirmed",
+          notes: completing.notes,
+        };
+        returnCreated = await insertBooking(returnSession);
+      }
+
+      // 4. Fecha modais, vai para aba Concluídos e recarrega lista
+      setCompleting(null);
+      setDetail(null);
+      setFilter("completed");
+      await load();
+
       toast({
         title: "Consulta concluída!",
-        description: returnOk
-          ? `Retorno criado para ${new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR")}`
-          : "Prontuário salvo, mas falha ao criar retorno.",
-        variant: returnOk ? "default" : "destructive",
+        description: compNextReturn
+          ? returnCreated
+            ? `Retorno agendado para ${new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR")}`
+            : "Prontuário salvo. Falha ao criar retorno."
+          : "Prontuário salvo com sucesso.",
       });
-    } else {
-      toast({ title: "Consulta concluída!", description: "Prontuário salvo." });
+    } finally {
+      setSavingRecord(false);
     }
-
-    // 4. Fecha modais, vai para aba Concluídos e recarrega lista
-    setCompleting(null);
-    setDetail(null);
-    setFilter("completed");
-    await load();
-    setSavingRecord(false);
   };
 
   const loadRecords = async (groupId: string) => {
