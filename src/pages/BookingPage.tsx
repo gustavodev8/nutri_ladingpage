@@ -146,6 +146,7 @@ const BookingPage = () => {
           paymentMethods: {
             creditCard: "all",
             debitCard: "all",
+            maxInstallments: 12,
           },
           visual: { hideFormTitle: true, style: { theme: "default" } },
         },
