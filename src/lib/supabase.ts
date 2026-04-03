@@ -217,6 +217,7 @@ export interface ConsultationRecord {
   id?: number;
   booking_id?: number;
   booking_group_id?: string;
+  session_number?: number;      // 1 = consulta inicial, 2+ = retorno N-1
   client_name?: string;
   client_email?: string;
   notes?: string;

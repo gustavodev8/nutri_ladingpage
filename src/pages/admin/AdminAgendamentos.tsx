@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   fetchBookings, updateBookingStatus, autoCompleteBookings,
-  insertConsultationRecord, fetchConsultationRecords,
+  insertBooking, insertConsultationRecord, fetchConsultationRecords,
   type Booking, type ConsultationRecord
 } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
@@ -159,9 +159,12 @@ const AdminAgendamentos = () => {
     setSavingRecord(true);
     const w = compWeight ? parseFloat(compWeight) : null;
     const h = compHeight ? parseFloat(compHeight) : null;
+
+    // 1. Salva o prontuário com session_number para identificação
     const ok = await insertConsultationRecord({
       booking_id: completing.id,
       booking_group_id: completing.booking_group_id,
+      session_number: completing.session_number,
       client_name: completing.client_name,
       client_email: completing.client_email,
       notes: compNotes.trim() || null,
@@ -170,14 +173,49 @@ const AdminAgendamentos = () => {
       next_steps: compNextSteps.trim() || null,
     } as ConsultationRecord);
 
-    if (ok) {
-      await handleStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
-      toast({ title: "Consulta concluída e prontuário salvo!" });
-      setCompleting(null);
-      if (detail) loadRecords(detail);
-    } else {
+    if (!ok) {
       toast({ title: "Erro ao salvar prontuário", variant: "destructive" });
+      setSavingRecord(false);
+      return;
     }
+
+    // 2. Marca sessão como concluída
+    await handleStatus(completing.id!, "completed", { completed_at: new Date().toISOString() });
+
+    // 3. Se há data de retorno, cria novo agendamento de retorno
+    if (compNextReturn) {
+      const returnSession: Booking = {
+        booking_group_id: completing.booking_group_id,
+        session_number: completing.session_number + 1,
+        total_sessions: completing.total_sessions,
+        client_name: completing.client_name,
+        client_email: completing.client_email,
+        client_phone: completing.client_phone,
+        plan_name: completing.plan_name,
+        plan_index: completing.plan_index,
+        appointment_date: compNextReturn,
+        appointment_time: completing.appointment_time,
+        type: completing.type,
+        status: "confirmed",
+        notes: completing.notes, // mantém ficha clínica original
+      };
+      const returnOk = await insertBooking(returnSession);
+      toast({
+        title: "Consulta concluída!",
+        description: returnOk
+          ? `Retorno criado para ${new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR")}`
+          : "Prontuário salvo, mas falha ao criar retorno.",
+        variant: returnOk ? "default" : "destructive",
+      });
+    } else {
+      toast({ title: "Consulta concluída!", description: "Prontuário salvo." });
+    }
+
+    // 4. Fecha modais, vai para aba Concluídos e recarrega lista
+    setCompleting(null);
+    setDetail(null);
+    setFilter("completed");
+    await load();
     setSavingRecord(false);
   };
 
@@ -661,9 +699,19 @@ const AdminAgendamentos = () => {
                           <div key={rec.id} className="border border-border rounded-md overflow-hidden">
                             {/* Record header row */}
                             <div className="px-4 py-2.5 bg-muted/30 border-b border-border flex items-center justify-between">
-                              <span className="text-xs font-medium text-foreground">
-                                {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {rec.session_number === 1
+                                    ? "Consulta inicial"
+                                    : rec.session_number
+                                    ? `Retorno ${rec.session_number - 1}`
+                                    : "Consulta"}
+                                </span>
+                                <span className="text-muted-foreground/40 text-xs">·</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                </span>
+                              </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                 {rec.weight && <span className="flex items-center gap-1"><Scale className="h-3 w-3" />{rec.weight} kg</span>}
                                 {rec.height && <span className="flex items-center gap-1"><Ruler className="h-3 w-3" />{rec.height} cm</span>}
