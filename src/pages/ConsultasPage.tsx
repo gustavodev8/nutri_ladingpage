@@ -8,6 +8,10 @@ import PageLayout from "@/components/PageLayout";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import { useContent } from "@/contexts/ContentContext";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import type { SiteContent } from "@/contexts/ContentContext";
+
+// ─── Dados estáticos ──────────────────────────────────────────────────────────
 
 const STEPS = [
   {
@@ -32,32 +36,185 @@ const STEPS = [
   },
 ];
 
-// Feature matrix por plano — índice alinhado com loja.plans do ContentContext
+// Matrix de features — índice alinhado com loja.plans
+// Colunas: [Online, Presencial, 90 Dias, Semestral, Anual]
 const PLAN_FEATURES: { label: string; included: boolean[] }[] = [
-  { label: "Cardápio 100% personalizado",    included: [true,  true,  true,  true,  true]  },
-  { label: "Avaliação de bioimpedância",      included: [false, true,  true,  true,  true]  },
-  { label: "Consulta por videochamada",       included: [true,  false, true,  true,  true]  },
-  { label: "Consulta presencial 1h",          included: [false, true,  true,  true,  true]  },
-  { label: "Acesso ao grupo VIP",             included: [true,  true,  true,  true,  true]  },
-  { label: "Treino com personal trainer",     included: [false, false, true,  true,  true]  },
-  { label: "E-books gratuitos",               included: [false, false, true,  true,  true]  },
-  { label: "Suporte de psicólogo",            included: [false, false, false, true,  true]  },
-  { label: "Plataforma de cursos gratuita",   included: [false, false, false, false, true]  },
+  { label: "Cardápio 100% personalizado",   included: [true,  true,  true,  true,  true]  },
+  { label: "Avaliação de bioimpedância",     included: [false, true,  true,  true,  true]  },
+  { label: "Consulta por videochamada",      included: [true,  false, true,  true,  true]  },
+  { label: "Consulta presencial 1h",         included: [false, true,  true,  true,  true]  },
+  { label: "Acesso ao grupo VIP",            included: [true,  true,  true,  true,  true]  },
+  { label: "Treino com personal trainer",    included: [false, false, true,  true,  true]  },
+  { label: "E-books gratuitos",              included: [false, false, true,  true,  true]  },
+  { label: "Suporte de psicólogo",           included: [false, false, false, true,  true]  },
+  { label: "Plataforma de cursos gratuita",  included: [false, false, false, false, true]  },
 ];
+
+// ─── PlanCard component ───────────────────────────────────────────────────────
+
+type Plan = SiteContent["loja"]["plans"][number];
+
+interface PlanCardProps {
+  plan: Plan;
+  planIndex: number;
+  whatsappUrl: (msg: string) => string;
+}
+
+const PlanCard = ({ plan, planIndex, whatsappUrl }: PlanCardProps) => {
+  const isDark = plan.popular;
+  const isAvulsa = plan.sessionCount === 1;
+
+  // Para avulsas: só os itens incluídos (lista positiva, sem ruído visual)
+  // Para pacotes: matrix completa com ✓ e ✗ (permite comparação entre pacotes)
+  const featuresToShow = isAvulsa
+    ? PLAN_FEATURES.filter(({ included }) => included[planIndex])
+    : PLAN_FEATURES;
+
+  return (
+    <div
+      className={`relative rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1
+        ${isDark
+          ? "bg-[#0f2318] text-white shadow-2xl shadow-primary/20"
+          : "bg-card border border-border/70 shadow-sm hover:shadow-md"
+        }`}
+    >
+      {/* Badge area — altura reservada para alinhar os cards entre si */}
+      <div className="h-10 px-6 pt-4 flex items-start">
+        {plan.badge && (
+          <span
+            className={`inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
+              ${isDark ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}
+          >
+            {plan.badge}
+          </span>
+        )}
+      </div>
+
+      {/* Corpo do card */}
+      <div className="px-6 pb-6 flex flex-col flex-1 gap-4">
+
+        {/* Nome e descrição */}
+        <div>
+          <h3 className={`font-bold text-xl leading-snug ${isDark ? "text-white" : "text-foreground"}`}>
+            {plan.name}
+          </h3>
+          <p className={`text-sm mt-1 leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+            {plan.desc}
+          </p>
+        </div>
+
+        {/* Preço */}
+        <div>
+          {!isAvulsa && (
+            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+              A PARTIR DE
+            </p>
+          )}
+          <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
+            {plan.price}
+          </p>
+          <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+            {isAvulsa ? "consulta avulsa" : `${plan.sessionCount} encontros`}
+          </p>
+        </div>
+
+        {/* Botão CTA — empurrado para baixo do preço, antes das features */}
+        <Link
+          to={`/agendar/${planIndex}`}
+          className={`w-full py-3 rounded-full text-sm font-bold text-center transition-all duration-200
+            ${isDark
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-foreground text-background hover:bg-foreground/90"
+            }`}
+        >
+          Contratar agora
+        </Link>
+
+        {/* WhatsApp link */}
+        <a
+          href={whatsappUrl(plan.whatsappMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`text-xs text-center hover:underline ${isDark ? "text-white/50 hover:text-white/80" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Tirar dúvidas no WhatsApp →
+        </a>
+
+        {/* Divisória */}
+        <hr className={isDark ? "border-white/10" : "border-border/60"} />
+
+        {/* Features */}
+        <ul className="flex flex-col gap-2.5">
+          {featuresToShow.map(({ label, included }) => {
+            const ok = included[planIndex] ?? false;
+            return (
+              <li key={label} className="flex items-center gap-2.5">
+                {ok ? (
+                  <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-primary/20" : "bg-primary/10"}`}>
+                    <Check className="w-3 h-3 text-primary" strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-muted"}`}>
+                    <X className={`w-3 h-3 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`} strokeWidth={3} />
+                  </span>
+                )}
+                <span
+                  className={`text-sm leading-tight
+                    ${!ok
+                      ? isDark ? "text-white/25 line-through" : "text-muted-foreground/40 line-through"
+                      : isDark ? "text-white/80" : "text-foreground/80"
+                    }`}
+                >
+                  {label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// ─── Separator ────────────────────────────────────────────────────────────────
+
+const Separator = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-4 max-w-5xl mx-auto">
+    <hr className="flex-1 border-border/50" />
+    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 whitespace-nowrap">
+      {label}
+    </span>
+    <hr className="flex-1 border-border/50" />
+  </div>
+);
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 const ConsultasPage = () => {
   const { content, whatsappUrl } = useContent();
   const { loja } = content;
 
+  const heroAnim   = useScrollAnimation();
+  const plansAnim  = useScrollAnimation();
+  const stepsAnim  = useScrollAnimation();
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
+  const avulsas = loja.plans.slice(0, 2);   // índices 0, 1
+  const pacotes = loja.plans.slice(2);       // índices 2, 3, 4
+
   return (
     <PageLayout>
-      {/* Hero da página */}
+
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="bg-green-light py-16 lg:py-24">
-        <div className="container mx-auto px-4 text-center max-w-3xl">
+        <div
+          ref={heroAnim.ref}
+          className={`container mx-auto px-4 text-center max-w-3xl transition-[opacity,transform] duration-700 ease-smooth
+            ${heroAnim.isVisible ? "opacity-100 translate-y-0" : heroAnim.hiddenClass}`}
+        >
           <p className="text-sm font-bold uppercase tracking-widest text-primary mb-3">Consultas</p>
           <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground leading-tight">
             Escolha o plano certo para{" "}
@@ -76,10 +233,14 @@ const ConsultasPage = () => {
         </div>
       </section>
 
-      {/* Planos — estilo Smart Fit */}
+      {/* ── Planos ───────────────────────────────────────────────────────── */}
       <section className="py-16 lg:py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+        <div
+          ref={plansAnim.ref}
+          className={`container mx-auto px-4 transition-[opacity,transform] duration-700 ease-smooth
+            ${plansAnim.isVisible ? "opacity-100 translate-y-0" : plansAnim.hiddenClass}`}
+        >
+          <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
               {loja.sectionTitle}
             </h2>
@@ -88,227 +249,30 @@ const ConsultasPage = () => {
             )}
           </div>
 
-          {/* Separador — Consultas avulsas */}
-          <div className="flex items-center gap-4 max-w-5xl mx-auto mb-6">
-            <hr className="flex-1 border-border/50" />
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 whitespace-nowrap">
-              Consultas avulsas
-            </span>
-            <hr className="flex-1 border-border/50" />
+          {/* Consultas avulsas */}
+          <Separator label="Consultas avulsas" />
+          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto mt-6 mb-10">
+            {avulsas.map((plan, i) => (
+              <PlanCard
+                key={plan.name}
+                plan={plan}
+                planIndex={i}
+                whatsappUrl={whatsappUrl}
+              />
+            ))}
           </div>
 
-          {/* Linha 1 — Consultas avulsas (2 cards centralizados) */}
-          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto mb-6">
-            {loja.plans.slice(0, 2).map((plan, i) => {
-              const isDark = plan.popular;
-              return (
-                <div
-                  key={i}
-                  className={`relative rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 overflow-hidden
-                    ${isDark
-                      ? "bg-[#0f2318] text-white shadow-2xl shadow-primary/20"
-                      : "bg-card border border-border/70 shadow-sm hover:shadow-md"
-                    }`}
-                >
-                  {/* Badge no topo */}
-                  {plan.badge && (
-                    <div className={`px-6 pt-4 pb-0`}>
-                      <span className={`inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
-                        ${isDark ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
-                        {plan.badge}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Corpo do card */}
-                  <div className="p-6 flex flex-col flex-1 gap-5">
-                    {/* Nome e descrição */}
-                    <div>
-                      <h3 className={`font-bold text-xl ${isDark ? "text-white" : "text-foreground"}`}>
-                        {plan.name}
-                      </h3>
-                      <p className={`text-sm mt-1 leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
-                        {plan.desc}
-                      </p>
-                    </div>
-
-                    {/* Preço */}
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-white/40" : "text-muted-foreground/70"}`}>
-                        A PARTIR DE
-                      </p>
-                      <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
-                        {plan.price}
-                      </p>
-                      <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
-                        {plan.sessionCount > 1 ? `${plan.sessionCount} encontros` : "consulta avulsa"}
-                      </p>
-                    </div>
-
-                    {/* Botão */}
-                    <Link
-                      to={`/agendar/${i}`}
-                      className={`w-full py-3 rounded-full text-sm font-bold text-center transition-all duration-200
-                        ${isDark
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "bg-foreground text-background hover:bg-foreground/90"
-                        }`}
-                    >
-                      Contratar agora
-                    </Link>
-
-                    {/* Link WhatsApp */}
-                    <a
-                      href={whatsappUrl(plan.whatsappMessage)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-xs text-center -mt-2 hover:underline ${isDark ? "text-white/50 hover:text-white/80" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      Tirar dúvidas no WhatsApp →
-                    </a>
-
-                    {/* Divisória */}
-                    <hr className={isDark ? "border-white/10" : "border-border/60"} />
-
-                    {/* Features */}
-                    <ul className="flex flex-col gap-3">
-                      {PLAN_FEATURES.map(({ label, included }) => {
-                        const ok = included[i] ?? false;
-                        return (
-                          <li key={label} className="flex items-center gap-2.5">
-                            {ok ? (
-                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-primary/20" : "bg-primary/10"}`}>
-                                <Check className="w-3 h-3 text-primary" strokeWidth={3} />
-                              </span>
-                            ) : (
-                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-muted"}`}>
-                                <X className={`w-3 h-3 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`} strokeWidth={3} />
-                              </span>
-                            )}
-                            <span className={`text-sm leading-tight
-                              ${!ok
-                                ? isDark ? "text-white/25 line-through" : "text-muted-foreground/40 line-through"
-                                : isDark ? "text-white/80" : "text-foreground/80"
-                              }`}>
-                              {label}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Separador visual */}
-          <div className="flex items-center gap-4 max-w-5xl mx-auto my-2">
-            <hr className="flex-1 border-border/50" />
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 whitespace-nowrap">
-              Pacotes com acompanhamento contínuo
-            </span>
-            <hr className="flex-1 border-border/50" />
-          </div>
-
-          {/* Linha 2 — Pacotes (3 cards) */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {loja.plans.slice(2).map((plan, j) => {
-              const i = j + 2; // índice real no array de features
-              const isDark = plan.popular;
-              return (
-                <div
-                  key={i}
-                  className={`relative rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 overflow-hidden
-                    ${isDark
-                      ? "bg-[#0f2318] text-white shadow-2xl shadow-primary/20"
-                      : "bg-card border border-border/70 shadow-sm hover:shadow-md"
-                    }`}
-                >
-                  {/* Badge no topo */}
-                  {plan.badge && (
-                    <div className="px-6 pt-4 pb-0">
-                      <span className={`inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
-                        ${isDark ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
-                        {plan.badge}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Corpo do card */}
-                  <div className="p-6 flex flex-col flex-1 gap-5">
-                    <div>
-                      <h3 className={`font-bold text-xl ${isDark ? "text-white" : "text-foreground"}`}>
-                        {plan.name}
-                      </h3>
-                      <p className={`text-sm mt-1 leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
-                        {plan.desc}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-white/40" : "text-muted-foreground/70"}`}>
-                        A PARTIR DE
-                      </p>
-                      <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
-                        {plan.price}
-                      </p>
-                      <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
-                        {plan.sessionCount} encontros
-                      </p>
-                    </div>
-
-                    <a
-                      href={`/agendar/${i}`}
-                      className={`w-full py-3 rounded-full text-sm font-bold text-center transition-all duration-200
-                        ${isDark
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "bg-foreground text-background hover:bg-foreground/90"
-                        }`}
-                    >
-                      Contratar agora
-                    </a>
-
-                    <a
-                      href={whatsappUrl(plan.whatsappMessage)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-xs text-center -mt-2 hover:underline ${isDark ? "text-white/50 hover:text-white/80" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      Tirar dúvidas no WhatsApp →
-                    </a>
-
-                    <hr className={isDark ? "border-white/10" : "border-border/60"} />
-
-                    <ul className="flex flex-col gap-3">
-                      {PLAN_FEATURES.map(({ label, included }) => {
-                        const ok = included[i] ?? false;
-                        return (
-                          <li key={label} className="flex items-center gap-2.5">
-                            {ok ? (
-                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-primary/20" : "bg-primary/10"}`}>
-                                <Check className="w-3 h-3 text-primary" strokeWidth={3} />
-                              </span>
-                            ) : (
-                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-muted"}`}>
-                                <X className={`w-3 h-3 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`} strokeWidth={3} />
-                              </span>
-                            )}
-                            <span className={`text-sm leading-tight
-                              ${!ok
-                                ? isDark ? "text-white/25 line-through" : "text-muted-foreground/40 line-through"
-                                : isDark ? "text-white/80" : "text-foreground/80"
-                              }`}>
-                              {label}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Pacotes */}
+          <Separator label="Pacotes com acompanhamento contínuo" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto mt-6">
+            {pacotes.map((plan, j) => (
+              <PlanCard
+                key={plan.name}
+                plan={plan}
+                planIndex={j + 2}
+                whatsappUrl={whatsappUrl}
+              />
+            ))}
           </div>
 
           {/* Formas de pagamento */}
@@ -326,39 +290,50 @@ const ConsultasPage = () => {
         </div>
       </section>
 
-      {/* Como funciona */}
+      {/* ── Como funciona ────────────────────────────────────────────────── */}
       <section className="py-16 lg:py-20 bg-green-light">
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="text-center mb-12">
-            <p className="text-sm font-bold uppercase tracking-widest text-primary mb-2">Metodologia</p>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-              Como funciona o acompanhamento
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              A cada 21 dias ajustamos o protocolo. Resultados reais exigem continuidade.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-6">
-            {STEPS.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex gap-4 bg-card rounded-2xl border border-border p-5">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Icon className="h-5 w-5 text-primary" />
+          <div
+            ref={stepsAnim.ref}
+            className={`transition-[opacity,transform] duration-700 ease-smooth
+              ${stepsAnim.isVisible ? "opacity-100 translate-y-0" : stepsAnim.hiddenClass}`}
+          >
+            <div className="text-center mb-12">
+              <p className="text-sm font-bold uppercase tracking-widest text-primary mb-2">Metodologia</p>
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                Como funciona o acompanhamento
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                A cada 21 dias ajustamos o protocolo. Resultados reais exigem continuidade.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {STEPS.map(({ icon: Icon, title, desc }, i) => (
+                <div
+                  key={title}
+                  className={`flex gap-4 bg-card rounded-2xl border border-border p-5 transition-[opacity,transform] duration-700 ease-smooth`}
+                  style={{ transitionDelay: `${i * 80}ms` }}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">{title}</p>
+                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-foreground text-sm">{title}</p>
-                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Depoimentos */}
+      {/* ── Depoimentos ─────────────────────────────────────────────────── */}
       <TestimonialsSection />
 
-      {/* CTA */}
+      {/* ── CTA ─────────────────────────────────────────────────────────── */}
       <CTASection />
+
     </PageLayout>
   );
 };
