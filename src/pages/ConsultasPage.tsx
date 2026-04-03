@@ -88,8 +88,18 @@ const ConsultasPage = () => {
             )}
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {loja.plans.map((plan, i) => {
+          {/* Separador — Consultas avulsas */}
+          <div className="flex items-center gap-4 max-w-5xl mx-auto mb-6">
+            <hr className="flex-1 border-border/50" />
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 whitespace-nowrap">
+              Consultas avulsas
+            </span>
+            <hr className="flex-1 border-border/50" />
+          </div>
+
+          {/* Linha 1 — Consultas avulsas (2 cards centralizados) */}
+          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto mb-6">
+            {loja.plans.slice(0, 2).map((plan, i) => {
               const isDark = plan.popular;
               return (
                 <div
@@ -161,6 +171,115 @@ const ConsultasPage = () => {
                     <hr className={isDark ? "border-white/10" : "border-border/60"} />
 
                     {/* Features */}
+                    <ul className="flex flex-col gap-3">
+                      {PLAN_FEATURES.map(({ label, included }) => {
+                        const ok = included[i] ?? false;
+                        return (
+                          <li key={label} className="flex items-center gap-2.5">
+                            {ok ? (
+                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-primary/20" : "bg-primary/10"}`}>
+                                <Check className="w-3 h-3 text-primary" strokeWidth={3} />
+                              </span>
+                            ) : (
+                              <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-muted"}`}>
+                                <X className={`w-3 h-3 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`} strokeWidth={3} />
+                              </span>
+                            )}
+                            <span className={`text-sm leading-tight
+                              ${!ok
+                                ? isDark ? "text-white/25 line-through" : "text-muted-foreground/40 line-through"
+                                : isDark ? "text-white/80" : "text-foreground/80"
+                              }`}>
+                              {label}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Separador visual */}
+          <div className="flex items-center gap-4 max-w-5xl mx-auto my-2">
+            <hr className="flex-1 border-border/50" />
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-2 whitespace-nowrap">
+              Pacotes com acompanhamento contínuo
+            </span>
+            <hr className="flex-1 border-border/50" />
+          </div>
+
+          {/* Linha 2 — Pacotes (3 cards) */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {loja.plans.slice(2).map((plan, j) => {
+              const i = j + 2; // índice real no array de features
+              const isDark = plan.popular;
+              return (
+                <div
+                  key={i}
+                  className={`relative rounded-2xl flex flex-col transition-all duration-300 hover:-translate-y-1 overflow-hidden
+                    ${isDark
+                      ? "bg-[#0f2318] text-white shadow-2xl shadow-primary/20"
+                      : "bg-card border border-border/70 shadow-sm hover:shadow-md"
+                    }`}
+                >
+                  {/* Badge no topo */}
+                  {plan.badge && (
+                    <div className="px-6 pt-4 pb-0">
+                      <span className={`inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full
+                        ${isDark ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                        {plan.badge}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Corpo do card */}
+                  <div className="p-6 flex flex-col flex-1 gap-5">
+                    <div>
+                      <h3 className={`font-bold text-xl ${isDark ? "text-white" : "text-foreground"}`}>
+                        {plan.name}
+                      </h3>
+                      <p className={`text-sm mt-1 leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+                        {plan.desc}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-white/40" : "text-muted-foreground/70"}`}>
+                        A PARTIR DE
+                      </p>
+                      <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
+                        {plan.price}
+                      </p>
+                      <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                        {plan.sessionCount} encontros
+                      </p>
+                    </div>
+
+                    <a
+                      href={`/agendar/${i}`}
+                      className={`w-full py-3 rounded-full text-sm font-bold text-center transition-all duration-200
+                        ${isDark
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-foreground text-background hover:bg-foreground/90"
+                        }`}
+                    >
+                      Contratar agora
+                    </a>
+
+                    <a
+                      href={whatsappUrl(plan.whatsappMessage)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-xs text-center -mt-2 hover:underline ${isDark ? "text-white/50 hover:text-white/80" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Tirar dúvidas no WhatsApp →
+                    </a>
+
+                    <hr className={isDark ? "border-white/10" : "border-border/60"} />
+
                     <ul className="flex flex-col gap-3">
                       {PLAN_FEATURES.map(({ label, included }) => {
                         const ok = included[i] ?? false;
