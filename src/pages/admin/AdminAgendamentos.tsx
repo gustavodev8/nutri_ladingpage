@@ -200,10 +200,19 @@ const AdminAgendamentos = () => {
         return;
       }
 
-      // 2. Marca sessão como concluída
-      const statusOk = await updateBookingStatus(completing.id!, "completed");
-      if (!statusOk) {
-        toast({ title: "Erro ao atualizar status", variant: "destructive" });
+      // 2. Marca sessão como concluída via Edge Function (usa service role key, bypassa RLS)
+      const completeRes = await fetch(`${SUPABASE_URL}/functions/v1/complete-booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ booking_id: completing.id }),
+      });
+      const completeData = await completeRes.json().catch(() => ({}));
+      if (!completeRes.ok) {
+        toast({ title: "Erro ao atualizar status", description: completeData.error || `HTTP ${completeRes.status}`, variant: "destructive" });
         return;
       }
 
