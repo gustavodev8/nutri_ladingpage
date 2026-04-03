@@ -199,12 +199,6 @@ export async function updateBookingStatus(id: number, status: string, extra?: Re
   return !error;
 }
 
-export async function updateBookingStatusDebug(id: number, status: string): Promise<string | null> {
-  const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
-  if (error) return `${error.code}: ${error.message}`;
-  return null;
-}
-
 /** Deleta bookings com status 'pending' criados há mais de 24h */
 export async function autoExpirePendingBookings(bookings: Booking[]): Promise<Booking[]> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
