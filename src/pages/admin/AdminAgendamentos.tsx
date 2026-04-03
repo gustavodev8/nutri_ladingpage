@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  fetchBookings, updateBookingStatus, autoCompleteBookings, autoExpirePendingBookings,
+  fetchBookings, updateBookingStatus, updateBookingStatusDebug, autoCompleteBookings, autoExpirePendingBookings,
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords,
   type Booking, type ConsultationRecord
@@ -200,10 +200,10 @@ const AdminAgendamentos = () => {
         return;
       }
 
-      // 2. Marca sessão como concluída — sem completed_at (coluna não existe no banco)
-      const statusOk = await updateBookingStatus(completing.id!, "completed");
-      if (!statusOk) {
-        toast({ title: "Erro ao atualizar status da consulta", variant: "destructive" });
+      // 2. Marca sessão como concluída
+      const statusError = await updateBookingStatusDebug(completing.id!, "completed");
+      if (statusError) {
+        toast({ title: "Erro ao atualizar status", description: statusError, variant: "destructive" });
         return;
       }
 

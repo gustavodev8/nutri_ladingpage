@@ -195,7 +195,14 @@ export async function insertBooking(booking: Booking): Promise<boolean> {
 export async function updateBookingStatus(id: number, status: string, extra?: Record<string, unknown>): Promise<boolean> {
   const payload: Record<string, unknown> = { status, ...extra };
   const { error } = await supabase.from('bookings').update(payload).eq('id', id);
+  if (error) console.error('updateBookingStatus error:', JSON.stringify(error));
   return !error;
+}
+
+export async function updateBookingStatusDebug(id: number, status: string): Promise<string | null> {
+  const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
+  if (error) return `${error.code}: ${error.message}`;
+  return null;
 }
 
 /** Deleta bookings com status 'pending' criados há mais de 24h */
