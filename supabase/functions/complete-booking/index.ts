@@ -29,7 +29,7 @@ serve(async (req) => {
         "Authorization": `Bearer ${serviceKey}`,
         "Prefer": "return=minimal",
       },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ status: "completed", completed_at: new Date().toISOString() }),
     });
 
     if (!res.ok) {

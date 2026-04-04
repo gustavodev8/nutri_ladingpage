@@ -44,7 +44,10 @@ const BookingPage = () => {
   const plan = loja.plans[idx];
   if (!plan) return <Navigate to="/" replace />;
 
-  const totalSessions = (plan.sessionCount || 1) + (plan.returnCount || 0);
+  // 1 consulta inicial + N retornos (sessionCount não entra na soma pois
+  // representa o total de encontros do plano, não consultas adicionais)
+  const totalReturns = plan.returnCount || 0;
+  const totalSessions = 1 + totalReturns;
 
   // Wizard state
   // If plan already defines a single type, skip the selection step
@@ -105,7 +108,8 @@ const BookingPage = () => {
       setAvailSlots(data);
       setLoadingSlots(false);
     });
-    setSessions(Array(totalSessions).fill(null).map(() => ({ date: null, time: null, type: consultationType })));
+    // Paciente só escolhe a data da 1ª consulta; retornos são agendados pelo nutricionista
+    setSessions([{ date: null, time: null, type: consultationType }]);
     setCurrentSessionIdx(0);
   }, [consultationType]);
 
@@ -160,6 +164,10 @@ const BookingPage = () => {
           onSubmit: async ({ formData }: { formData: Record<string, unknown> }) => {
             setStage("loading");
             try {
+              // Salva como "pending" antes de enviar ao MP — garante que o booking
+              // existe no banco mesmo que algo falhe depois do pagamento ser aprovado
+              await saveBookings("pending");
+
               const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -286,6 +294,13 @@ const BookingPage = () => {
     }
     setStage("loading");
     try {
+      // Salva o booking como "pending" ANTES de criar o pagamento
+      // Garante que o booking existe mesmo que o usuário feche a aba após pagar
+      const saved = await saveBookings("pending");
+      if (!saved) {
+        toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
+      }
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -300,10 +315,6 @@ const BookingPage = () => {
       });
       const data = await res.json();
       if (!data.qr_code) throw new Error(data.error || "Erro ao gerar Pix");
-      const saved = await saveBookings("pending");
-      if (!saved) {
-        toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
-      }
       setPixData({ payment_id: data.payment_id, qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
       setStage("pix_qr");
       startPolling(data.payment_id);
@@ -315,7 +326,23 @@ const BookingPage = () => {
   };
 
   const startPolling = (paymentId: number) => {
+    let isMounted = true;
+    const POLL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+    const startedAt = Date.now();
+
     pollingRef.current = setInterval(async () => {
+      if (!isMounted) { clearInterval(pollingRef.current!); return; }
+
+      // Timeout de 30 minutos: para de verificar e volta para idle
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        clearInterval(pollingRef.current!);
+        if (isMounted) {
+          setStage("idle");
+          toast({ title: "Tempo de pagamento expirado", description: "O QR Code Pix expirou. Tente novamente.", variant: "destructive" });
+        }
+        return;
+      }
+
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/check-payment-status`, {
           method: "POST",
@@ -326,10 +353,13 @@ const BookingPage = () => {
         if (data.status === "approved") {
           clearInterval(pollingRef.current!);
           await confirmBookingsByGroupId(bookingGroupId);
-          setStage("approved");
+          if (isMounted) setStage("approved");
         }
       } catch (_) {}
     }, 3000);
+
+    // Cleanup ao desmontar
+    return () => { isMounted = false; clearInterval(pollingRef.current!); };
   };
 
   const handleCopy = () => {
@@ -367,14 +397,20 @@ const BookingPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">Pagamento aprovado. Um email de confirmação foi enviado para</p>
                 <p className="text-sm font-semibold bg-muted px-3 py-1.5 rounded-lg inline-block">{clientEmail}</p>
               </div>
-              <div className="w-full text-left space-y-1.5 bg-primary/5 border border-primary/10 rounded-xl p-4">
-                {sessions.map((s, i) => s.date && s.time && (
-                  <div key={i} className="flex justify-between text-xs gap-2">
-                    <span className="text-muted-foreground">{i === 0 ? "Consulta" : `Retorno ${i}`}</span>
-                    <span className="font-medium">{s.date.toLocaleDateString("pt-BR")} · {s.time} · {s.type === "online" ? "Online" : "Presencial"}</span>
+              {/* Data da consulta */}
+              {sessions[0]?.date && sessions[0]?.time && (
+                <div className="w-full text-left space-y-1.5 bg-primary/5 border border-primary/10 rounded-xl p-4">
+                  <div className="flex justify-between text-xs gap-2">
+                    <span className="text-muted-foreground font-medium">Consulta inicial</span>
+                    <span className="font-semibold">{sessions[0].date.toLocaleDateString("pt-BR")} · {sessions[0].time} · {sessions[0].type === "online" ? "Online" : "Presencial"}</span>
                   </div>
-                ))}
-              </div>
+                  {totalReturns > 0 && (
+                    <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-primary/10">
+                      Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} do seu plano serão agendados pelo nutricionista após cada consulta.
+                    </p>
+                  )}
+                </div>
+              )}
               <Button asChild variant="outline" size="sm" className="rounded-full gap-2 w-full">
                 <Link to="/"><ArrowLeft className="h-3.5 w-3.5" />Voltar ao início</Link>
               </Button>
@@ -396,7 +432,14 @@ const BookingPage = () => {
           <div className="text-center space-y-1">
             <p className="text-xs font-bold uppercase tracking-widest text-primary">Agendar consulta</p>
             <h1 className="font-display text-2xl font-bold text-foreground">{plan.name}</h1>
-            <p className="text-sm text-muted-foreground">{totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}</p>
+            <p className="text-sm text-muted-foreground">
+              {totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}
+            </p>
+            {totalReturns > 0 && (
+              <p className="text-xs text-muted-foreground/70">
+                Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} serão agendados pelo nutricionista após cada consulta
+              </p>
+            )}
           </div>
 
           {/* Steps indicator */}
@@ -449,20 +492,9 @@ const BookingPage = () => {
           {/* ── STEP 1: Dates ── */}
           {step === 1 && (
             <div className="space-y-4">
-              {totalSessions > 1 && (
-                <div className="flex gap-2 flex-wrap">
-                  {sessions.map((s, i) => (
-                    <button key={i} onClick={() => setCurrentSessionIdx(i)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                        currentSessionIdx === i ? "bg-primary text-primary-foreground border-primary" :
-                        s.date && s.time ? "bg-primary/10 text-primary border-primary/20" :
-                        "bg-card border-border text-muted-foreground"
-                      }`}>
-                      {i === 0 ? "Consulta" : `Retorno ${i}`}{s.date && s.time ? " ✓" : ""}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-sm font-medium text-muted-foreground text-center">
+                Escolha a data da sua primeira consulta
+              </p>
 
               {/* Per-session type toggle */}
               <div className="flex gap-2">
@@ -567,9 +599,10 @@ const BookingPage = () => {
               )}
 
               <div className="flex gap-2 pt-2">
-                {!planType && (
-                  <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4" /></Button>
-                )}
+                <Button variant="outline" className="rounded-full gap-2"
+                  onClick={() => planType ? window.history.back() : setStep(0)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <Button className="flex-1 rounded-full gap-2" disabled={!allPicked} onClick={() => setStep(2)}>Continuar <ArrowRight className="h-4 w-4" /></Button>
               </div>
             </div>
@@ -608,9 +641,16 @@ const BookingPage = () => {
                   </div>
                 </div>
               </div>
-              <Button className="w-full rounded-full gap-2" disabled={!clientName.trim() || !clientEmail.trim()} onClick={() => setStep(3)}>
-                Continuar <ArrowRight className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(1)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button className="flex-1 rounded-full gap-2"
+                  disabled={!clientName.trim() || !clientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail.trim())}
+                  onClick={() => setStep(3)}>
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
@@ -690,9 +730,14 @@ const BookingPage = () => {
                 </div>
               </div>
 
-              <Button className="w-full rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
-                Continuar <ArrowRight className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(2)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 

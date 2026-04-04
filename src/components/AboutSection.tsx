@@ -1,8 +1,5 @@
-import { Award, Users, GraduationCap, LucideIcon } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
-
-const STAT_ICONS: LucideIcon[] = [Award, Users, GraduationCap];
 
 const AboutSection = () => {
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
@@ -52,23 +49,21 @@ const AboutSection = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              {about.stats.map(({ label, value }, i) => {
-                const Icon = STAT_ICONS[i % STAT_ICONS.length];
-                return (
-                  <div
-                    key={label}
-                    className={`text-center p-4 rounded-2xl bg-green-light transition-[opacity,transform] duration-700 ease-smooth ${
-                      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-                    }`}
-                    style={{ transitionDelay: isVisible ? `${200 + i * 100}ms` : "0ms" }}
-                  >
-                    <Icon className="h-6 w-6 text-primary mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-foreground">{value}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-3">
+              {about.stats.map(({ label, value }, i) => (
+                <div
+                  key={label}
+                  className={`relative p-5 rounded-2xl bg-background border border-border/60 overflow-hidden transition-[opacity,transform] duration-700 ease-smooth ${
+                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                  }`}
+                  style={{ transitionDelay: isVisible ? `${200 + i * 100}ms` : "0ms" }}
+                >
+                  {/* Accent bar */}
+                  <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/60 via-primary/30 to-transparent rounded-t-2xl" />
+                  <p className="text-3xl font-bold text-primary tracking-tight leading-none">{value}</p>
+                  <p className="text-xs text-muted-foreground mt-2 leading-snug">{label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

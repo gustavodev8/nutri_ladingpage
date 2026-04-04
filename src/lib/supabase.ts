@@ -73,6 +73,51 @@ export async function uploadImage(file: File): Promise<string | null> {
   return urlData.publicUrl;
 }
 
+// Comprime imagens via Canvas antes do upload.
+// PDFs e docs são enviados sem alteração.
+async function compressFileIfImage(file: File): Promise<{ blob: Blob; ext: string; mime: string }> {
+  const isImage = file.type.startsWith("image/") && file.type !== "image/gif";
+  if (!isImage) return { blob: file, ext: file.name.split(".").pop() || "bin", mime: file.type };
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // Redimensiona mantendo proporção — máx 1920px no lado maior
+      const MAX = 1920;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+        else                { width = Math.round((width * MAX) / height); height = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width  = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => resolve({ blob: blob ?? file, ext: "jpg", mime: "image/jpeg" }),
+        "image/jpeg",
+        0.82 // qualidade 82% — bom equilíbrio entre tamanho e nitidez
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve({ blob: file, ext: file.name.split(".").pop() || "bin", mime: file.type }); };
+    img.src = url;
+  });
+}
+
+export async function uploadRecordFile(file: File, groupId: string): Promise<string | null> {
+  const { blob, ext, mime } = await compressFileIfImage(file);
+  const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `records/${groupId}/${Date.now()}_${baseName}.${ext}`;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, { upsert: false, contentType: mime });
+  if (error) { console.error('[Supabase] uploadRecordFile error:', error.message); return null; }
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+  return urlData.publicUrl;
+}
+
 export async function uploadPdf(file: File): Promise<string | null> {
   const ext = file.name.split(".").pop();
   const path = `pdfs/${Date.now()}.${ext}`;
@@ -187,8 +232,17 @@ export async function fetchBookingsForDate(date: string, type: string): Promise<
 }
 
 export async function insertBooking(booking: Booking): Promise<boolean> {
-  const { error } = await supabase.from('bookings').insert(booking);
-  if (error) { console.error("insertBooking error:", error); return false; }
+  // Tenta upsert por (booking_group_id, session_number) para ser idempotente:
+  // se o booking já existe (ex: pré-salvo como pending antes do pagamento),
+  // apenas atualiza o status sem duplicar.
+  const { error } = await supabase
+    .from('bookings')
+    .upsert(booking, { onConflict: 'booking_group_id,session_number', ignoreDuplicates: false });
+  if (error) {
+    // Fallback: se upsert falhar (ex: sem constraint unique), tenta insert simples
+    const { error: insertError } = await supabase.from('bookings').insert(booking);
+    if (insertError) { console.error("insertBooking error:", insertError); return false; }
+  }
   return true;
 }
 
@@ -199,18 +253,14 @@ export async function updateBookingStatus(id: number, status: string, extra?: Re
   return !error;
 }
 
-/** Deleta bookings com status 'pending' criados há mais de 24h */
+/** Filtra bookings com status 'pending' criados há mais de 24h (client-side, sem delete via anon key) */
 export async function autoExpirePendingBookings(bookings: Booking[]): Promise<Booking[]> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const toExpire = bookings.filter(b => {
-    if (b.status !== 'pending') return false;
+  return bookings.filter(b => {
+    if (b.status !== 'pending') return true;
     const created = new Date(b.created_at || 0);
-    return created < cutoff;
+    return created >= cutoff; // mantém só os pending recentes
   });
-  for (const b of toExpire) {
-    await supabase.from('bookings').delete().eq('id', b.id!);
-  }
-  return bookings.filter(b => !toExpire.some(e => e.id === b.id));
 }
 
 export async function autoCompleteBookings(bookings: Booking[]): Promise<Booking[]> {
@@ -228,6 +278,11 @@ export async function autoCompleteBookings(bookings: Booking[]): Promise<Booking
   );
 }
 
+export interface RecordFile {
+  name: string;
+  url: string;
+}
+
 export interface ConsultationRecord {
   id?: number;
   booking_id?: number;
@@ -240,6 +295,7 @@ export interface ConsultationRecord {
   height?: number | null;
   next_return_date?: string | null;
   next_steps?: string | null;
+  files?: RecordFile[] | null;
   created_at?: string;
 }
 
