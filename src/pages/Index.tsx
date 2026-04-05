@@ -4,6 +4,7 @@ import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import ServicesSection from "@/components/ServicesSection";
 import ModalitiesSection from "@/components/ModalitiesSection";
+import ResultsTeaser from "@/components/ResultsTeaser";
 import DigitalProductsSection from "@/components/DigitalProductsSection";
 import FAQSection from "@/components/FAQSection";
 import CTASection from "@/components/CTASection";
@@ -39,7 +40,9 @@ const Index = () => {
         <ServicesSection />
         {/* 4. Como atende — online vs presencial */}
         <ModalitiesSection />
-        {/* 5. Ebooks e materiais digitais */}
+        {/* 5. Prova social — teaser de resultados */}
+        <ResultsTeaser />
+        {/* 6. Ebooks e materiais digitais */}
         <DigitalProductsSection />
         {/* 6. Perguntas frequentes */}
         <FAQSection />
