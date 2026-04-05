@@ -4,7 +4,7 @@ import {
   CalendarClock, X, ChevronRight, ChevronLeft, Globe, MapPin, User,
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
   UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
-  Send, Paperclip, Trash2, Pencil,
+  Send, Paperclip, Trash2, Pencil, Search, SlidersHorizontal, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,13 +91,22 @@ const FOUND_LABELS: Record<string, string> = {
   instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
 };
 
-type FilterTab = "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
+type FilterTab = "all" | "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
+
+const BORDER_COLOR: Record<string, string> = {
+  confirmed: "border-l-primary",
+  pending:   "border-l-amber-400",
+  completed: "border-l-blue-400",
+  no_show:   "border-l-orange-400",
+  cancelled: "border-l-red-400",
+};
 
 const AdminAgendamentos = () => {
   const [bookings, setBookings]   = useState<Booking[]>([]);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState<number | null>(null);
-  const [filter, setFilter]       = useState<FilterTab>("confirmed");
+  const [filter, setFilter]       = useState<FilterTab>("all");
+  const [search, setSearch]       = useState("");
   const [detail, setDetail]       = useState<string | null>(null);
   const [records, setRecords]     = useState<ConsultationRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
@@ -552,6 +561,7 @@ const AdminAgendamentos = () => {
 
   // Counts por grupo (não por sessão individual)
   const counts: Record<FilterTab, number> = {
+    all:       Object.values(allGrouped).length,
     confirmed: Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "confirmed")).length,
     pending:   Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "pending")).length,
     retornos:  Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed")).length,
@@ -561,11 +571,10 @@ const AdminAgendamentos = () => {
   };
 
   const TABS: { id: FilterTab; label: string }[] = [
+    { id: "all",       label: "Todos" },
     { id: "confirmed", label: "Confirmados" },
     { id: "pending",   label: "Pendentes" },
-    { id: "retornos",  label: "Retornos" },
     { id: "completed", label: "Concluídos" },
-    { id: "no_show",   label: "Não compareceu" },
     { id: "cancelled", label: "Cancelados" },
   ];
 
@@ -573,9 +582,9 @@ const AdminAgendamentos = () => {
   const filteredGroupIds = Object.entries(allGrouped)
     .filter(([, sessions]) => {
       const complete = isGroupComplete(sessions);
+      if (filter === "all")       return true;
       if (filter === "completed") return complete;
-      if (complete) return false; // grupos completos nunca aparecem em outros tabs
-      if (filter === "retornos")  return sessions.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed");
+      if (complete) return false;
       if (filter === "cancelled") return sessions.every(b => b.status === "cancelled");
       return sessions.some(b => b.status === filter);
     })
@@ -584,11 +593,20 @@ const AdminAgendamentos = () => {
   const groups: Record<string, Booking[]> = {};
   filteredGroupIds.forEach(id => { groups[id] = allGrouped[id]; });
 
-  const groupEntries = Object.entries(groups).sort(([, a], [, b]) => {
-    const latestA = [...a].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
-    const latestB = [...b].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
-    return new Date(latestB.appointment_date).getTime() - new Date(latestA.appointment_date).getTime();
-  });
+  const groupEntries = Object.entries(groups)
+    .filter(([, sessions]) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      const first = sessions[0];
+      return first.client_name?.toLowerCase().includes(q) ||
+             first.plan_name?.toLowerCase().includes(q) ||
+             first.client_email?.toLowerCase().includes(q);
+    })
+    .sort(([, a], [, b]) => {
+      const latestA = [...a].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
+      const latestB = [...b].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
+      return new Date(latestB.appointment_date).getTime() - new Date(latestA.appointment_date).getTime();
+    });
 
   // Detail — reutiliza allGrouped já calculado acima
   const detailGroup = detail ? (allGrouped[detail] || []).sort((a, b) => a.session_number - b.session_number) : [];
@@ -598,31 +616,52 @@ const AdminAgendamentos = () => {
   })();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <CalendarCheck className="h-5 w-5 text-primary" />
-        </div>
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
           <p className="text-sm text-muted-foreground">Gerencie as consultas agendadas</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setFilter(t.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
-              filter === t.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card border-border text-muted-foreground hover:text-foreground"
-            }`}>
-            {t.label}
-            <span className="ml-1.5 opacity-60">({counts[t.id]})</span>
-          </button>
-        ))}
+      {/* Search + Filter */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar paciente..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+          />
+        </div>
+        <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
+          <SlidersHorizontal className="h-4 w-4" />
+          Filtros
+        </button>
+      </div>
+
+      {/* Underline Tabs */}
+      <div className="border-b border-border overflow-x-auto scrollbar-none">
+        <div className="flex gap-0 min-w-max">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setFilter(t.id)}
+              className={`px-4 py-2.5 text-sm font-medium transition-all relative whitespace-nowrap ${
+                filter === t.id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}>
+              {t.label}
+              <span className={`ml-1.5 text-xs ${filter === t.id ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
+                {counts[t.id]}
+              </span>
+              {filter === t.id && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && (
@@ -631,114 +670,221 @@ const AdminAgendamentos = () => {
         </div>
       )}
 
-      {!loading && groupEntries.length === 0 && (
-        <div className="rounded-2xl bg-card border border-border p-14 text-center">
-          <CalendarCheck className="h-9 w-9 text-muted-foreground/20 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado.</p>
+      {/* Table */}
+      {!loading && (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {/* Table Header — hidden on mobile */}
+          <div className="hidden md:grid grid-cols-[1fr_180px_140px_110px] gap-4 px-4 py-2.5 border-b border-border bg-muted/30">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Paciente</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Data / Hora</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Progresso</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Status</span>
+          </div>
+
+          {groupEntries.length === 0 && (
+            <div className="py-14 text-center">
+              <CalendarCheck className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado.</p>
+            </div>
+          )}
+
+          {groupEntries.map(([groupId, sessions], idx) => {
+            const first = sessions[0];
+            // Sessão mais recente como referência de data/hora
+            const latestSession = [...sessions].sort((a, b) => (b.session_number ?? 0) - (a.session_number ?? 0))[0];
+            const completedCount = sessions.filter(s => s.status === "completed").length;
+            const totalSess = latestSession.total_sessions ?? 1;
+            const progress = Math.round((completedCount / totalSess) * 100);
+            const overallStatus = isGroupComplete(sessions) ? "completed"
+              : sessions.some(s => s.status === "confirmed") ? "confirmed"
+              : sessions.some(s => s.status === "no_show") ? "no_show"
+              : sessions.some(s => s.status === "cancelled") ? "cancelled" : "pending";
+
+            // Extrair goal das notas clínicas
+            const clinicalNotes: ClinicalNotes = (() => {
+              try { return JSON.parse(first.notes || "{}"); } catch { return {}; }
+            })();
+            const goalLabel = clinicalNotes.goal ? (GOAL_LABELS[clinicalNotes.goal] || clinicalNotes.goal) : null;
+
+            const borderColor = BORDER_COLOR[overallStatus] || "border-l-border";
+
+            return (
+              <div key={groupId}
+                onClick={() => openDetail(groupId)}
+                className={`border-l-[3px] ${borderColor} cursor-pointer hover:bg-muted/20 transition-colors ${idx !== groupEntries.length - 1 ? "border-b border-border" : ""}`}>
+
+                {/* Mobile layout (< md) */}
+                <div className="md:hidden flex items-center gap-3 px-4 py-3.5">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-muted-foreground">{initials(first.client_name)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                      <StatusPill status={overallStatus} />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground">{first.plan_name}</span>
+                      <span className="text-muted-foreground/30">·</span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarCheck className="h-3 w-3 text-muted-foreground/40" />
+                        {new Date(latestSession.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3 text-muted-foreground/40" />
+                        {(latestSession.appointment_time || "").substring(0, 5)}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{totalSess}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop layout (≥ md) */}
+                <div className="hidden md:grid grid-cols-[1fr_180px_140px_110px] gap-4 items-center px-4 py-3.5">
+                  {/* Paciente */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-muted-foreground">{initials(first.client_name)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {goalLabel && <><span className="text-xs text-muted-foreground">{goalLabel}</span><span className="text-muted-foreground/30">·</span></>}
+                        <span className="text-xs text-muted-foreground">{first.plan_name}</span>
+                        <span className="text-muted-foreground/30">·</span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Data / Hora */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-xs text-foreground">
+                      <CalendarCheck className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                      {formatDate(latestSession.appointment_date)}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                      {(latestSession.appointment_time || "").substring(0, 5)}
+                    </div>
+                  </div>
+                  {/* Progresso */}
+                  <div className="space-y-1.5">
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium">{completedCount}/{totalSess}</p>
+                  </div>
+                  {/* Status */}
+                  <div><StatusPill status={overallStatus} /></div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Cards */}
-      {!loading && groupEntries.map(([groupId, sessions]) => {
-        const first = sessions[0];
-        const sorted = [...sessions].sort((a, b) => a.session_number - b.session_number);
-        const overallStatus = sessions.every(s => s.status === "completed") ? "completed"
-          : sessions.some(s => s.status === "confirmed") ? "confirmed"
-          : sessions.some(s => s.status === "no_show") ? "no_show"
-          : sessions.some(s => s.status === "cancelled") ? "cancelled" : "pending";
-
-        return (
-          <div key={groupId}
-            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
-            onClick={() => openDetail(groupId)}>
-            <div className="px-5 py-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">{initials(first.client_name)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{first.client_name}</p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs text-muted-foreground">{first.plan_name}</span>
-                  <span className="text-muted-foreground/30 text-xs">·</span>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
-                  </span>
-                </div>
-              </div>
-              <div className="hidden sm:flex flex-col items-end gap-1">
-                {sorted.slice(0, 2).map(s => (
-                  <span key={s.id} className="text-xs text-muted-foreground">
-                    {formatDate(s.appointment_date)} · {(s.appointment_time || "").substring(0, 5)}
-                  </span>
-                ))}
-                {sorted.length > 2 && <span className="text-xs text-muted-foreground/50">+{sorted.length - 2} sessões</span>}
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <StatusPill status={overallStatus} />
-                <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
       {/* ── Detail Modal ── */}
       {detail && detailFirst && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]" onClick={() => setDetail(null)}>
-          <div className="w-full max-w-5xl bg-background rounded-xl border border-border shadow-2xl flex flex-col max-h-[88vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]" onClick={() => setDetail(null)}>
+          <div className="w-full md:max-w-4xl bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[92svh] md:max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
 
             {/* ── Header ── */}
-            <div className="flex items-center gap-4 px-6 py-4 border-b border-border shrink-0">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">{initials(detailFirst.client_name)}</span>
+            <div className="flex items-center gap-4 px-6 py-5 border-b border-border shrink-0">
+              <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-white">{initials(detailFirst.client_name)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-sm text-foreground leading-none truncate">{detailFirst.client_name}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {detailFirst.plan_name}
-                  <span className="mx-1.5 opacity-30">·</span>
-                  {detailFirst.type === "online" ? "Online" : "Presencial"}
-                  <span className="mx-1.5 opacity-30">·</span>
-                  {detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}
+                <h2 className="font-bold text-base text-foreground leading-tight truncate">{detailFirst.client_name}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                  <span>{detailFirst.plan_name}</span>
+                  <span className="opacity-30">·</span>
+                  <span className="flex items-center gap-1">
+                    {detailFirst.type === "online" ? <Globe className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                    {detailFirst.type === "online" ? "Online" : "Presencial"}
+                  </span>
+                  <span className="opacity-30">·</span>
+                  <span>{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
                 >
                   <Send className="h-3.5 w-3.5" />Enviar material
                 </button>
-                <button onClick={() => setDetail(null)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                {/* Mobile: icon-only send button */}
+                <button
+                  onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
+                  className="sm:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  title="Enviar material"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+                <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            {/* ── Body: 2 columns ── */}
-            <div className="flex flex-1 min-h-0">
+            {/* ── Body: stacked on mobile, 2 columns on desktop ── */}
+            <div className="flex flex-col md:flex-row flex-1 min-h-0">
 
-              {/* ── Left: patient sidebar ── */}
-              <div className="w-52 shrink-0 overflow-y-auto border-r border-border p-5 space-y-6">
+              {/* ── Left sidebar ── */}
+              <div className="md:w-56 shrink-0 overflow-y-auto border-b md:border-b-0 md:border-r border-border p-4 md:p-5 space-y-4 md:space-y-5 bg-muted/20">
+                {/* On mobile: show as horizontal scrollable row */}
+                <div className="md:hidden flex gap-4 overflow-x-auto pb-1">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground/40" />
+                    <span className="text-xs text-foreground">{detailFirst.client_email}</span>
+                  </div>
+                  {detailFirst.client_phone && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground/40" />
+                      <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
+                    </div>
+                  )}
+                  {detailNotes.birthDate && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Cake className="h-3.5 w-3.5 text-muted-foreground/40" />
+                      <span className="text-xs text-foreground">{new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}{detailNotes.sex && ` · ${detailNotes.sex}`}</span>
+                    </div>
+                  )}
+                  {detailNotes.goal && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Target className="h-3.5 w-3.5 text-muted-foreground/40" />
+                      <span className="text-xs text-foreground">{GOAL_LABELS[detailNotes.goal] || detailNotes.goal}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Desktop sidebar content */}
+                <div className="hidden md:contents">
 
-                {/* Contact */}
-                <div className="space-y-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Contato</p>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-0.5" />
-                      <span className="text-xs text-foreground/80 break-all leading-snug">{detailFirst.client_email}</span>
+                {/* Contato */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-px" />
+                      <span className="text-xs text-foreground break-all leading-snug">{detailFirst.client_email}</span>
                     </div>
                     {detailFirst.client_phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xs text-foreground/80">{detailFirst.client_phone}</span>
+                      <div className="flex items-center gap-2.5">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
                       </div>
                     )}
                     {detailNotes.birthDate && (
-                      <div className="flex items-center gap-2">
-                        <Cake className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                        <span className="text-xs text-foreground/80">
+                      <div className="flex items-center gap-2.5">
+                        <Cake className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        <span className="text-xs text-foreground">
                           {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
                           {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
                         </span>
@@ -747,148 +893,202 @@ const AdminAgendamentos = () => {
                   </div>
                 </div>
 
-                {/* Clinical */}
+                {/* Ficha Clínica */}
                 {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
                   detailNotes.healthConditions || detailNotes.medications ||
                   detailNotes.hadNutritionist || detailNotes.howFound) && (
-                  <div className="space-y-2.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Ficha clínica</p>
-                    <dl className="space-y-2">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
+                    <div className="space-y-3">
                       {[
-                        { icon: Target,     label: "Objetivo",      val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
-                        { icon: Salad,      label: "Restrições",    val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
-                        { icon: HelpCircle, label: "Alergias",      val: detailNotes.allergies },
-                        { icon: Heart,      label: "Condições",     val: detailNotes.healthConditions },
-                        { icon: Pill,       label: "Medicamentos",  val: detailNotes.medications },
-                        { icon: User,       label: "Acomp. ant.",   val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
-                        { icon: HelpCircle, label: "Como chegou",   val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
+                        { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
+                        { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
+                        { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
+                        { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
+                        { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
+                        { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
+                        { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
                       ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
                         <div key={label}>
-                          <dt className="text-[10px] text-muted-foreground/50 flex items-center gap-1 mb-0.5"><Icon className="h-2.5 w-2.5" />{label}</dt>
-                          <dd className="text-xs font-medium text-foreground pl-3.5 leading-snug">{val}</dd>
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1 mb-0.5">
+                            <Icon className="h-2.5 w-2.5" />{label}
+                          </p>
+                          <p className="text-xs font-semibold text-foreground leading-snug pl-3.5">{val}</p>
                         </div>
                       ))}
-                    </dl>
+                    </div>
                   </div>
                 )}
-              </div>
+              </div>{/* end hidden md:contents */}
+              </div>{/* end sidebar */}
 
-              {/* ── Right: tabs ── */}
+              {/* ── Right panel ── */}
               <div className="flex-1 flex flex-col min-h-0">
 
-                {/* Tab bar */}
-                <div className="flex items-center border-b border-border shrink-0 px-6">
+                {/* Underline tabs */}
+                <div className="flex border-b border-border shrink-0 px-6 overflow-x-auto scrollbar-none">
                   {([
                     { id: "sessions" as const, label: "Sessões",    count: detailGroup.length },
                     { id: "records"  as const, label: "Prontuário", count: records.length },
                   ]).map(tab => (
                     <button key={tab.id} onClick={() => setDetailTab(tab.id)}
-                      className={`relative py-3 px-1 mr-6 text-xs font-medium transition-colors ${
-                        detailTab === tab.id
-                          ? "text-foreground after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-foreground"
-                          : "text-muted-foreground hover:text-foreground"
+                      className={`relative py-3 pr-6 text-sm font-medium transition-colors ${
+                        detailTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {tab.label}
-                      {tab.count > 0 && (
-                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                          detailTab === tab.id ? "bg-foreground/10 text-foreground" : "bg-muted text-muted-foreground"
-                        }`}>{tab.count}</span>
-                      )}
+                      {tab.count > 0 && <span className="ml-1.5 text-muted-foreground/60 text-xs">{tab.count}</span>}
+                      {detailTab === tab.id && <span className="absolute bottom-0 left-0 right-6 h-0.5 bg-foreground rounded-full" />}
                     </button>
                   ))}
                 </div>
 
                 {/* ── SESSIONS TAB ── */}
                 {detailTab === "sessions" && (
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto divide-y divide-border/50">
                     {detailGroup.map((session) => {
                       const isActive = session.status === "confirmed" || session.status === "pending";
                       const isConfirming = confirmAction?.id === session.id;
-                      const statusColor =
-                        session.status === "completed" ? "bg-blue-400" :
-                        session.status === "confirmed"  ? "bg-emerald-400" :
+                      const dotColor =
+                        session.status === "completed" ? "bg-emerald-400" :
+                        session.status === "confirmed"  ? "bg-blue-400" :
                         session.status === "no_show"    ? "bg-orange-400" :
                         session.status === "cancelled"  ? "bg-red-400" : "bg-amber-400";
 
                       return (
-                        <div key={session.id}
-                          className={`group grid border-b border-border/30 last:border-0 transition-colors ${
-                            isActive ? "hover:bg-muted/30" : "opacity-50"
-                          }`}
-                          style={{ gridTemplateColumns: "150px 155px 115px 1fr" }}
-                        >
-                          {/* dot + label */}
-                          <div className="flex items-center gap-2 px-5 py-3 min-w-0">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor}`} />
-                            <span className="text-xs font-medium text-foreground truncate">
-                              {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
-                            </span>
+                        <div key={session.id} className={`group transition-colors ${isActive ? "hover:bg-muted/20" : "opacity-50"}`}>
+
+                          {/* ── Mobile layout ── */}
+                          <div className="md:hidden flex items-start gap-3 px-4 py-3 border-b border-border/40 last:border-b-0">
+                            <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${dotColor}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium text-foreground">
+                                  {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
+                                </span>
+                                <StatusPill status={session.status || "pending"} />
+                              </div>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <CalendarCheck className="h-3 w-3 text-muted-foreground/40" />
+                                  {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                                </span>
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3 text-muted-foreground/40" />
+                                  {(session.appointment_time || "").substring(0, 5)}
+                                </span>
+                              </div>
+                              {isActive && !isConfirming && (
+                                <div className="flex items-center gap-3 mt-2 text-xs">
+                                  <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
+                                    className="text-muted-foreground hover:text-foreground font-medium transition-colors">Realocar</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
+                                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40">Concluir</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
+                                    className="text-muted-foreground hover:text-orange-500 font-medium transition-colors">Faltou</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
+                                    className="text-muted-foreground hover:text-red-500 font-medium transition-colors">Cancelar</button>
+                                </div>
+                              )}
+                              {isConfirming && confirmAction!.status === "no_show" && (
+                                <div className="flex items-center gap-2 mt-2 text-xs">
+                                  <span className="text-muted-foreground">Marcar falta?</span>
+                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                </div>
+                              )}
+                              {isConfirming && confirmAction!.status === "cancelled" && (
+                                <div className="flex items-center gap-2 mt-2 text-xs">
+                                  <span className="text-muted-foreground">Cancelar?</span>
+                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                </div>
+                              )}
+                              {session.status === "completed" && (
+                                <span className="flex items-center gap-1 mt-2 text-xs text-emerald-600 font-medium">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />Realizada
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          {/* date · time */}
-                          <div className="flex items-center px-2 py-3">
-                            <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                              {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                              <span className="mx-1 opacity-40">·</span>
-                              {(session.appointment_time || "").substring(0, 5)}
-                            </span>
-                          </div>
-
-                          {/* status pill */}
-                          <div className="flex items-center px-2 py-3">
-                            <StatusPill status={session.status || "pending"} />
-                          </div>
-
-                          {/* actions — hover only (or always when confirming) */}
-                          <div className={`flex items-center justify-end gap-3 px-5 py-3 text-xs whitespace-nowrap transition-opacity ${
-                            isConfirming ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                          }`}>
-                            {isActive && !isConfirming && (
-                              <>
-                                <button
-                                  onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
-                                  className="text-muted-foreground hover:text-foreground font-medium transition-colors"
-                                >Realocar</button>
-                                <span className="text-border">·</span>
-                                <button
-                                  disabled={updating === session.id}
-                                  onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
-                                  className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40"
-                                >Concluir</button>
-                                <span className="text-border">·</span>
-                                <button
-                                  disabled={updating === session.id}
-                                  onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
-                                  className="text-muted-foreground hover:text-orange-500 font-medium transition-colors disabled:opacity-40"
-                                >Faltou</button>
-                                <span className="text-border">·</span>
-                                <button
-                                  disabled={updating === session.id}
-                                  onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
-                                  className="text-muted-foreground hover:text-red-500 font-medium transition-colors disabled:opacity-40"
-                                >Cancelar</button>
-                              </>
-                            )}
-                            {isConfirming && confirmAction!.status === "no_show" && (
-                              <>
-                                <span className="text-muted-foreground">Marcar falta?</span>
-                                <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500 hover:text-orange-600">Sim</button>
-                                <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
-                              </>
-                            )}
-                            {isConfirming && confirmAction!.status === "cancelled" && (
-                              <>
-                                <span className="text-muted-foreground">Cancelar consulta?</span>
-                                <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500 hover:text-red-600">Sim</button>
-                                <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
-                              </>
-                            )}
-                            {session.status === "completed" && (
-                              <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-                                <CheckCircle2 className="h-3.5 w-3.5" />Realizada
+                          {/* ── Desktop layout ── */}
+                          <div className="hidden md:flex items-center gap-4 px-6 py-3.5">
+                            {/* dot + name */}
+                            <div className="flex items-center gap-2.5 w-36 shrink-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                              <span className="text-sm font-medium text-foreground truncate">
+                                {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
                               </span>
-                            )}
+                            </div>
+
+                            {/* date */}
+                            <div className="flex items-center gap-1.5 w-36 shrink-0">
+                              <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              <span className="text-xs text-muted-foreground tabular-nums">
+                                {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                              </span>
+                            </div>
+
+                            {/* time */}
+                            <div className="flex items-center gap-1.5 w-16 shrink-0">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              <span className="text-xs text-muted-foreground tabular-nums">
+                                {(session.appointment_time || "").substring(0, 5)}
+                              </span>
+                            </div>
+
+                            {/* status */}
+                            <div className="w-28 shrink-0">
+                              <StatusPill status={session.status || "pending"} />
+                            </div>
+
+                            {/* actions — hover */}
+                            <div className={`flex items-center gap-3 ml-auto text-xs whitespace-nowrap transition-opacity ${isConfirming ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                              {isActive && !isConfirming && (
+                                <>
+                                  <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
+                                    className="text-muted-foreground hover:text-foreground font-medium transition-colors">Realocar</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
+                                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40">Concluir</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
+                                    className="text-muted-foreground hover:text-orange-500 font-medium transition-colors">Faltou</button>
+                                  <span className="text-border">·</span>
+                                  <button disabled={updating === session.id}
+                                    onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
+                                    className="text-muted-foreground hover:text-red-500 font-medium transition-colors">Cancelar</button>
+                                </>
+                              )}
+                              {isConfirming && confirmAction!.status === "no_show" && (
+                                <>
+                                  <span className="text-muted-foreground">Marcar falta?</span>
+                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                </>
+                              )}
+                              {isConfirming && confirmAction!.status === "cancelled" && (
+                                <>
+                                  <span className="text-muted-foreground">Cancelar?</span>
+                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                </>
+                              )}
+                              {session.status === "completed" && (
+                                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />Realizada
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1090,8 +1290,8 @@ const AdminAgendamentos = () => {
 
       {/* ── Completion Modal ── */}
       {completing && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-background rounded-xl border border-border shadow-2xl w-full max-w-lg flex flex-col" style={{ maxHeight: "min(92vh, 780px)" }}>
+        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]">
+          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg flex flex-col" style={{ maxHeight: "min(92svh, 780px)" }}>
 
             {/* Header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
@@ -1338,8 +1538,8 @@ const AdminAgendamentos = () => {
 
       {/* ── Send Material Modal ── */}
       {sendTarget && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-background rounded-xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]">
+          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg max-h-[92svh] md:max-h-[90vh] flex flex-col">
 
             {/* Header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
