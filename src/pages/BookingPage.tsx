@@ -3,7 +3,7 @@ import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
-  Copy, Check, X, QrCode, CreditCard, MessageCircle
+  Copy, Check, X, QrCode, CreditCard, MessageCircle, Camera, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +81,7 @@ const BookingPage = () => {
   const [sex, setSex] = useState("");
 
   // Clinical info
+  const [anamnesisPhotos, setAnamnesisPhotos] = useState<File[]>([]);
   const [goal, setGoal] = useState("");
   const [allergies, setAllergies] = useState("");
   const [restrictions, setRestrictions] = useState("");
@@ -729,6 +730,51 @@ const BookingPage = () => {
                   </div>
                 </div>
               </div>
+
+                {/* Fotos corporais */}
+                <div className="space-y-2 pt-1">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    Fotos corporais <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 space-y-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Envie fotos atuais para ajudar na avaliação inicial. Pedimos{" "}
+                      <strong className="text-foreground">respeito e discrição</strong>:{" "}
+                      mulheres de biquíni ou top + short; homens de short. Frente, lado e costas.
+                    </p>
+                    <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg bg-background border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-primary">
+                      <Camera className="h-3.5 w-3.5" />
+                      Selecionar fotos
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          const picked = Array.from(e.target.files || []);
+                          e.target.value = "";
+                          setAnamnesisPhotos(prev => [...prev, ...picked].slice(0, 6));
+                        }}
+                      />
+                    </label>
+                    {anamnesisPhotos.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {anamnesisPhotos.map((f, i) => (
+                          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                            <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => setAnamnesisPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center"
+                            >
+                              <X className="h-2.5 w-2.5 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
               <div className="flex gap-2">
                 <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(2)}>

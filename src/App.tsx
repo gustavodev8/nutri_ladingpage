@@ -13,6 +13,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import ConsultasPage from "./pages/ConsultasPage";
 import ResultadosPage from "./pages/ResultadosPage";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import ProdutoPage from "./pages/ProdutoPage";
 import BookingPage from "./pages/BookingPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -42,6 +44,7 @@ import AdminSenha from "./pages/admin/AdminSenha";
 import AdminPagamentos from "./pages/admin/AdminPagamentos";
 import AdminDisponibilidade from "./pages/admin/AdminDisponibilidade";
 import AdminAgendamentos from "./pages/admin/AdminAgendamentos";
+import AdminBlog from "./pages/admin/AdminBlog";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +70,8 @@ const App = () => (
               {/* Public pages */}
               <Route path="/consultas" element={<ConsultasPage />} />
               <Route path="/resultados" element={<ResultadosPage />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
 
               {/* Product detail pages */}
               <Route path="/produto/:id" element={<ProdutoPage />} />
@@ -109,6 +114,7 @@ const App = () => (
                 <Route path="pagamentos" element={<AdminPagamentos />} />
                 <Route path="disponibilidade" element={<AdminDisponibilidade />} />
                 <Route path="agendamentos" element={<AdminAgendamentos />} />
+                <Route path="blog" element={<AdminBlog />} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>

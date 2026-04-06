@@ -343,3 +343,73 @@ export async function confirmBookingsByGroupId(bookingGroupId: string): Promise<
     .eq('booking_group_id', bookingGroupId);
   return !error;
 }
+
+// ─── Blog ─────────────────────────────────────────────────────────────────────
+/*
+  SQL para criar a tabela (execute no Supabase SQL Editor):
+
+  create table blog_posts (
+    id bigint generated always as identity primary key,
+    created_at timestamptz default now() not null,
+    updated_at timestamptz default now(),
+    title text not null,
+    slug text unique not null,
+    content text not null,
+    cover_image_url text,
+    font text default 'sans',
+    published boolean default false not null
+  );
+  alter table blog_posts enable row level security;
+  create policy "Public read published" on blog_posts for select using (published = true);
+  create policy "Admin full" on blog_posts using (auth.role() = 'authenticated');
+*/
+
+export interface BlogPost {
+  id?: number;
+  created_at?: string;
+  updated_at?: string;
+  title: string;
+  slug: string;
+  content: string;
+  cover_image_url?: string | null;
+  font?: string;
+  published?: boolean;
+}
+
+export async function fetchBlogPosts(onlyPublished = true): Promise<BlogPost[]> {
+  let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
+  if (onlyPublished) query = query.eq('published', true);
+  const { data, error } = await query;
+  if (error) { console.error('fetchBlogPosts error:', error); return []; }
+  return data as BlogPost[];
+}
+
+export async function fetchBlogPost(slug: string): Promise<BlogPost | null> {
+  const { data, error } = await supabase
+    .from('blog_posts').select('*').eq('slug', slug).single();
+  if (error) { console.error('fetchBlogPost error:', error); return null; }
+  return data as BlogPost;
+}
+
+export async function upsertBlogPost(post: BlogPost): Promise<BlogPost | null> {
+  const payload = { ...post, updated_at: new Date().toISOString() };
+  const { data, error } = await supabase
+    .from('blog_posts').upsert(payload, { onConflict: 'slug' }).select().single();
+  if (error) { console.error('upsertBlogPost error:', error); return null; }
+  return data as BlogPost;
+}
+
+export async function deleteBlogPost(id: number): Promise<boolean> {
+  const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+  if (error) { console.error('deleteBlogPost error:', error); return false; }
+  return true;
+}
+
+export async function uploadBlogImage(file: File): Promise<string | null> {
+  const { blob, ext, mime } = await compressFileIfImage(file);
+  const path = `blog/${Date.now()}.${ext}`;
+  const { data, error } = await supabase.storage
+    .from(BUCKET).upload(path, blob, { upsert: true, contentType: mime });
+  if (error) { console.error('uploadBlogImage error:', error); return null; }
+  return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
+}

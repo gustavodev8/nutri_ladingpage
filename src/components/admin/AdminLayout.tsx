@@ -50,6 +50,7 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin/resultados",  icon: TrendingUp,        label: "Resultados"  },
       { to: "/admin/depoimentos", icon: MessageSquareQuote, label: "Depoimentos" },
+      { to: "/admin/blog",        icon: BookOpen,          label: "Blog"        },
     ],
   },
   {
