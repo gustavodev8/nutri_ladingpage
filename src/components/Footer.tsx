@@ -1,15 +1,21 @@
-import { Leaf, Instagram, Phone, Facebook } from "lucide-react";
+import { Leaf, Instagram, Phone, Facebook, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
+
+const CITIES = [
+  "Alagoinhas", "Feira de Santana", "Salvador",
+  "Crisópolis", "Olindina", "Aporá", "Acajutiba", "Esplanada",
+];
 
 const PAGE_LINKS = [
   { href: "/", label: "Início" },
   { href: "/consultas", label: "Consultas & Planos" },
   { href: "/resultados", label: "Resultados" },
+  { href: "/blog", label: "Blog" },
 ];
 
 const ANCHOR_LINKS = [
-  { href: "/#sobre", label: "Sobre o Dr. Fillipe" },
+  { href: "/#sobre", label: "Sobre Fillipe David" },
   { href: "/#servicos", label: "Serviços" },
   { href: "/#faq", label: "FAQ" },
 ];
@@ -21,8 +27,10 @@ const Footer = () => {
   return (
     <footer className="bg-foreground text-primary-foreground/80 py-16">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-3 gap-8 md:gap-12 mb-10 md:mb-12">
-          <div className="space-y-4">
+        <div className="grid md:grid-cols-4 gap-8 md:gap-10 mb-10 md:mb-12">
+
+          {/* Brand */}
+          <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-2">
               <Leaf className="h-6 w-6 text-accent" />
               <span className="font-display text-xl font-bold text-primary-foreground">
@@ -30,15 +38,15 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-sm leading-relaxed">
-              {identity.specialty}
-              <br />
-              {identity.crn}
+              {identity.specialty}<br />{identity.crn}
             </p>
-            <p className="text-sm">
-              {contact.city}
+            <p className="text-xs text-primary-foreground/50 leading-relaxed">
+              Atendimento presencial e online para todo o mundo.
+              <br />Pacientes no Brasil, China, EUA e Amsterdã.
             </p>
           </div>
 
+          {/* Navigation */}
           <div className="space-y-4">
             <h4 className="font-bold text-primary-foreground">Navegação</h4>
             <nav className="flex flex-col gap-2">
@@ -55,16 +63,25 @@ const Footer = () => {
             </nav>
           </div>
 
+          {/* Cities */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-primary-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-accent" />Cidades Atendidas
+            </h4>
+            <ul className="flex flex-col gap-1.5">
+              {CITIES.map((city) => (
+                <li key={city} className="text-sm text-primary-foreground/70">{city}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Social */}
           <div className="space-y-4">
             <h4 className="font-bold text-primary-foreground">Redes Sociais</h4>
             <div className="flex gap-3">
               {[
                 { icon: Instagram, href: contact.instagramUrl, label: "Instagram" },
-                {
-                  icon: Phone,
-                  href: `https://wa.me/${identity.whatsappNumber}`,
-                  label: "WhatsApp",
-                },
+                { icon: Phone, href: `https://wa.me/${identity.whatsappNumber}`, label: "WhatsApp" },
                 { icon: Facebook, href: contact.facebookUrl, label: "Facebook" },
               ].map(({ icon: Icon, href, label }) => (
                 <a

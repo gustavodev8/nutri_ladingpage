@@ -3,7 +3,7 @@ import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
-  Copy, Check, X, QrCode, CreditCard
+  Copy, Check, X, QrCode, CreditCard, MessageCircle, Camera, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,10 @@ const BookingPage = () => {
   const plan = loja.plans[idx];
   if (!plan) return <Navigate to="/" replace />;
 
-  const totalSessions = (plan.sessionCount || 1) + (plan.returnCount || 0);
+  // 1 consulta inicial + N retornos (sessionCount não entra na soma pois
+  // representa o total de encontros do plano, não consultas adicionais)
+  const totalReturns = plan.returnCount || 0;
+  const totalSessions = 1 + totalReturns;
 
   // Wizard state
   // If plan already defines a single type, skip the selection step
@@ -78,6 +81,7 @@ const BookingPage = () => {
   const [sex, setSex] = useState("");
 
   // Clinical info
+  const [anamnesisPhotos, setAnamnesisPhotos] = useState<File[]>([]);
   const [goal, setGoal] = useState("");
   const [allergies, setAllergies] = useState("");
   const [restrictions, setRestrictions] = useState("");
@@ -105,13 +109,14 @@ const BookingPage = () => {
       setAvailSlots(data);
       setLoadingSlots(false);
     });
-    setSessions(Array(totalSessions).fill(null).map(() => ({ date: null, time: null, type: consultationType })));
+    // Paciente só escolhe a data da 1ª consulta; retornos são agendados pelo nutricionista
+    setSessions([{ date: null, time: null, type: consultationType }]);
     setCurrentSessionIdx(0);
   }, [consultationType]);
 
   // Load MP SDK when reaching payment step
   useEffect(() => {
-    if (step !== 3) return;
+    if (step !== 4) return;
     if (document.getElementById("mp-sdk")) return;
     const script = document.createElement("script");
     script.id = "mp-sdk";
@@ -121,8 +126,9 @@ const BookingPage = () => {
 
   // Render Payment Brick when card tab active
   useEffect(() => {
-    if (step !== 3 || payTab !== "card" || stage !== "idle") return;
+    if (step !== 4 || payTab !== "card" || stage !== "idle") return;
     if (brickRendered.current) return;
+    if (!MP_PUBLIC_KEY) return;             // guard: MP not configured
     if (!plan.priceAmount || plan.priceAmount <= 0) return; // guard: no amount
 
     const tryRender = (attempts = 0) => {
@@ -145,6 +151,7 @@ const BookingPage = () => {
           paymentMethods: {
             creditCard: "all",
             debitCard: "all",
+            maxInstallments: 12,
           },
           visual: { hideFormTitle: true, style: { theme: "default" } },
         },
@@ -158,6 +165,10 @@ const BookingPage = () => {
           onSubmit: async ({ formData }: { formData: Record<string, unknown> }) => {
             setStage("loading");
             try {
+              // Salva como "pending" antes de enviar ao MP — garante que o booking
+              // existe no banco mesmo que algo falhe depois do pagamento ser aprovado
+              await saveBookings("pending");
+
               const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -177,7 +188,22 @@ const BookingPage = () => {
                 if (!saved) toast({ title: "Pagamento aprovado, mas erro ao salvar agendamento. Entre em contato.", variant: "destructive" });
                 setStage("approved");
               } else {
-                throw new Error(data.error || "Pagamento não aprovado");
+                // Traduz status_detail do MP para mensagem amigável
+                const detailMessages: Record<string, string> = {
+                  cc_rejected_insufficient_amount:   "Saldo insuficiente no cartão.",
+                  cc_rejected_bad_filled_card_number:"Número do cartão incorreto.",
+                  cc_rejected_bad_filled_date:       "Data de vencimento incorreta.",
+                  cc_rejected_bad_filled_security_code: "Código de segurança incorreto.",
+                  cc_rejected_call_for_authorize:    "Ligue para o banco para autorizar.",
+                  cc_rejected_high_risk:             "Transação recusada por segurança. Tente outro cartão.",
+                  rejected_by_bank:                  "Recusado pelo banco. Tente outro cartão.",
+                  cc_rejected_card_disabled:         "Cartão desativado. Entre em contato com o banco.",
+                  cc_rejected_duplicated_payment:    "Pagamento duplicado detectado.",
+                  pending_waiting_payment:           "Pagamento pendente. Aguarde a confirmação.",
+                };
+                const detail = data.status_detail as string | undefined;
+                const friendlyMsg = (detail && detailMessages[detail]) || data.error || `Pagamento não aprovado${detail ? ` (${detail})` : ""}.`;
+                throw new Error(friendlyMsg);
               }
             } catch (e) {
               const msg = e instanceof Error ? e.message : "Erro no pagamento";
@@ -269,6 +295,13 @@ const BookingPage = () => {
     }
     setStage("loading");
     try {
+      // Salva o booking como "pending" ANTES de criar o pagamento
+      // Garante que o booking existe mesmo que o usuário feche a aba após pagar
+      const saved = await saveBookings("pending");
+      if (!saved) {
+        toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
+      }
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -283,10 +316,6 @@ const BookingPage = () => {
       });
       const data = await res.json();
       if (!data.qr_code) throw new Error(data.error || "Erro ao gerar Pix");
-      const saved = await saveBookings("pending");
-      if (!saved) {
-        toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
-      }
       setPixData({ payment_id: data.payment_id, qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
       setStage("pix_qr");
       startPolling(data.payment_id);
@@ -298,7 +327,23 @@ const BookingPage = () => {
   };
 
   const startPolling = (paymentId: number) => {
+    let isMounted = true;
+    const POLL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+    const startedAt = Date.now();
+
     pollingRef.current = setInterval(async () => {
+      if (!isMounted) { clearInterval(pollingRef.current!); return; }
+
+      // Timeout de 30 minutos: para de verificar e volta para idle
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        clearInterval(pollingRef.current!);
+        if (isMounted) {
+          setStage("idle");
+          toast({ title: "Tempo de pagamento expirado", description: "O QR Code Pix expirou. Tente novamente.", variant: "destructive" });
+        }
+        return;
+      }
+
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/check-payment-status`, {
           method: "POST",
@@ -309,10 +354,13 @@ const BookingPage = () => {
         if (data.status === "approved") {
           clearInterval(pollingRef.current!);
           await confirmBookingsByGroupId(bookingGroupId);
-          setStage("approved");
+          if (isMounted) setStage("approved");
         }
       } catch (_) {}
     }, 3000);
+
+    // Cleanup ao desmontar
+    return () => { isMounted = false; clearInterval(pollingRef.current!); };
   };
 
   const handleCopy = () => {
@@ -350,14 +398,20 @@ const BookingPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">Pagamento aprovado. Um email de confirmação foi enviado para</p>
                 <p className="text-sm font-semibold bg-muted px-3 py-1.5 rounded-lg inline-block">{clientEmail}</p>
               </div>
-              <div className="w-full text-left space-y-1.5 bg-primary/5 border border-primary/10 rounded-xl p-4">
-                {sessions.map((s, i) => s.date && s.time && (
-                  <div key={i} className="flex justify-between text-xs gap-2">
-                    <span className="text-muted-foreground">{i === 0 ? "Consulta" : `Retorno ${i}`}</span>
-                    <span className="font-medium">{s.date.toLocaleDateString("pt-BR")} · {s.time} · {s.type === "online" ? "Online" : "Presencial"}</span>
+              {/* Data da consulta */}
+              {sessions[0]?.date && sessions[0]?.time && (
+                <div className="w-full text-left space-y-1.5 bg-primary/5 border border-primary/10 rounded-xl p-4">
+                  <div className="flex justify-between text-xs gap-2">
+                    <span className="text-muted-foreground font-medium">Consulta inicial</span>
+                    <span className="font-semibold">{sessions[0].date.toLocaleDateString("pt-BR")} · {sessions[0].time} · {sessions[0].type === "online" ? "Online" : "Presencial"}</span>
                   </div>
-                ))}
-              </div>
+                  {totalReturns > 0 && (
+                    <p className="text-xs text-muted-foreground/70 mt-2 pt-2 border-t border-primary/10">
+                      Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} do seu plano serão agendados pelo nutricionista após cada consulta.
+                    </p>
+                  )}
+                </div>
+              )}
               <Button asChild variant="outline" size="sm" className="rounded-full gap-2 w-full">
                 <Link to="/"><ArrowLeft className="h-3.5 w-3.5" />Voltar ao início</Link>
               </Button>
@@ -379,7 +433,14 @@ const BookingPage = () => {
           <div className="text-center space-y-1">
             <p className="text-xs font-bold uppercase tracking-widest text-primary">Agendar consulta</p>
             <h1 className="font-display text-2xl font-bold text-foreground">{plan.name}</h1>
-            <p className="text-sm text-muted-foreground">{totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}</p>
+            <p className="text-sm text-muted-foreground">
+              {totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}
+            </p>
+            {totalReturns > 0 && (
+              <p className="text-xs text-muted-foreground/70">
+                Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} serão agendados pelo nutricionista após cada consulta
+              </p>
+            )}
           </div>
 
           {/* Steps indicator */}
@@ -432,20 +493,27 @@ const BookingPage = () => {
           {/* ── STEP 1: Dates ── */}
           {step === 1 && (
             <div className="space-y-4">
-              {totalSessions > 1 && (
-                <div className="flex gap-2 flex-wrap">
-                  {sessions.map((s, i) => (
-                    <button key={i} onClick={() => setCurrentSessionIdx(i)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                        currentSessionIdx === i ? "bg-primary text-primary-foreground border-primary" :
-                        s.date && s.time ? "bg-primary/10 text-primary border-primary/20" :
-                        "bg-card border-border text-muted-foreground"
-                      }`}>
-                      {i === 0 ? "Consulta" : `Retorno ${i}`}{s.date && s.time ? " ✓" : ""}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-sm font-medium text-muted-foreground text-center">
+                Escolha a data da sua primeira consulta
+              </p>
+
+              {/* Per-session type toggle */}
+              <div className="flex gap-2">
+                {[
+                  { id: "online" as const, label: "Online", icon: Globe },
+                  { id: "presencial" as const, label: "Presencial", icon: MapPin },
+                ].filter(t => !planType || planType === "both" || planType === t.id)
+                 .map(({ id, label, icon: Icon }) => (
+                  <button key={id} onClick={() => handleSessionTypeChange(id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                      sessions[currentSessionIdx]?.type === id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                    }`}>
+                    <Icon className="h-3.5 w-3.5" />{label}
+                  </button>
+                ))}
+              </div>
 
               {/* Per-session type toggle */}
               <div className="flex gap-2">
@@ -550,9 +618,10 @@ const BookingPage = () => {
               )}
 
               <div className="flex gap-2 pt-2">
-                {!planType && (
-                  <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4" /></Button>
-                )}
+                <Button variant="outline" className="rounded-full gap-2"
+                  onClick={() => planType ? window.history.back() : setStep(0)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <Button className="flex-1 rounded-full gap-2" disabled={!allPicked} onClick={() => setStep(2)}>Continuar <ArrowRight className="h-4 w-4" /></Button>
               </div>
             </div>
@@ -591,9 +660,16 @@ const BookingPage = () => {
                   </div>
                 </div>
               </div>
-              <Button className="w-full rounded-full gap-2" disabled={!clientName.trim() || !clientEmail.trim()} onClick={() => setStep(3)}>
-                Continuar <ArrowRight className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(1)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button className="flex-1 rounded-full gap-2"
+                  disabled={!clientName.trim() || !clientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail.trim())}
+                  onClick={() => setStep(3)}>
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
@@ -673,9 +749,59 @@ const BookingPage = () => {
                 </div>
               </div>
 
-              <Button className="w-full rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
-                Continuar <ArrowRight className="h-4 w-4" />
-              </Button>
+                {/* Fotos corporais */}
+                <div className="space-y-2 pt-1">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    Fotos corporais <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 space-y-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Envie fotos atuais para ajudar na avaliação inicial. Pedimos{" "}
+                      <strong className="text-foreground">respeito e discrição</strong>:{" "}
+                      mulheres de biquíni ou top + short; homens de short. Frente, lado e costas.
+                    </p>
+                    <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg bg-background border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-primary">
+                      <Camera className="h-3.5 w-3.5" />
+                      Selecionar fotos
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          const picked = Array.from(e.target.files || []);
+                          e.target.value = "";
+                          setAnamnesisPhotos(prev => [...prev, ...picked].slice(0, 6));
+                        }}
+                      />
+                    </label>
+                    {anamnesisPhotos.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {anamnesisPhotos.map((f, i) => (
+                          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                            <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => setAnamnesisPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center"
+                            >
+                              <X className="h-2.5 w-2.5 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(2)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
@@ -745,7 +871,29 @@ const BookingPage = () => {
                   {/* Card tab */}
                   {payTab === "card" && (
                     <div>
-                      {(!plan.priceAmount || plan.priceAmount <= 0) ? (
+                      {/* MP não configurado → redirecionar para WhatsApp */}
+                      {!MP_PUBLIC_KEY ? (
+                        <div className="bg-muted/40 border border-border rounded-2xl p-5 space-y-3 text-center">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm text-foreground">Pagamento via link de cartão</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              Enviaremos um link de pagamento seguro diretamente no WhatsApp para você pagar com cartão de crédito em até 12×.
+                            </p>
+                          </div>
+                          <a
+                            href={whatsappUrl(`Olá Dr. Fillipe! Gostaria de pagar o ${plan.name} (${plan.price}) com cartão de crédito. Pode me enviar o link de pagamento?`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Solicitar link de pagamento
+                          </a>
+                        </div>
+                      ) : (!plan.priceAmount || plan.priceAmount <= 0) ? (
                         <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3 text-center">
                           Pagamento por cartão não configurado para este plano. Use o Pix ou entre em contato.
                         </p>

@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 serve(async (req) => {
@@ -29,6 +30,7 @@ serve(async (req) => {
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const resendKey   = Deno.env.get("RESEND_API_KEY");
     const fromEmail   = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@nutrivida.com.br";
+    const brandName   = Deno.env.get("BRAND_NAME") || "NutriVida";
 
     // 1. Update booking in DB
     const updateRes = await fetch(`${supabaseUrl}/rest/v1/bookings?id=eq.${booking_id}`, {
@@ -76,7 +78,7 @@ serve(async (req) => {
 
                 <!-- Brand -->
                 <tr><td style="padding:32px 40px 0;text-align:left;">
-                  <p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;letter-spacing:-0.3px;">NutriVida</p>
+                  <p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;letter-spacing:-0.3px;">${brandName}</p>
                 </td></tr>
 
                 <!-- Divider -->
@@ -116,7 +118,7 @@ serve(async (req) => {
                 <!-- Footer -->
                 <tr><td style="padding:0 40px 32px;">
                   <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
-                  <p style="margin:0;font-size:12px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Este é um email automático</p>
+                  <p style="margin:0;font-size:12px;color:#d1d5db;text-align:center;">${brandName} &nbsp;·&nbsp; Este é um email automático</p>
                 </td></tr>
 
               </table>

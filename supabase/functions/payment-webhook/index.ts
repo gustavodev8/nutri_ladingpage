@@ -42,18 +42,47 @@ serve(async (req) => {
       const customerName = parts[3] ? decodeURIComponent(parts[3]) : "";
       const planName = parts[4] ? decodeURIComponent(parts[4]) : "Consulta";
 
-      // Update booking status to confirmed
+      // Update booking status to confirmed (if booking was pre-saved client-side)
       if (supabaseUrl && supabaseServiceKey) {
-        await fetch(`${supabaseUrl}/rest/v1/bookings?booking_group_id=eq.${bookingGroupId}`, {
+        const patchRes = await fetch(`${supabaseUrl}/rest/v1/bookings?booking_group_id=eq.${bookingGroupId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "apikey": supabaseServiceKey,
             "Authorization": `Bearer ${supabaseServiceKey}`,
-            "Prefer": "return=minimal",
+            "Prefer": "return=representation",
           },
           body: JSON.stringify({ status: "confirmed" }),
         });
+        const patched = await patchRes.json().catch(() => []);
+
+        // Se nenhum booking foi encontrado (cliente fechou a aba antes de salvar),
+        // cria um booking básico com os dados disponíveis no external_reference
+        if (!Array.isArray(patched) || patched.length === 0) {
+          console.log("No booking found for group", bookingGroupId, "— inserting fallback booking");
+          await fetch(`${supabaseUrl}/rest/v1/bookings`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": supabaseServiceKey,
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+              "Prefer": "return=minimal",
+            },
+            body: JSON.stringify({
+              booking_group_id: bookingGroupId,
+              session_number: 1,
+              total_sessions: 1,
+              client_name: customerName,
+              client_email: customerEmail,
+              plan_name: planName,
+              appointment_date: new Date().toISOString().split("T")[0],
+              appointment_time: "00:00",
+              type: "online",
+              status: "confirmed",
+              notes: JSON.stringify({ _fallback: true, _reason: "Booking criado pelo webhook — paciente pode não ter selecionado data" }),
+            }),
+          });
+        }
       }
 
       // Send confirmation email

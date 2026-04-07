@@ -1,10 +1,29 @@
-import { Calendar, Video } from "lucide-react";
+import { Video, Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useContent } from "@/contexts/ContentContext";
 
+/** Splits `text` into parts, wrapping matched highlights in <span className="text-primary"> */
+function highlightTagline(text: string, highlights: string[]) {
+  const words = highlights.map(h => h.trim()).filter(Boolean);
+  if (!words.length) return <>{text}</>;
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isHighlight = words.some(w => w.toLowerCase() === part.toLowerCase());
+        return isHighlight
+          ? <span key={i} className="text-primary">{part}</span>
+          : <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 const HeroSection = () => {
-  const { content, whatsappUrl } = useContent();
+  const { content } = useContent();
   const { hero, identity } = content;
   const navigate = useNavigate();
 
@@ -14,11 +33,9 @@ const HeroSection = () => {
       <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
 
-      {/* Mobile-only decorative blobs — top area */}
+      {/* Mobile blobs */}
       <div className="lg:hidden absolute -top-10 -right-10 w-56 h-56 bg-primary/20 rounded-full blur-3xl blob-float-1" />
       <div className="lg:hidden absolute top-40 -left-16 w-48 h-48 bg-primary/15 rounded-full blur-2xl blob-float-2" />
-
-      {/* Mobile-only decorative blobs — bottom area */}
       <div className="lg:hidden absolute bottom-10 -right-8 w-52 h-52 bg-primary/22 rounded-full blur-3xl blob-float-3" />
       <div className="lg:hidden absolute bottom-28 -left-12 w-56 h-56 bg-primary/18 rounded-full blur-3xl blob-float-4" />
       <div className="lg:hidden absolute bottom-0 left-1/3 w-60 h-48 bg-accent/20 rounded-full blur-3xl blob-float-5" />
@@ -27,24 +44,38 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 relative z-10 py-8 lg:py-0">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="space-y-6 lg:space-y-8">
-            <div className="space-y-3 lg:space-y-4">
+            <div className="space-y-4 lg:space-y-5">
+
+              {/* Badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-primary/10 text-primary text-xs lg:text-sm font-medium">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 {hero.badge}
               </div>
+
+              {/* Main headline — value proposition */}
               <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                {identity.doctorName}
+                {highlightTagline(hero.tagline, [hero.taglineHighlight1, hero.taglineHighlight2])}
               </h1>
-              <p className="text-base lg:text-lg text-accent font-medium">
-                {identity.specialty} — {identity.crn}
+
+              {/* Name as credibility subtitle */}
+              <p className="text-base lg:text-lg text-accent font-semibold">
+                {identity.doctorName} — {identity.specialty}
               </p>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-lg">
-                {hero.tagline}{" "}
-                <span className="text-primary font-semibold">{hero.taglineHighlight1}</span> e{" "}
-                <span className="text-primary font-semibold">{hero.taglineHighlight2}</span>
+
+              {/* Social proof supporting text */}
+              <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-lg">
+                Método aplicado em mais de{" "}
+                <strong className="text-foreground">7.000 pacientes</strong> no
+                Brasil, China, Estados Unidos e Amsterdã. Atendimento presencial
+                em{" "}
+                <strong className="text-foreground">
+                  Alagoinhas, Salvador, Feira de Santana
+                </strong>{" "}
+                e região — e online para todo o mundo.
               </p>
             </div>
 
+            {/* CTAs principais */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 size="lg"
@@ -65,6 +96,16 @@ const HeroSection = () => {
               </Button>
             </div>
 
+            {/* CTA secundário — resultados */}
+            <button
+              onClick={() => navigate("/resultados")}
+              className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
+            >
+              <span>Ver histórias reais de transformação</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-200" />
+            </button>
+
+            {/* Social proof avatars */}
             <div className="flex items-center gap-4 pt-2">
               <div className="flex -space-x-3">
                 {[1, 2, 3, 4].map((i) => (
@@ -81,7 +122,6 @@ const HeroSection = () => {
                 {hero.socialProofText}
               </p>
             </div>
-
           </div>
 
           {/* Desktop photo */}
@@ -98,9 +138,9 @@ const HeroSection = () => {
                 ) : (
                   <div className="text-center space-y-3 p-8">
                     <div className="w-24 h-24 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
-                      <span className="text-4xl">👩‍⚕️</span>
+                      <span className="text-4xl">🥗</span>
                     </div>
-                    <p className="text-muted-foreground text-sm">Foto da profissional</p>
+                    <p className="text-muted-foreground text-sm">Foto do profissional</p>
                   </div>
                 )}
               </div>

@@ -1,0 +1,641 @@
+================================================================================
+  RELATÓRIO COMPLETO DO PROJETO — nutri_ladingpage
+  Gerado em: 2026-04-02
+  Para uso em novas sessões do Claude — leia este arquivo inteiro antes de agir.
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. VISÃO GERAL DO PROJETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Nome do cliente: Dr. Fillipe David
+Tipo: Landing page profissional para nutricionista + painel administrativo completo
+Stack: React 18 + TypeScript + Vite + Tailwind CSS + Supabase
+Deploy: Vercel (auto-deploy via push para main no GitHub)
+Repositório: https://github.com/gustavodev8/nutri_ladingpage
+Domínio: fillipedavidnutri.online (Hostinger, DNS apontando para Vercel)
+Vercel URL: https://nutri-ladingpage.vercel.app (ou similar)
+
+O projeto é uma SPA (Single Page Application) com múltiplas rotas. Tem uma área
+pública (landing page + páginas de consultas e resultados) e uma área privada
+(painel admin em /admin, protegido por autenticação Supabase).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2. TECNOLOGIAS E DEPENDÊNCIAS PRINCIPAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend:
+  - React 18.3.1
+  - React Router DOM 6.30.1 (SPA routing)
+  - TypeScript 5.8.3
+  - Vite 5.4.19 (build tool)
+  - Tailwind CSS 3.4.17
+  - shadcn/ui (Radix UI) — componentes prontos (Button, Card, Dialog, etc.)
+  - Lucide React 0.462.0 — ícones
+  - React Hook Form 7.61.1 + Zod 3.25.76 — formulários e validação
+  - Date-fns 3.6.0 — manipulação de datas
+  - @tanstack/react-query — cache de queries
+
+Backend/Database:
+  - Supabase JS 2.100.0
+  - PostgreSQL via Supabase (tabelas: site_content, bookings, availability_slots,
+    consultation_records, payment_logs)
+  - Supabase Auth (login do admin)
+  - Supabase Storage (bucket "images") — upload de fotos e PDFs
+  - Supabase Edge Functions — processamento de pagamentos
+
+Pagamentos:
+  - Mercado Pago (PIX + cartão de crédito)
+  - Edge Functions: create-preference, create-pix-payment, check-payment-status,
+    payment-webhook, process-consultation-payment, reschedule-booking
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. ESTRUTURA DE ARQUIVOS DO PROJETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+nutri_ladingpage/
+├── index.html                         ← entry point HTML, favicon, meta SEO
+├── vercel.json                        ← rewrite SPA: tudo → /index.html
+├── package.json
+├── vite.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── .env                               ← VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+├── .env.example
+├── supabase-setup.sql                 ← SQL para criação das tabelas
+├── PROJETO_RELATORIO.txt              ← este arquivo
+│
+├── public/
+│   ├── favicon.svg                    ← ícone folha verde (tema nutrição)
+│   └── robots.txt
+│
+├── supabase/
+│   ├── functions/
+│   │   ├── check-payment-status/
+│   │   ├── create-pix-payment/
+│   │   ├── create-preference/
+│   │   ├── payment-webhook/
+│   │   ├── process-consultation-payment/
+│   │   └── reschedule-booking/
+│   └── migrations/
+│       └── 20240101000000_payment_logs.sql
+│
+└── src/
+    ├── App.tsx                        ← roteamento principal
+    ├── main.tsx                       ← entry point React
+    ├── index.css                      ← estilos globais Tailwind
+    │
+    ├── contexts/
+    │   ├── ContentContext.tsx         ← CENTRAL: todo conteúdo do site + Supabase sync
+    │   └── AuthContext.tsx            ← autenticação admin via Supabase Auth
+    │
+    ├── lib/
+    │   ├── supabase.ts                ← cliente Supabase + todas as funções de DB
+    │   └── utils.ts                   ← utilitários (cn, etc.)
+    │
+    ├── hooks/
+    │   ├── useScrollAnimation.ts      ← hook de animação ao entrar na viewport
+    │   ├── use-mobile.tsx
+    │   └── use-toast.ts
+    │
+    ├── components/
+    │   ├── Navbar.tsx                 ← navbar fixa com navegação inteligente
+    │   ├── Footer.tsx                 ← rodapé com links de página + âncoras
+    │   ├── PageLayout.tsx             ← layout compartilhado das páginas internas
+    │   ├── HeroSection.tsx            ← seção hero da home
+    │   ├── AboutSection.tsx           ← seção sobre o nutricionista
+    │   ├── ServicesSection.tsx        ← seção de serviços
+    │   ├── ModalitiesSection.tsx      ← online vs presencial + mapa
+    │   ├── DigitalProductsSection.tsx ← e-books e produtos digitais
+    │   ├── FAQSection.tsx             ← perguntas frequentes (accordion)
+    │   ├── CTASection.tsx             ← call-to-action final
+    │   ├── ResultsSection.tsx         ← antes e depois (carousel)
+    │   ├── TestimonialsSection.tsx    ← depoimentos (carousel)
+    │   ├── WhatsAppButton.tsx         ← botão flutuante WhatsApp
+    │   ├── ShopSection.tsx            ← OBSOLETO (não usado mais, não deletar)
+    │   ├── PricingSection.tsx         ← OBSOLETO (mantido como backup)
+    │   ├── ScheduleSection.tsx        ← OBSOLETO (mantido como backup)
+    │   │
+    │   ├── admin/
+    │   │   ├── AdminLayout.tsx        ← layout do painel admin (sidebar + topbar)
+    │   │   ├── AdminFormWrapper.tsx   ← wrapper padrão de formulários admin
+    │   │   ├── ImageUpload.tsx        ← componente upload de imagem/PDF
+    │   │   └── ProtectedRoute.tsx     ← redirecionamento se não autenticado
+    │   │
+    │   └── ui/                        ← shadcn/ui (não editar manualmente)
+    │       └── (button, card, dialog, tabs, input, etc.)
+    │
+    ├── pages/
+    │   ├── Index.tsx                  ← home page (/)
+    │   ├── ConsultasPage.tsx          ← página /consultas
+    │   ├── ResultadosPage.tsx         ← página /resultados
+    │   ├── BookingPage.tsx            ← agendamento /agendar/:planIndex
+    │   ├── ProdutoPage.tsx            ← detalhe produto /produto/:id
+    │   ├── PaymentSuccess.tsx         ← /pagamento/sucesso
+    │   ├── PaymentPending.tsx         ← /pagamento/pendente
+    │   ├── PaymentFailure.tsx         ← /pagamento/erro
+    │   ├── AdminLogin.tsx             ← /admin/login
+    │   └── NotFound.tsx               ← 404
+    │
+    └── pages/admin/                   ← todas as páginas do painel admin
+        ├── AdminDashboard.tsx         ← dashboard principal
+        ├── AdminPerfil.tsx            ← editar identidade/brand
+        ├── AdminHero.tsx              ← editar seção hero
+        ├── AdminSobre.tsx             ← editar seção sobre
+        ├── AdminServicos.tsx          ← editar serviços
+        ├── AdminModalidades.tsx       ← editar online/presencial + mapa
+        ├── AdminPrecos.tsx            ← editar pricing section (legado)
+        ├── AdminHorarios.tsx          ← editar horários de atendimento
+        ├── AdminDepoimentos.tsx       ← editar depoimentos
+        ├── AdminFAQ.tsx               ← editar FAQ
+        ├── AdminCTA.tsx               ← editar call-to-action
+        ├── AdminContato.tsx           ← editar endereço e redes sociais
+        ├── AdminProdutosDigitais.tsx  ← gerenciar e-books
+        ├── AdminResultados.tsx        ← gerenciar fotos antes/depois
+        ├── AdminDisponibilidade.tsx   ← gerenciar slots de horário
+        ├── AdminAgendamentos.tsx      ← gerenciar agendamentos (complexo, 660 linhas)
+        ├── AdminPagamentos.tsx        ← visualizar logs de pagamento
+        └── AdminSenha.tsx             ← alterar senha do admin
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  4. ROTEAMENTO (src/App.tsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Rotas públicas:
+  /                       → Index.tsx (home)
+  /consultas              → ConsultasPage.tsx
+  /resultados             → ResultadosPage.tsx
+  /produto/:id            → ProdutoPage.tsx
+  /agendar/:planIndex     → BookingPage.tsx
+  /pagamento/sucesso      → PaymentSuccess.tsx
+  /pagamento/pendente     → PaymentPending.tsx
+  /pagamento/erro         → PaymentFailure.tsx
+
+Rotas admin (protegidas por ProtectedRoute):
+  /admin/login            → AdminLogin.tsx
+  /admin                  → AdminDashboard.tsx
+  /admin/perfil           → AdminPerfil.tsx
+  /admin/hero             → AdminHero.tsx
+  /admin/sobre            → AdminSobre.tsx
+  /admin/servicos         → AdminServicos.tsx
+  /admin/modalidades      → AdminModalidades.tsx
+  /admin/precos           → AdminPrecos.tsx
+  /admin/horarios         → AdminHorarios.tsx
+  /admin/depoimentos      → AdminDepoimentos.tsx
+  /admin/faq              → AdminFAQ.tsx
+  /admin/cta              → AdminCTA.tsx
+  /admin/contato          → AdminContato.tsx
+  /admin/produtos         → AdminProdutosDigitais.tsx
+  /admin/resultados       → AdminResultados.tsx
+  /admin/disponibilidade  → AdminDisponibilidade.tsx
+  /admin/agendamentos     → AdminAgendamentos.tsx
+  /admin/pagamentos       → AdminPagamentos.tsx
+  /admin/senha            → AdminSenha.tsx
+  /admin/*                → redireciona para /admin
+
+IMPORTANTE — vercel.json:
+  Todas as rotas são reescritas para /index.html (necessário para SPA no Vercel).
+  Sem isso, qualquer refresh em /admin ou /consultas dá 404.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5. ESTRUTURA DAS PÁGINAS PÚBLICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOME (/)  — src/pages/Index.tsx
+  Componentes na ordem:
+  1. Navbar
+  2. HeroSection        ← tagline + CTAs + badge de vagas abertas
+  3. AboutSection       ← bio Dr. Fillipe + stats (10 anos, 7k pacientes, 7 países, 4 pós)
+  4. ServicesSection    ← 6 serviços (online, presencial, clínica, esportiva, etc.)
+  5. ModalitiesSection  ← online vs presencial + mapa Google
+  6. DigitalProductsSection ← e-books com preço + botão "Saiba mais"
+  7. FAQSection         ← accordion de perguntas frequentes
+  8. CTASection         ← call-to-action final com WhatsApp
+  9. Footer
+  10. WhatsAppButton    ← botão flutuante
+
+CONSULTAS (/consultas)  — src/pages/ConsultasPage.tsx
+  Usa PageLayout (Navbar + main com padding-top + Footer + WhatsApp)
+  Conteúdo:
+  1. Hero da página (foco em conversão)
+  2. Grid de planos (loja.plans do ContentContext)
+  3. "Como funciona" — 4 etapas metodologia
+  4. TestimonialsSection
+  5. CTASection
+
+RESULTADOS (/resultados)  — src/pages/ResultadosPage.tsx
+  Usa PageLayout
+  Conteúdo:
+  1. Hero com estatísticas (7000+, 10+, 7, 4)
+  2. ResultsSection (antes e depois em carousel)
+  3. TestimonialsSection
+  4. CTASection
+
+PageLayout (src/components/PageLayout.tsx):
+  Wrapper para páginas que não são a home. Inclui:
+  <Navbar /> + <main className="pt-16 lg:pt-20"> + <Footer /> + <WhatsAppButton />
+  O padding-top compensa a navbar fixa.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  6. SISTEMA DE CONTEÚDO (ContentContext)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Arquivo: src/contexts/ContentContext.tsx
+
+TODO o conteúdo editável do site passa por este contexto. É o arquivo mais
+importante do frontend.
+
+Interface SiteContent — seções:
+  identity      brandName, doctorName, crn, specialty, whatsappNumber, photoUrl
+  hero          badge, tagline, taglineHighlight1/2, cta1Text/2Text, ratingScore/Count, socialProof
+  about         eyebrow, title, bio1/2, photoUrl, stats[]
+  services      title, subtitle, items[] {icon, title, desc}
+  pricing       title, subtitle, plans[] {title, price, period, features[], popular, whatsappMessage}
+  schedule      title, days[] {day, hours, open}
+  testimonials  title, items[] {name, initials, text}
+  faq           title, items[] {q, a}
+  cta           title, subtitle, buttonText, whatsappMessage
+  contact       address, neighborhood, city, cep, instagramUrl, facebookUrl
+  modalities    sectionTitle, onlineTitle/Desc, presentialTitle/Desc, mapsEmbedUrl
+  loja          sectionTitle, sectionSubtitle, plans[] {name, desc, price, priceAmount,
+                  badge, popular, whatsappMessage, sessionCount, returnCount, consultationType}
+  produtosDigitais  sectionTitle, sectionSubtitle, items[] {name, desc, longDesc, details[],
+                    price, priceAmount, badge, imageUrl, pdfUrl, whatsappMessage}
+  resultados    sectionTitle, sectionSubtitle, disclaimer, ctaText, whatsappMessage,
+                  items[] {initials, text, time, beforeImageUrl, afterImageUrl}
+
+DEFAULT_CONTENT — valores padrão reais do Dr. Fillipe David:
+  brandName: "Fillipe David"
+  whatsappNumber: "5575991268688"
+  hero tagline: "Dieta não emagrece. O que transforma é método e acompanhamento real"
+  about: 10 anos, 7.000+ pacientes, 7 países, 4 pós-graduações
+  loja plans (5 planos):
+    - Consulta Online: R$ 99 (1 sessão, online)
+    - Consulta Clínica Presencial: R$ 199 (1 sessão, presencial)
+    - Protocolo 90 Dias: R$ 1.488 (5 sessões, badge "Mais Escolhido", popular: true)
+    - Pacote Semestral: R$ 2.800 (9 sessões, badge "Melhor Resultado")
+    - Protocolo Anual: R$ 4.550 (20 sessões)
+  5 produtos digitais com preços: R$47, R$37, R$47, R$97, R$120
+  6 depoimentos com nomes reais (Maria S., João P., Carla M., Roberto L., Fernanda A.)
+  FAQ com "Aceita convênio?" → "Não. Atendemos somente particular."
+
+Como funciona o sync de conteúdo:
+  1. Na inicialização, carrega do localStorage (cache) imediatamente
+  2. Busca no Supabase via fetchContent()
+  3. Se Supabase for mais recente (_ts timestamp), sobrescreve
+  4. Admin edita → updateContent() → salva no state, localStorage E Supabase
+  5. deepMerge() garante que campos novos do DEFAULT sempre existem
+
+resetContent():
+  Força o DEFAULT_CONTENT para o Supabase. Botão "Aplicar dados do Dr. Fillipe"
+  no AdminDashboard chama essa função. IMPORTANTE: chamar esse botão após deploy
+  se o conteúdo do Supabase estiver vazio/desatualizado.
+
+whatsappUrl(message):
+  Gera link https://wa.me/{whatsappNumber}?text={message}
+  Disponível via useContent().whatsappUrl()
+
+Cache key localStorage: "nutrivida_content_cache"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  7. NAVBAR (src/components/Navbar.tsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Navbar fixa no topo (z-50). Fundo transparente, vira bg-card/95 com blur ao scrollar.
+
+Links de navegação:
+  { href: "#sobre",       label: "Sobre",       type: "anchor" }
+  { href: "#servicos",    label: "Serviços",     type: "anchor" }
+  { href: "#atendimento", label: "Atendimento",  type: "anchor" }
+  { href: "/consultas",   label: "Consultas",    type: "page" }
+  { href: "/resultados",  label: "Resultados",   type: "page" }
+  { href: "#faq",         label: "FAQ",          type: "anchor" }
+
+Comportamento inteligente (handleNavClick):
+  - type === "page" → navigate(href) via useNavigate
+  - type === "anchor" + estamos na home "/" → scrollToAnchor(id) suavemente
+  - type === "anchor" + estamos em outra página → navigate("/") + setTimeout(300ms) + scroll
+  - Logo clicado: scroll para topo se na home, navigate("/") se em outra página
+  - "Agendar Consulta" button → navigate("/consultas")
+  - Menu mobile fecha ao trocar de rota (useEffect em location.pathname)
+
+scrollToAnchor(id):
+  Calcula posição do elemento, subtrai 80px (altura da navbar) e faz smooth scroll.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  8. FOOTER (src/components/Footer.tsx)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3 colunas:
+  1. Identidade: logo + especialidade + CRN + cidade
+  2. Navegação: links de página (React Router <Link>) + links de âncora (<a>)
+     PAGE_LINKS: /  (Início), /consultas, /resultados
+     ANCHOR_LINKS: /#sobre, /#servicos, /#faq
+  3. Redes Sociais: Instagram, WhatsApp, Facebook (ícones circulares)
+
+Usa dados do ContentContext: identity.brandName, identity.specialty, identity.crn,
+contact.city, contact.instagramUrl, contact.facebookUrl, identity.whatsappNumber.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  9. BANCO DE DADOS SUPABASE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tabelas (ver supabase-setup.sql para SQL completo):
+
+site_content
+  id          int (sempre 1, única linha)
+  content     jsonb (toda a SiteContent em JSON)
+  updated_at  timestamp
+
+bookings
+  id                  serial PK
+  created_at          timestamp
+  booking_group_id    uuid (agrupa sessões do mesmo paciente/plano)
+  session_number      int (1, 2, 3, ...)
+  total_sessions      int
+  client_name         text
+  client_email        text
+  client_phone        text
+  plan_name           text
+  plan_index          int
+  appointment_date    date (ISO "YYYY-MM-DD")
+  appointment_time    text ("09:00")
+  type                text ('online' | 'presencial')
+  status              text ('pending' | 'confirmed' | 'completed' | 'no_show' | 'cancelled')
+  notes               text (opcional)
+  completed_at        timestamp (preenchido ao concluir)
+
+availability_slots
+  id          serial PK
+  date        date
+  start_time  text ("09:00")
+  type        text ('online' | 'presencial')
+  active      boolean
+
+consultation_records
+  id                  serial PK
+  booking_id          int (FK bookings.id)
+  booking_group_id    uuid
+  client_name         text
+  client_email        text
+  notes               text
+  weight              numeric
+  height              numeric
+  next_return_date    date
+  next_steps          text
+  created_at          timestamp
+
+payment_logs
+  (ver migrations/20240101000000_payment_logs.sql)
+
+Funções em src/lib/supabase.ts:
+  fetchContent()                    → lê site_content row 1
+  saveContent(content)              → upsert site_content row 1
+  uploadImage(file)                 → upload para bucket "images/products/"
+  uploadPdf(file)                   → upload para bucket "images/pdfs/"
+  fetchAvailabilitySlots()          → slots ativos de hoje em diante
+  fetchSlotsByMonth(year, month)    → slots de um mês (para calendário admin)
+  fetchSlotsByDate(date, type)      → slots de data e tipo específicos
+  addAvailabilitySlot(slot)         → inserir slot
+  deleteAvailabilitySlot(id)        → deletar slot
+  fetchBookings()                   → todos os bookings ordenados por data
+  fetchBookingsForDate(date, type)  → horários ocupados (para evitar conflito)
+  insertBooking(booking)            → criar agendamento
+  updateBookingStatus(id, status, extra?)  → atualizar status + campos extras
+  autoCompleteBookings(bookings)    → marca como "completed" bookings confirmed passados
+  insertConsultationRecord(record)  → salvar prontuário
+  fetchConsultationRecords(groupId) → buscar prontuários por grupo
+  confirmBookingsByGroupId(groupId) → confirmar todas as sessões de um grupo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  10. SISTEMA DE AGENDAMENTOS (AdminAgendamentos.tsx — 660 linhas)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Arquivo: src/pages/admin/AdminAgendamentos.tsx
+
+Status de agendamento:
+  pending     → aguardando confirmação
+  confirmed   → confirmado pelo admin
+  completed   → consulta realizada (preenchido com prontuário)
+  no_show     → paciente não compareceu
+  cancelled   → cancelado
+
+Auto-complete na abertura da página:
+  autoCompleteBookings() marca como "completed" todos os bookings com status
+  "confirmed" cuja data de consulta já passou.
+
+5 abas de filtro:
+  Confirmados | Pendentes | Concluídos | Não compareceu | Cancelados
+
+Funcionalidades:
+  - Confirmar agendamento (pending → confirmed)
+  - Cancelar agendamento (qualquer → cancelled)
+  - Marcar como não compareceu (no_show)
+  - Reagendar (modal com nova data e hora, chama Edge Function reschedule-booking)
+  - Concluir consulta (modal com campos clínicos)
+
+Modal de conclusão (Completion Modal):
+  Campos:
+    - Peso (kg)
+    - Altura (cm) → calcula IMC automaticamente
+    - Anotações da consulta (textarea)
+    - Próximos passos / encaminhamentos
+    - Data do próximo retorno (date picker)
+  Ao salvar: updateBookingStatus(id, 'completed') + insertConsultationRecord()
+
+Prontuário (Consultation Records):
+  Ao clicar em um agendamento concluído ou de paciente com histórico,
+  exibe tabela com todas as consultas anteriores do mesmo booking_group_id.
+  Inclui: data, peso, altura, IMC, anotações.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  11. PAINEL ADMIN — VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Acesso: /admin/login → autentica via Supabase Auth
+Layout: sidebar (desktop) + menu hamburger (mobile)
+
+AdminDashboard.tsx:
+  - Banner âmbar "Aplicar dados do Dr. Fillipe David" → chama resetContent()
+    ATENÇÃO: Chamar isso SOBRESCREVE o Supabase com o DEFAULT_CONTENT. Usar
+    apenas quando o conteúdo do site estiver errado ou vazio.
+  - Grid de atalhos para todas as 17 seções editáveis
+
+Como cada página admin funciona:
+  1. Carrega content via useContent()
+  2. Usa React Hook Form para editar
+  3. Salva via updateContent() → atualiza Supabase + localStorage
+  4. Exibe feedback "Salvo!" via saveStatus do context
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  12. DEPLOY E CONFIGURAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Vercel:
+  - Projeto conectado ao GitHub: gustavodev8/nutri_ladingpage
+  - Auto-deploy em cada push para branch main
+  - Build command: vite build (detectado automaticamente)
+  - Output dir: dist
+  - Variáveis de ambiente no Vercel: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+
+vercel.json (raiz do projeto):
+  {
+    "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  }
+  CRÍTICO: sem isso, F5 em /admin ou /consultas dá 404.
+
+Domínio:
+  - fillipedavidnutri.online comprado na Hostinger
+  - DNS configurado na Hostinger:
+    A record: @ → 216.198.79.1
+    CNAME: www → cname.vercel-dns.com (ou domínio Vercel fornecido)
+  - Domínio adicionado nas configurações do projeto no Vercel
+
+.env (local, não commitado):
+  VITE_SUPABASE_URL=https://[projeto].supabase.co
+  VITE_SUPABASE_ANON_KEY=[anon key]
+
+Supabase Edge Functions:
+  Deploy via: supabase functions deploy [nome-da-function]
+  Precisam de SUPABASE_SERVICE_ROLE_KEY e MERCADOPAGO_ACCESS_TOKEN como secrets.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  13. FLUXO DE AGENDAMENTO (usuário final)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Usuário acessa /consultas → vê os planos
+2. Clica "Agendar agora" em um plano → vai para /agendar/:planIndex
+3. BookingPage.tsx:
+   a. Mostra detalhes do plano
+   b. Usuário preenche nome, email, telefone
+   c. Escolhe data disponível (via fetchAvailabilitySlots)
+   d. Escolhe horário disponível (via fetchSlotsByDate, verifica fetchBookingsForDate)
+   e. Clica confirmar → insertBooking() com status "pending"
+   f. Redireciona para /pagamento/[resultado]
+4. Admin vê o booking em /admin/agendamentos na aba "Pendentes"
+5. Admin confirma → status → "confirmed"
+6. Após a consulta, admin conclui com prontuário → status → "completed"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  14. COMPONENTES OBSOLETOS (não remover, apenas não usar)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ShopSection.tsx:
+  Antes ficava na home como seção de planos. Foi substituído pela página
+  /consultas (ConsultasPage). Ainda tem o overlay "Em desenvolvimento" do
+  período anterior. NÃO é importado em nenhuma página — pode ser ignorado.
+
+PricingSection.tsx:
+  Versão mais antiga de pricing. Não usada em nenhuma página atual.
+
+ScheduleSection.tsx:
+  Seção de horários que ficava na home. Removida na reestruturação. Não usada.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  15. PROBLEMAS CONHECIDOS E SOLUÇÕES APLICADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEMA: 404 ao acessar /admin ou /consultas diretamente no Vercel
+SOLUÇÃO: vercel.json com rewrite "/(.*)" → "/index.html" (já aplicado)
+
+PROBLEMA: Conteúdo do site não muda mesmo após editar no admin
+CAUSA: Supabase tinha dados antigos mais recentes que o DEFAULT_CONTENT
+SOLUÇÃO: Botão "Aplicar dados do Dr. Fillipe" no AdminDashboard → resetContent()
+
+PROBLEMA: INP warning no Chrome ao clicar no botão reset do admin
+CAUSA: Código síncrono pesado (JSON stringify grande) bloqueava o click event
+SOLUÇÃO: setTimeout(fn, 50) para deferir o trabalho fora do evento de clique
+
+PROBLEMA: Scroll para seções não funcionava ao clicar na navbar vindo de outra página
+SOLUÇÃO: navigate("/") + setTimeout(300, scrollToAnchor) no Navbar.tsx
+
+PROBLEMA: Favicon feio (padrão do Vite)
+SOLUÇÃO: public/favicon.svg com ícone de folha verde (tema nutrição), referenciado
+         no index.html como <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+PROBLEMA: Botão "Comprar pelo WhatsApp" nos produtos digitais (desnecessário)
+SOLUÇÃO: Removido do DigitalProductsSection.tsx — apenas botão "Saiba mais" permanece
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  16. DADOS REAIS DO DR. FILLIPE DAVID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WhatsApp: 5575991268688 (com DDI 55 e DDD 75 — Bahia)
+Cidade: Alagoinhas/BA
+Especialidade: Nutricionista Clínico e Esportivo
+Experiência: 10+ anos
+Pacientes: 7.000+ em 7 países
+Pós-graduações: 4 (área esportiva e emagrecimento/estética)
+Convênios: NÃO aceita. Somente particular.
+Metodologia: Acompanhamento contínuo a cada 21 dias
+
+Instagram: https://instagram.com (placeholder — atualizar no admin)
+Facebook: https://facebook.com (placeholder — atualizar no admin)
+Google Maps embed: vazio (atualizar no admin → AdminModalidades)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  17. PENDÊNCIAS E PRÓXIMOS PASSOS SUGERIDOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Alta prioridade:
+  [ ] Após deploy, admin deve clicar "Aplicar dados do Dr. Fillipe David"
+      para sincronizar DEFAULT_CONTENT com Supabase
+  [ ] Atualizar Instagram e Facebook reais no admin (/admin/contato)
+  [ ] Adicionar foto real do Dr. Fillipe no admin (/admin/sobre e /admin/perfil)
+  [ ] Adicionar embed do Google Maps em /admin/modalidades
+  [ ] Adicionar fotos antes/depois reais em /admin/resultados
+  [ ] Configurar MERCADOPAGO_ACCESS_TOKEN no Supabase para pagamentos funcionarem
+
+Média prioridade:
+  [ ] Adicionar CRN real do Dr. Fillipe (/admin/perfil)
+  [ ] Criar slots de disponibilidade reais (/admin/disponibilidade)
+  [ ] Adicionar fotos dos produtos digitais (/admin/produtos)
+  [ ] Revisar PDFs dos e-books (upload via /admin/produtos)
+
+Opcional/futuro:
+  [ ] Adicionar página /admin/modalidades para editar mapa embed
+  [ ] SEO: adicionar Open Graph images reais
+  [ ] Analytics: Google Analytics ou Vercel Analytics
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  18. COMANDOS ÚTEIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Desenvolvimento local:
+  npm run dev                     ← inicia servidor Vite em localhost:8080
+  npm run build                   ← build de produção em /dist
+
+Git / Deploy:
+  git add [arquivos]
+  git commit -m "mensagem"
+  git push origin main            ← dispara auto-deploy no Vercel
+
+Supabase Edge Functions:
+  supabase functions deploy create-preference
+  supabase functions deploy create-pix-payment
+  supabase functions deploy check-payment-status
+  supabase functions deploy payment-webhook
+  supabase functions deploy process-consultation-payment
+  supabase functions deploy reschedule-booking
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  19. RESUMO RÁPIDO PARA NOVA SESSÃO DO CLAUDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- É uma landing page de nutricionista (Dr. Fillipe David, Alagoinhas/BA)
+- React + Vite + Tailwind + Supabase, deploy no Vercel com domínio Hostinger
+- Multi-página: home (/), consultas (/consultas), resultados (/resultados)
+- Admin completo em /admin (protegido por autenticação Supabase)
+- Todo conteúdo editável passa pelo ContentContext (deepMerge com DEFAULT_CONTENT)
+- Agendamentos com status: pending → confirmed → completed (+ no_show, cancelled)
+- Auto-complete: bookings confirmed passados viram completed automaticamente
+- Prontuário: cada consulta concluída salva peso/altura/IMC/notas na tabela consultation_records
+- vercel.json é CRÍTICO para SPA routing funcionar no Vercel
+- "Aplicar dados do Dr. Fillipe" no dashboard admin sincroniza conteúdo real com Supabase
+- WhatsApp: 5575991268688
+- Planos: R$99 / R$199 / R$1.488 / R$2.800 / R$4.550
+- Não aceita convênio — somente particular
+
+================================================================================
+  FIM DO RELATÓRIO
+================================================================================

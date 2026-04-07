@@ -1,64 +1,150 @@
 import { useState } from "react";
-import { NavLink, useNavigate, Outlet } from "react-router-dom";
+import { NavLink, useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
-  Leaf,
-  User,
-  Sparkles,
-  Layers,
-  ShoppingBag,
-  BookOpen,
-  TrendingUp,
-  Clock,
-  MessageSquareQuote,
-  HelpCircle,
-  MapPin,
-  Megaphone,
-  LogOut,
-  Menu,
-  X,
-  ExternalLink,
-  KeyRound,
-  Globe,
-  Loader2,
-  ReceiptText,
-  CalendarDays,
-  CalendarCheck,
+  Leaf, User, Sparkles, Layers, ShoppingBag, BookOpen, TrendingUp,
+  Clock, MessageSquareQuote, HelpCircle, MapPin, Megaphone, LogOut,
+  Menu, ExternalLink, KeyRound, Globe, Loader2, ReceiptText,
+  CalendarDays, CalendarCheck, ChevronDown, FileText, Star, Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContent } from "@/contexts/ContentContext";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
-  { to: "/admin/perfil", icon: User, label: "Perfil & Contato" },
-  { to: "/admin/hero", icon: Sparkles, label: "Seção Principal" },
-  { to: "/admin/sobre", icon: User, label: "Sobre Mim" },
-  { to: "/admin/servicos", icon: Layers, label: "Serviços" },
-  { to: "/admin/modalidades", icon: Globe, label: "Modalidades" },
-  { to: "/admin/precos", icon: ShoppingBag, label: "Loja de Consultas" },
-  { to: "/admin/produtos", icon: BookOpen, label: "Produtos Digitais" },
-  { to: "/admin/disponibilidade", icon: CalendarDays, label: "Disponibilidade" },
-  { to: "/admin/agendamentos", icon: CalendarCheck, label: "Agendamentos" },
-  { to: "/admin/pagamentos", icon: ReceiptText, label: "Logs de Pagamento" },
-  { to: "/admin/resultados", icon: TrendingUp, label: "Resultados" },
-  { to: "/admin/horarios", icon: Clock, label: "Horários" },
-  { to: "/admin/depoimentos", icon: MessageSquareQuote, label: "Depoimentos" },
-  { to: "/admin/faq", icon: HelpCircle, label: "FAQ" },
-  { to: "/admin/cta", icon: Megaphone, label: "Chamada Final" },
-  { to: "/admin/contato", icon: MapPin, label: "Endereço & Redes" },
-  { to: "/admin/senha", icon: KeyRound, label: "Alterar Senha" },
+// ─── Grupos de navegação ──────────────────────────────────────────────────────
+
+const NAV_GROUPS = [
+  {
+    label: "Conteúdo do Site",
+    icon: FileText,
+    items: [
+      { to: "/admin/hero",       icon: Sparkles,          label: "Seção Principal" },
+      { to: "/admin/sobre",      icon: User,              label: "Sobre Mim"       },
+      { to: "/admin/servicos",   icon: Layers,            label: "Serviços"        },
+      { to: "/admin/modalidades",icon: Globe,             label: "Modalidades"     },
+      { to: "/admin/horarios",   icon: Clock,             label: "Horários"        },
+      { to: "/admin/faq",        icon: HelpCircle,        label: "FAQ"             },
+      { to: "/admin/cta",        icon: Megaphone,         label: "Chamada Final"   },
+    ],
+  },
+  {
+    label: "Consultas & Produtos",
+    icon: ShoppingBag,
+    items: [
+      { to: "/admin/precos",   icon: ShoppingBag, label: "Loja de Consultas" },
+      { to: "/admin/produtos", icon: BookOpen,    label: "Produtos Digitais" },
+    ],
+  },
+  {
+    label: "Agendamentos",
+    icon: CalendarCheck,
+    items: [
+      { to: "/admin/disponibilidade", icon: CalendarDays,  label: "Disponibilidade"    },
+      { to: "/admin/agendamentos",    icon: CalendarCheck, label: "Agendamentos"        },
+      { to: "/admin/pagamentos",      icon: ReceiptText,   label: "Logs de Pagamento"  },
+    ],
+  },
+  {
+    label: "Prova Social",
+    icon: Star,
+    items: [
+      { to: "/admin/resultados",  icon: TrendingUp,        label: "Resultados"  },
+      { to: "/admin/depoimentos", icon: MessageSquareQuote, label: "Depoimentos" },
+      { to: "/admin/blog",        icon: BookOpen,          label: "Blog"        },
+    ],
+  },
+  {
+    label: "Conta",
+    icon: Settings,
+    items: [
+      { to: "/admin/perfil",  icon: User,     label: "Perfil & Contato"  },
+      { to: "/admin/contato", icon: MapPin,   label: "Endereço & Redes"  },
+      { to: "/admin/senha",   icon: KeyRound, label: "Alterar Senha"     },
+    ],
+  },
 ];
+
+// ─── NavGroup component ───────────────────────────────────────────────────────
+
+interface NavGroupProps {
+  label: string;
+  icon: React.ElementType;
+  items: { to: string; icon: React.ElementType; label: string }[];
+  defaultOpen: boolean;
+  onItemClick: () => void;
+}
+
+const NavGroup = ({ label, icon: GroupIcon, items, defaultOpen, onItemClick }: NavGroupProps) => {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      {/* Group header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 mt-1"
+      >
+        <span className="flex items-center gap-2">
+          <GroupIcon className="h-3.5 w-3.5" />
+          {label}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform duration-200",
+            open ? "rotate-0" : "-rotate-90"
+          )}
+        />
+      </button>
+
+      {/* Items */}
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="pl-2 mt-0.5 space-y-0.5">
+          {items.map(({ to, icon: Icon, label: itemLabel }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onItemClick}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                )
+              }
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              {itemLabel}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
 
 const AdminLayout = () => {
   const { logout } = useAuth();
   const { content, loading } = useContent();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/admin/login", { replace: true });
   };
+
+  // Abre automaticamente o grupo que contém a rota atual
+  const groupDefaultOpen = (items: { to: string }[]) =>
+    items.some((item) => location.pathname.startsWith(item.to));
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -78,9 +164,9 @@ const AdminLayout = () => {
         )}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-border">
+        <div className="p-5 border-b border-border">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Leaf className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -93,34 +179,45 @@ const AdminLayout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                )
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
-            </NavLink>
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          {/* Dashboard */}
+          <NavLink
+            to="/admin"
+            end
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 mb-2",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )
+            }
+          >
+            <Leaf className="h-4 w-4 shrink-0" />
+            Dashboard
+          </NavLink>
+
+          {/* Grupos colapsáveis */}
+          {NAV_GROUPS.map((group) => (
+            <NavGroup
+              key={group.label}
+              label={group.label}
+              icon={group.icon}
+              items={group.items}
+              defaultOpen={groupDefaultOpen(group.items)}
+              onItemClick={() => setSidebarOpen(false)}
+            />
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="p-4 border-t border-border space-y-1">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors px-3 py-2"
+            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-muted/40"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Ver site
@@ -146,7 +243,7 @@ const AdminLayout = () => {
             onClick={() => setSidebarOpen(true)}
             aria-label="Abrir menu"
           >
-            <Menu className="h-6 w-6" />
+            <Leaf className="h-6 w-6" />
           </button>
           <p className="text-sm text-muted-foreground">
             Olá, <span className="font-medium text-foreground">Admin</span>

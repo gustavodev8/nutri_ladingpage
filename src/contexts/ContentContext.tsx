@@ -143,18 +143,18 @@ export interface SiteContent {
 export const DEFAULT_CONTENT: SiteContent = {
   identity: {
     brandName: "Fillipe David",
-    doctorName: "Dr. Fillipe David",
+    doctorName: "Fillipe David",
     crn: "CRN",
     specialty: "Nutricionista Clínico e Esportivo",
     whatsappNumber: "5575991268688",
     photoUrl: "",
   },
   hero: {
-    badge: "Vagas abertas — Alagoinhas/BA e Online",
-    tagline: "Dieta não emagrece. O que transforma é",
-    taglineHighlight1: "método",
-    taglineHighlight2: "acompanhamento real",
-    cta1Text: "Consulta Online",
+    badge: "Atendimento online e presencial • Brasil e exterior",
+    tagline: "Emagreça até 15kg em 90 dias — com método científico e sem dietas genéricas",
+    taglineHighlight1: "método científico",
+    taglineHighlight2: "sem dietas genéricas",
+    cta1Text: "Quero mudar de vida",
     cta2Text: "Consulta Presencial",
     ratingScore: "5.0/5",
     ratingCount: "+200 avaliações",
@@ -164,7 +164,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   about: {
     eyebrow: "Quem sou eu",
     title: "10 anos ajudando pessoas a transformarem seu corpo e saúde",
-    bio1: "Me chamo Fillipe David, nutricionista clínico especializado em emagrecimento e nutrição esportiva. Com mais de 10 anos de experiência, já ajudei mais de 7 mil pessoas em 7 países diferentes a alcançarem seus objetivos de forma real e duradoura.",
+    bio1: "Me chamo Fillipe David, nutricionista clínico especializado em emagrecimento e nutrição esportiva. Com mais de 10 anos de experiência, já ajudei mais de 7 mil pessoas em países como Brasil, China, Estados Unidos e Amsterdã a alcançarem seus objetivos de forma real e duradoura.",
     bio2: "Busquei aprimorar meu conhecimento com 4 pós-graduações na área esportiva e emagrecimento associado à estética. Minha abordagem é baseada em ciência, sem dietas prontas ou genéricas — cada protocolo é construído para a sua realidade, rotina e objetivos.",
     photoUrl: "",
     stats: [
