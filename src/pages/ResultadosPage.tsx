@@ -120,43 +120,31 @@ const ResultadosPage = () => {
       <TestimonialsSection />
 
       {/* ── Banner de conversão ── */}
-      <section className="bg-[#1c3a28] py-16 md:py-20">
-        <div className="container mx-auto px-6 md:px-10 max-w-4xl text-center">
-
-          {/* Label */}
-          <span className="inline-flex items-center px-3 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-300 text-[11px] font-bold uppercase tracking-widest mb-6">
-            Próximo passo
-          </span>
-
-          {/* Headline */}
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
-            A próxima história de sucesso{" "}
-            <em className="not-italic italic text-amber-400">pode ser a sua</em>
+      <section className="bg-green-light border-y border-border py-14 md:py-16">
+        <div className="container mx-auto px-6 md:px-10 max-w-3xl text-center">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground leading-snug mb-3">
+            Pronto para escrever a sua história?
           </h2>
-          <p className="text-white/65 text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-            Cada resultado que você viu aqui começou com uma única decisão. Escolha o plano ideal e comece sua transformação hoje.
+          <p className="text-muted-foreground text-base leading-relaxed mb-8 max-w-xl mx-auto">
+            Cada resultado que você viu aqui começou com uma consulta. Conheça os planos e escolha o que faz sentido para você.
           </p>
-
-          {/* Perks */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-10">
-            {PLAN_PERKS.map(({ icon: Icon, text }) => (
-              <span key={text} className="flex items-center gap-2 text-sm text-white/75 font-medium">
-                <Icon className="h-4 w-4 text-amber-400 shrink-0" />
-                {text}
-              </span>
-            ))}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/consultas"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors duration-200 group"
+            >
+              Ver planos e consultas
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+            </Link>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              {PLAN_PERKS.map(({ icon: Icon, text }) => (
+                <span key={text} className="flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                  {text}
+                </span>
+              ))}
+            </div>
           </div>
-
-          {/* CTA */}
-          <Link
-            to="/consultas"
-            className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#1c3a28] font-bold text-lg shadow-xl shadow-amber-900/30 hover:shadow-amber-800/40 transition-all duration-200 hover:-translate-y-0.5 group"
-          >
-            Ver planos e consultas
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
-          </Link>
-
-          <p className="text-white/35 text-xs mt-5">Sem fidelidade • Cancele quando quiser</p>
         </div>
       </section>
 

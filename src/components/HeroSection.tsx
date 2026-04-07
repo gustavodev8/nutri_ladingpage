@@ -1,4 +1,4 @@
-import { Video, Calendar, ArrowRight, Sparkles } from "lucide-react";
+import { Video, Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useContent } from "@/contexts/ContentContext";
@@ -96,19 +96,14 @@ const HeroSection = () => {
               </Button>
             </div>
 
-            {/* CTA secundário — prova social / resultados */}
-            <div className="relative inline-block w-full sm:w-auto">
-              {/* Ping rings */}
-              <span className="absolute -inset-1 rounded-2xl bg-amber-400/20 animate-ping" />
-              <button
-                onClick={() => navigate("/resultados")}
-                className="relative w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-white font-bold text-base shadow-lg shadow-amber-500/30 hover:shadow-amber-400/40 transition-all duration-200 hover:-translate-y-0.5 group"
-              >
-                <Sparkles className="h-5 w-5 shrink-0" />
-                <span>Ver histórias de transformação</span>
-                <ArrowRight className="h-4 w-4 shrink-0 group-hover:translate-x-1 transition-transform duration-200" />
-              </button>
-            </div>
+            {/* CTA secundário — resultados */}
+            <button
+              onClick={() => navigate("/resultados")}
+              className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
+            >
+              <span>Ver histórias reais de transformação</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-200" />
+            </button>
 
             {/* Social proof avatars */}
             <div className="flex items-center gap-4 pt-2">
