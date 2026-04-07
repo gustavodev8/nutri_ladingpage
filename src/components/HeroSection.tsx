@@ -3,6 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useContent } from "@/contexts/ContentContext";
 
+/** Splits `text` into parts, wrapping matched highlights in <span className="text-primary"> */
+function highlightTagline(text: string, highlights: string[]) {
+  const words = highlights.map(h => h.trim()).filter(Boolean);
+  if (!words.length) return <>{text}</>;
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isHighlight = words.some(w => w.toLowerCase() === part.toLowerCase());
+        return isHighlight
+          ? <span key={i} className="text-primary">{part}</span>
+          : <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 const HeroSection = () => {
   const { content } = useContent();
   const { hero, identity } = content;
@@ -35,9 +54,7 @@ const HeroSection = () => {
 
               {/* Main headline — value proposition */}
               <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                {hero.tagline}{" "}
-                <span className="text-primary">{hero.taglineHighlight1}</span>{" "}e{" "}
-                <span className="text-primary">{hero.taglineHighlight2}</span>
+                {highlightTagline(hero.tagline, [hero.taglineHighlight1, hero.taglineHighlight2])}
               </h1>
 
               {/* Name as credibility subtitle */}

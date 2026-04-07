@@ -151,8 +151,8 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   hero: {
     badge: "Vagas abertas — Alagoinhas/BA e Online",
-    tagline: "Emagreça até 15kg em 90 dias —",
-    taglineHighlight1: "com método científico",
+    tagline: "Emagreça até 15kg em 90 dias — com método científico e sem dietas genéricas",
+    taglineHighlight1: "método científico",
     taglineHighlight2: "sem dietas genéricas",
     cta1Text: "Quero mudar de vida",
     cta2Text: "Consulta Presencial",
