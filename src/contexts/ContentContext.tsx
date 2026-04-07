@@ -62,7 +62,7 @@ export interface SiteContent {
   };
   testimonials: {
     title: string;
-    items: { name: string; initials: string; text: string; photoUrl?: string }[];
+    items: { imageUrl: string }[];
   };
   faq: {
     title: string;
@@ -239,11 +239,9 @@ export const DEFAULT_CONTENT: SiteContent = {
   testimonials: {
     title: "O que dizem meus pacientes",
     items: [
-      { name: "Maria S.", initials: "MS", text: "O Dr. Fillipe mudou minha vida! Perdi 15kg de forma saudável e sem sofrimento. O cardápio é totalmente personalizado e sem aquela sensação de dieta." },
-      { name: "João P.", initials: "JP", text: "Minha performance nos treinos melhorou muito depois que comecei o acompanhamento com o Dr. Fillipe. O plano é feito pra minha rotina de verdade." },
-      { name: "Carla M.", initials: "CM", text: "Faço consulta online e é incrível. Mesmo longe, o acompanhamento é completo e o Dr. Fillipe está sempre disponível. Super recomendo!" },
-      { name: "Roberto L.", initials: "RL", text: "Consegui controlar minha diabetes com alimentação. Os exames nunca estiveram tão bons. O Dr. Fillipe é um profissional diferenciado." },
-      { name: "Fernanda A.", initials: "FA", text: "Sem restrições absurdas, sem sofrimento. Aprendi a comer de verdade. Em 4 meses, perdi 12kg e mudei minha relação com a comida completamente." },
+      { imageUrl: "" },
+      { imageUrl: "" },
+      { imageUrl: "" },
     ],
   },
   faq: {

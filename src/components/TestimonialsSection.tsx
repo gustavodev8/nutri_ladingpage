@@ -1,11 +1,5 @@
-import { Star, UserCircle } from "lucide-react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-} from "@/components/ui/carousel";
+import { useState } from "react";
+import { X } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
 
@@ -13,6 +7,9 @@ const TestimonialsSection = () => {
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
   const { content } = useContent();
   const { testimonials } = content;
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const filled = testimonials.items.filter((item) => item.imageUrl);
 
   return (
     <section id="depoimentos" className="py-20 lg:py-28">
@@ -22,7 +19,6 @@ const TestimonialsSection = () => {
           isVisible ? "opacity-100 translate-y-0" : hiddenClass
         }`}
       >
-        {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-10 md:mb-16 space-y-3 md:space-y-4">
           <span className="text-accent font-semibold text-sm uppercase tracking-widest">
             Depoimentos
@@ -32,57 +28,50 @@ const TestimonialsSection = () => {
           </h2>
         </div>
 
-        {/* Carousel */}
-        <div className="max-w-5xl mx-auto px-6 md:px-12">
-          <Carousel opts={{ loop: true }}>
-            <CarouselContent>
-              {testimonials.items.map(({ name, initials, text, photoUrl }, i) => (
-                <CarouselItem key={i} className="md:basis-1/2 lg:basis-1/3">
-                  <div className="flex flex-col rounded-2xl overflow-hidden border border-border bg-card">
-
-                    {/* Photo 4:3 */}
-                    <div className="aspect-[4/3] bg-muted w-full overflow-hidden">
-                      {photoUrl ? (
-                        <img
-                          src={photoUrl}
-                          alt={name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-primary/5">
-                          <UserCircle className="h-12 w-12 text-primary/20" />
-                          <span className="text-xs text-muted-foreground/50">Foto do paciente</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-5 space-y-3 flex flex-col flex-1">
-                      {/* Stars */}
-                      <div className="flex gap-0.5">
-                        {[...Array(5)].map((_, j) => (
-                          <Star key={j} className="h-3.5 w-3.5 fill-accent text-accent" />
-                        ))}
-                      </div>
-
-                      {/* Quote */}
-                      <p className="text-muted-foreground text-sm leading-relaxed italic flex-1">
-                        "{text}"
-                      </p>
-
-                      {/* Name */}
-                      <p className="font-semibold text-foreground text-sm pt-1">{name}</p>
-                    </div>
-
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
-        </div>
+        {filled.length === 0 ? (
+          <p className="text-center text-muted-foreground text-sm">
+            Nenhum depoimento adicionado ainda.
+          </p>
+        ) : (
+          <div className="columns-2 md:columns-3 gap-3 md:gap-4 max-w-4xl mx-auto">
+            {filled.map((item, i) => (
+              <div
+                key={i}
+                className="break-inside-avoid mb-3 md:mb-4 rounded-2xl overflow-hidden border border-border/50 cursor-zoom-in shadow-sm hover:shadow-md transition-shadow"
+                onClick={() => setLightbox(item.imageUrl)}
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={`Depoimento ${i + 1}`}
+                  className="w-full h-auto object-cover"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightbox}
+            alt="Depoimento"
+            className="max-h-[90vh] max-w-full rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   );
 };
