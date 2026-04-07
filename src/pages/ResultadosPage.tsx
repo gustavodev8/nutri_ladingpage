@@ -1,17 +1,10 @@
 import { useEffect } from "react";
-import { CheckCircle2, Users, Clock, Globe, GraduationCap, ArrowRight, ShieldCheck, Zap, CalendarCheck } from "lucide-react";
+import { CheckCircle2, Users, Clock, Globe, GraduationCap, ArrowRight, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import ResultsSection from "@/components/ResultsSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
-import CTASection from "@/components/CTASection";
 import { useContent } from "@/contexts/ContentContext";
-
-const PLAN_PERKS = [
-  { icon: ShieldCheck, text: "Protocolo 100% individualizado" },
-  { icon: Zap,         text: "Resultados a partir da 1ª consulta" },
-  { icon: CalendarCheck, text: "Consulta online ou presencial" },
-];
 
 const STAT_ICONS = [Users, Clock, Globe, GraduationCap];
 
@@ -22,7 +15,7 @@ const TRUST_BADGES = [
 ];
 
 const ResultadosPage = () => {
-  const { content } = useContent();
+  const { content, whatsappUrl } = useContent();
   const { about } = content;
 
   useEffect(() => {
@@ -119,37 +112,56 @@ const ResultadosPage = () => {
       {/* ── Depoimentos ── */}
       <TestimonialsSection />
 
-      {/* ── Banner de conversão ── */}
-      <section className="bg-green-light border-y border-border py-14 md:py-16">
-        <div className="container mx-auto px-6 md:px-10 max-w-3xl text-center">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground leading-snug mb-3">
-            Pronto para escrever a sua história?
-          </h2>
-          <p className="text-muted-foreground text-base leading-relaxed mb-8 max-w-xl mx-auto">
-            Cada resultado que você viu aqui começou com uma consulta. Conheça os planos e escolha o que faz sentido para você.
+      {/* ── CTA exclusivo da página de resultados ── */}
+      <section className="bg-green-dark py-20 md:py-28 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+
+        <div className="relative z-10 container mx-auto px-6 md:px-10 max-w-2xl text-center space-y-8">
+
+          {/* Eyebrow */}
+          <p className="text-xs font-bold uppercase tracking-widest text-primary-foreground/50">
+            Comece agora
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+          {/* Headline */}
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-primary-foreground leading-tight">
+            O seu resultado começa com uma única decisão
+          </h2>
+
+          {/* Divider */}
+          <div className="flex items-center justify-center gap-2">
+            <span className="w-8 h-px bg-primary-foreground/20" />
+            <span className="w-2 h-px bg-primary-foreground/10" />
+          </div>
+
+          {/* Body */}
+          <p className="text-primary-foreground/65 text-base md:text-lg leading-relaxed">
+            Mais de 7.000 pessoas em 7 países já mudaram sua saúde com o método de Fillipe David. Escolha o plano ideal e agende sua consulta.
+          </p>
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
               to="/consultas"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors duration-200 group"
+              className="group inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-primary-foreground text-primary font-semibold text-sm hover:bg-primary-foreground/90 transition-colors duration-200"
             >
               Ver planos e consultas
               <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform duration-200" />
             </Link>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {PLAN_PERKS.map(({ icon: Icon, text }) => (
-                <span key={text} className="flex items-center gap-1.5">
-                  <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-                  {text}
-                </span>
-              ))}
-            </div>
+            <a
+              href={whatsappUrl("Olá, vim pela página de resultados e quero saber mais!")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-4 rounded-xl border border-primary-foreground/20 text-primary-foreground/70 text-sm font-medium hover:border-primary-foreground/40 hover:text-primary-foreground transition-colors duration-200"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Tirar dúvidas pelo WhatsApp
+            </a>
           </div>
+
         </div>
       </section>
-
-      {/* ── CTA ── */}
-      <CTASection />
 
     </PageLayout>
   );
