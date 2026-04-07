@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Plus, Trash2, UserCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Trash2, UserCircle, Camera, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import AdminFormWrapper from "@/components/admin/AdminFormWrapper";
 import { useContent, type SiteContent } from "@/contexts/ContentContext";
+import { uploadImage } from "@/lib/supabase";
 
 type TestimonialsContent = SiteContent["testimonials"];
 type TestimonialItem = TestimonialsContent["items"][number];
@@ -13,6 +14,19 @@ type TestimonialItem = TestimonialsContent["items"][number];
 const AdminDepoimentos = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<TestimonialsContent>(content.testimonials);
+  const [uploading, setUploading] = useState<number | null>(null);
+  const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handlePhotoUpload = async (index: number, file: File) => {
+    setUploading(index);
+    const url = await uploadImage(file);
+    setUploading(null);
+    if (url) setItem(index, "photoUrl", url);
+  };
+
+  const removePhoto = (index: number) => {
+    setItem(index, "photoUrl", "");
+  };
 
   const setTitle = (value: string) => {
     setForm((p) => ({ ...p, title: value }));
@@ -40,7 +54,7 @@ const AdminDepoimentos = () => {
       ...p,
       items: [
         ...p.items,
-        { name: "Nome Sobrenome", initials: "NS", text: "Depoimento do paciente..." },
+        { name: "Nome Sobrenome", initials: "NS", text: "Depoimento do paciente...", photoUrl: "" },
       ],
     }));
   };
@@ -106,6 +120,46 @@ const AdminDepoimentos = () => {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
+                {/* Foto 4:3 */}
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Foto do paciente</Label>
+                  <div className="relative w-full max-w-[200px] aspect-[4/3] rounded-xl overflow-hidden border border-dashed border-border bg-muted/50">
+                    {item.photoUrl ? (
+                      <>
+                        <img src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(i)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5 text-white" />
+                        </button>
+                      </>
+                    ) : (
+                      <label className="w-full h-full flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted transition-colors">
+                        {uploading === i ? (
+                          <span className="text-xs text-muted-foreground">Enviando…</span>
+                        ) : (
+                          <>
+                            <Camera className="h-6 w-6 text-muted-foreground/50" />
+                            <span className="text-xs text-muted-foreground">Escolher foto</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          ref={(el) => { fileRefs.current[i] = el; }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(i, file);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Nome</Label>
                   <Input

@@ -62,7 +62,7 @@ export interface SiteContent {
   };
   testimonials: {
     title: string;
-    items: { name: string; initials: string; text: string }[];
+    items: { name: string; initials: string; text: string; photoUrl?: string }[];
   };
   faq: {
     title: string;
@@ -150,7 +150,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     photoUrl: "",
   },
   hero: {
-    badge: "Nutrição clínica e esportiva • Online e presencial",
+    badge: "Atendimento online e presencial • Brasil e exterior",
     tagline: "Emagreça até 15kg em 90 dias — com método científico e sem dietas genéricas",
     taglineHighlight1: "método científico",
     taglineHighlight2: "sem dietas genéricas",
