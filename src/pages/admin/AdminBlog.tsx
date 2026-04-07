@@ -34,6 +34,7 @@ const AdminBlog = () => {
   const [coverPreview, setCoverPreview] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const [confirmDelete, setConfirmDelete]   = useState<number | null>(null);
+  const [toggling, setToggling]             = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -101,10 +102,16 @@ const AdminBlog = () => {
 
   /* Toggle published */
   const handleTogglePublish = async (post: BlogPost) => {
-    const updated = await upsertBlogPost({ ...post, published: !post.published });
+    if (!post.id) return;
+    setToggling(post.id);
+    const newPublished = !post.published;
+    const updated = await upsertBlogPost({ ...post, published: newPublished });
+    setToggling(null);
     if (updated) {
-      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, published: !p.published } : p));
-      toast({ title: updated.published ? "Post publicado!" : "Post despublicado" });
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, published: newPublished } : p));
+      toast({ title: newPublished ? "Post publicado!" : "Post despublicado" });
+    } else {
+      toast({ title: "Erro ao alterar status do post", description: "Verifique se o RLS está desativado no Supabase.", variant: "destructive" });
     }
   };
 
@@ -270,10 +277,13 @@ const AdminBlog = () => {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => handleTogglePublish(post)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                  disabled={toggling === post.id}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   title={post.published ? "Despublicar" : "Publicar"}
                 >
-                  {post.published ? <EyeOff className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+                  {toggling === post.id
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : post.published ? <EyeOff className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
                 </button>
                 <button
                   onClick={() => openEdit(post)}
