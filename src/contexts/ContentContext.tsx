@@ -150,7 +150,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     photoUrl: "",
   },
   hero: {
-    badge: "Vagas abertas — Alagoinhas/BA e Online",
+    badge: "Nutrição clínica e esportiva • Online e presencial",
     tagline: "Emagreça até 15kg em 90 dias — com método científico e sem dietas genéricas",
     taglineHighlight1: "método científico",
     taglineHighlight2: "sem dietas genéricas",
