@@ -392,11 +392,22 @@ export async function fetchBlogPost(slug: string): Promise<BlogPost | null> {
 }
 
 export async function upsertBlogPost(post: BlogPost): Promise<BlogPost | null> {
-  const payload = { ...post, updated_at: new Date().toISOString() };
-  const { data, error } = await supabase
-    .from('blog_posts').upsert(payload, { onConflict: 'slug' }).select().single();
-  if (error) { console.error('upsertBlogPost error:', error); return null; }
-  return data as BlogPost;
+  const { id, ...fields } = post;
+  const payload = { ...fields, updated_at: new Date().toISOString() };
+
+  if (id) {
+    // UPDATE existing post by id
+    const { data, error } = await supabase
+      .from('blog_posts').update(payload).eq('id', id).select().single();
+    if (error) { console.error('upsertBlogPost update error:', error); return null; }
+    return data as BlogPost;
+  } else {
+    // INSERT new post
+    const { data, error } = await supabase
+      .from('blog_posts').insert(payload).select().single();
+    if (error) { console.error('upsertBlogPost insert error:', error); return null; }
+    return data as BlogPost;
+  }
 }
 
 export async function deleteBlogPost(id: number): Promise<boolean> {
