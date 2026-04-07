@@ -10,49 +10,81 @@ function readingTime(text: string) {
   return Math.max(1, Math.round(words / 200));
 }
 
-/* Very lightweight markdown renderer — bold, italic, headings, paragraphs */
-function renderContent(text: string, fontClass: string) {
+/* Inline markdown: bold, italic */
+function parseInline(line: string) {
+  return line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
+function renderContent(text: string) {
   const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   let key = 0;
+  let listBuffer: React.ReactNode[] = [];
 
-  const parseInline = (line: string) => {
-    // bold **text**, italic *text*
-    return line
-      .split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
-      .map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**"))
-          return <strong key={i}>{part.slice(2, -2)}</strong>;
-        if (part.startsWith("*") && part.endsWith("*"))
-          return <em key={i}>{part.slice(1, -1)}</em>;
-        return part;
-      });
+  const flushList = () => {
+    if (listBuffer.length === 0) return;
+    elements.push(
+      <ul key={key++} className="my-5 space-y-2 pl-5 list-none">
+        {listBuffer.map((item, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-foreground/80 leading-relaxed text-[17px]">
+            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+    listBuffer = [];
   };
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) { elements.push(<div key={key++} className="h-3" />); continue; }
+
+    if (!trimmed) {
+      flushList();
+      elements.push(<div key={key++} className="h-2" />);
+      continue;
+    }
 
     if (trimmed.startsWith("### ")) {
-      elements.push(<h3 key={key++} className={`text-xl font-bold text-foreground mt-6 mb-2 ${fontClass}`}>{trimmed.slice(4)}</h3>);
-    } else if (trimmed.startsWith("## ")) {
-      elements.push(<h2 key={key++} className={`text-2xl font-bold text-foreground mt-8 mb-3 ${fontClass}`}>{trimmed.slice(3)}</h2>);
-    } else if (trimmed.startsWith("# ")) {
-      elements.push(<h1 key={key++} className={`text-3xl font-bold text-foreground mt-8 mb-4 ${fontClass}`}>{trimmed.slice(2)}</h1>);
-    } else if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+      flushList();
       elements.push(
-        <li key={key++} className="ml-5 list-disc text-foreground/85 leading-relaxed text-base">
-          {parseInline(trimmed.slice(2))}
-        </li>
+        <h3 key={key++} className="text-xl font-bold text-foreground mt-10 mb-3 leading-snug">
+          {trimmed.slice(4)}
+        </h3>
       );
-    } else {
+    } else if (trimmed.startsWith("## ")) {
+      flushList();
       elements.push(
-        <p key={key++} className="text-foreground/85 leading-relaxed text-base mb-1">
+        <h2 key={key++} className="text-2xl font-bold text-foreground mt-12 mb-4 leading-snug">
+          {trimmed.slice(3)}
+        </h2>
+      );
+    } else if (trimmed.startsWith("# ")) {
+      flushList();
+      elements.push(
+        <h1 key={key++} className="text-3xl font-bold text-foreground mt-12 mb-5 leading-snug">
+          {trimmed.slice(2)}
+        </h1>
+      );
+    } else if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+      listBuffer.push(parseInline(trimmed.slice(2)));
+    } else {
+      flushList();
+      elements.push(
+        <p key={key++} className="text-[17px] text-foreground/80 leading-[1.85] mb-0">
           {parseInline(trimmed)}
         </p>
       );
     }
   }
+
+  flushList();
   return elements;
 }
 
@@ -95,10 +127,10 @@ const BlogPost = () => {
           </Button>
         </div>
       ) : (
-        <article className="py-12 md:py-20">
+        <article>
           {/* Cover */}
           {post.cover_image_url && (
-            <div className="w-full max-h-[460px] overflow-hidden mb-10">
+            <div className="w-full max-h-[500px] overflow-hidden">
               <img
                 src={post.cover_image_url}
                 alt={post.title}
@@ -107,21 +139,27 @@ const BlogPost = () => {
             </div>
           )}
 
-          <div className="container mx-auto px-4 max-w-3xl">
-            {/* Back */}
+          {/* Article body — constrained reading width */}
+          <div className="container mx-auto px-4 max-w-[680px] py-12 md:py-16">
+
+            {/* Back link */}
             <Link
               to="/blog"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-8"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-10"
             >
-              <ArrowLeft className="h-4 w-4" />Blog
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao blog
             </Link>
 
             {/* Meta */}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mb-6">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-6">
               <span className="flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5" />
-                {new Date(post.created_at!).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                {new Date(post.created_at!).toLocaleDateString("pt-BR", {
+                  weekday: "long", day: "2-digit", month: "long", year: "numeric",
+                })}
               </span>
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
               <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
                 {readingTime(post.content)} min de leitura
@@ -129,19 +167,27 @@ const BlogPost = () => {
             </div>
 
             {/* Title */}
-            <h1 className={`font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-8 ${fontClass}`}>
+            <h1 className={`font-display text-3xl md:text-4xl font-bold text-foreground leading-tight mb-8 ${fontClass}`}>
               {post.title}
             </h1>
 
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-10">
+              <span className="w-8 h-0.5 bg-primary rounded-full" />
+              <span className="w-2 h-0.5 bg-primary/40 rounded-full" />
+            </div>
+
             {/* Content */}
-            <div className={`prose-like space-y-1 ${fontClass}`}>
-              {renderContent(post.content, fontClass)}
+            <div className={`space-y-4 ${fontClass}`}>
+              {renderContent(post.content)}
             </div>
 
             {/* Footer CTA */}
-            <div className="mt-16 p-6 rounded-2xl bg-primary/5 border border-primary/20 text-center space-y-3">
+            <div className="mt-16 p-7 rounded-2xl bg-primary/5 border border-primary/15 text-center space-y-3">
               <p className="font-bold text-foreground text-lg">Pronto para transformar sua saúde?</p>
-              <p className="text-sm text-muted-foreground">Agende sua consulta com Fillipe David e receba um protocolo feito para você.</p>
+              <p className="text-sm text-muted-foreground">
+                Agende sua consulta com Fillipe David e receba um protocolo feito para você.
+              </p>
               <Button asChild size="lg" className="rounded-full px-8 mt-1">
                 <Link to="/consultas">Quero mudar de vida</Link>
               </Button>
