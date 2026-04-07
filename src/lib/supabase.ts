@@ -396,17 +396,15 @@ export async function upsertBlogPost(post: BlogPost): Promise<BlogPost | null> {
   const payload = { ...fields, updated_at: new Date().toISOString() };
 
   if (id) {
-    // UPDATE existing post by id
-    const { data, error } = await supabase
-      .from('blog_posts').update(payload).eq('id', id).select().single();
+    // UPDATE existing post by id — don't chain .select() to avoid RLS select restrictions
+    const { error } = await supabase.from('blog_posts').update(payload).eq('id', id);
     if (error) { console.error('upsertBlogPost update error:', error); return null; }
-    return data as BlogPost;
+    return { ...post, ...payload };
   } else {
-    // INSERT new post
-    const { data, error } = await supabase
-      .from('blog_posts').insert(payload).select().single();
+    // INSERT new post — don't chain .select() to avoid RLS select restrictions
+    const { error } = await supabase.from('blog_posts').insert(payload);
     if (error) { console.error('upsertBlogPost insert error:', error); return null; }
-    return data as BlogPost;
+    return { ...payload } as BlogPost;
   }
 }
 
