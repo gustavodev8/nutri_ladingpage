@@ -6,6 +6,7 @@ import ServicesSection from "@/components/ServicesSection";
 import ModalitiesSection from "@/components/ModalitiesSection";
 import ResultsTeaser from "@/components/ResultsTeaser";
 import DigitalProductsSection from "@/components/DigitalProductsSection";
+import FreeEbookSection from "@/components/FreeEbookSection";
 import FAQSection from "@/components/FAQSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
@@ -42,7 +43,9 @@ const Index = () => {
         <ModalitiesSection />
         {/* 5. Prova social — teaser de resultados */}
         <ResultsTeaser />
-        {/* 6. Ebooks e materiais digitais */}
+        {/* 6. E-book gratuito — captação de leads */}
+        <FreeEbookSection />
+        {/* 7. Ebooks e materiais digitais */}
         <DigitalProductsSection />
         {/* 6. Perguntas frequentes */}
         <FAQSection />
