@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
@@ -37,12 +37,25 @@ declare global {
 
 const BookingPage = () => {
   const { planIndex } = useParams<{ planIndex: string }>();
+  const [searchParams] = useSearchParams();
+  const isFree = searchParams.get("free") === "1";
   const { content, whatsappUrl } = useContent();
   const { loja, identity } = content;
 
-  const idx = Number(planIndex);
-  const plan = loja.plans[idx];
-  if (!plan) return <Navigate to="/" replace />;
+  const idx = Number(planIndex ?? "0");
+  const plan = loja.plans[idx] ?? {
+    name: "Consulta Gratuita (20 min)",
+    price: "Gratuito",
+    priceAmount: 0,
+    consultationType: "online" as const,
+    returnCount: 0,
+    sessionCount: 1,
+    desc: "",
+    features: [],
+    popular: false,
+    whatsappMessage: "",
+  };
+  if (!isFree && !loja.plans[idx]) return <Navigate to="/" replace />;
 
   // 1 consulta inicial + N retornos (sessionCount não entra na soma pois
   // representa o total de encontros do plano, não consultas adicionais)
@@ -363,6 +376,17 @@ const BookingPage = () => {
     return () => { isMounted = false; clearInterval(pollingRef.current!); };
   };
 
+  const handleFreeBooking = async () => {
+    setStage("loading");
+    const ok = await saveBookings("confirmed");
+    if (ok) {
+      setStage("approved");
+    } else {
+      setStage("error");
+      toast({ title: "Erro ao salvar agendamento. Tente novamente.", variant: "destructive" });
+    }
+  };
+
   const handleCopy = () => {
     if (!pixData?.qr_code) return;
     navigator.clipboard.writeText(pixData.qr_code);
@@ -395,7 +419,9 @@ const BookingPage = () => {
               </div>
               <div className="space-y-2">
                 <h2 className="font-display text-2xl font-bold text-foreground">Consulta confirmada!</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">Pagamento aprovado. Um email de confirmação foi enviado para</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {isFree ? "Agendamento salvo! Um email de confirmação será enviado para" : "Pagamento aprovado. Um email de confirmação foi enviado para"}
+                </p>
                 <p className="text-sm font-semibold bg-muted px-3 py-1.5 rounded-lg inline-block">{clientEmail}</p>
               </div>
               {/* Data da consulta */}
@@ -434,7 +460,7 @@ const BookingPage = () => {
             <p className="text-xs font-bold uppercase tracking-widest text-primary">Agendar consulta</p>
             <h1 className="font-display text-2xl font-bold text-foreground">{plan.name}</h1>
             <p className="text-sm text-muted-foreground">
-              {totalSessions} sessão{totalSessions > 1 ? "ões" : ""} · {plan.price}
+              {isFree ? "Online · Gratuita · 20 min" : `${totalSessions} sessão${totalSessions > 1 ? "ões" : ""} · ${plan.price}`}
             </p>
             {totalReturns > 0 && (
               <p className="text-xs text-muted-foreground/70">
@@ -445,10 +471,12 @@ const BookingPage = () => {
 
           {/* Steps indicator */}
           {(() => {
-            const steps = planType
-              ? ["Datas", "Dados", "Clínico", "Pagamento"]
-              : ["Tipo", "Datas", "Dados", "Clínico", "Pagamento"];
-            const displayStep = planType ? step - 1 : step;
+            const steps = isFree
+              ? ["Datas", "Dados", "Clínico"]
+              : planType
+                ? ["Datas", "Dados", "Clínico", "Pagamento"]
+                : ["Tipo", "Datas", "Dados", "Clínico", "Pagamento"];
+            const displayStep = (isFree || planType) ? step - 1 : step;
             return (
               <div className="flex items-center justify-center gap-1">
                 {steps.map((label, i) => (
@@ -798,9 +826,19 @@ const BookingPage = () => {
                 <Button variant="outline" className="rounded-full gap-2" onClick={() => setStep(2)}>
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
-                  Continuar <ArrowRight className="h-4 w-4" />
-                </Button>
+                {isFree ? (
+                  <Button
+                    className="flex-1 rounded-full gap-2"
+                    disabled={!goal || stage === "loading"}
+                    onClick={handleFreeBooking}
+                  >
+                    {stage === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />Salvando...</> : <>Confirmar agendamento <CheckCircle2 className="h-4 w-4" /></>}
+                  </Button>
+                ) : (
+                  <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
+                    Continuar <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           )}

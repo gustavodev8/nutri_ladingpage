@@ -255,7 +255,7 @@ const ProdutoPage = () => {
                     <p className="text-sm font-semibold text-foreground">Sua consulta gratuita de 20 min</p>
                     <p className="text-xs text-muted-foreground">Como bônus da sua compra, agende agora sua consulta grátis com Fillipe David.</p>
                     <Button asChild size="sm" className="rounded-full gap-2 w-full mt-1">
-                      <Link to="/consultas">Agendar consulta gratuita</Link>
+                      <Link to="/consultas/0?free=1">Agendar consulta gratuita</Link>
                     </Button>
                   </div>
 
