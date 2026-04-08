@@ -59,9 +59,12 @@ const DigitalProductsSection = () => {
                 <h3 className="font-bold text-base text-foreground">{item.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.desc}</p>
                 <p className="text-2xl font-extrabold text-primary">{item.price}</p>
-                <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                  <Gift className="h-3.5 w-3.5 shrink-0" />
-                  Inclui consulta gratuita de 20 min
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
+                  <Gift className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-primary leading-tight">+ Consulta gratuita de 20 min</p>
+                    <p className="text-[11px] text-muted-foreground leading-tight">inclusa na compra</p>
+                  </div>
                 </div>
                 <Button
                   asChild

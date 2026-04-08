@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Mail, BookOpen, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, BookOpen, CheckCircle2, ArrowRight, Loader2, Video } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
@@ -79,6 +80,25 @@ const FreeEbookSection = () => {
                 </li>
               ))}
             </ul>
+
+            {/* Bonus highlight */}
+            <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4">
+              <Video className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Bônus: consulta online gratuita de 20 min
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Quem comprar qualquer e-book ganha uma consulta individual com Fillipe David — sem custo adicional.
+                </p>
+                <Link
+                  to="/produto/0"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary mt-2 hover:underline"
+                >
+                  Ver e-books disponíveis <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Right — form */}
