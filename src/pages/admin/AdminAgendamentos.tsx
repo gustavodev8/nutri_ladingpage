@@ -722,7 +722,12 @@ const AdminAgendamentos = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
-                      <StatusPill status={overallStatus} />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {first.plan_name?.toLowerCase().includes("gratuita") && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">Gratuita</span>
+                        )}
+                        <StatusPill status={overallStatus} />
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <span className="text-xs text-muted-foreground">{first.plan_name}</span>
@@ -753,7 +758,12 @@ const AdminAgendamentos = () => {
                       <span className="text-xs font-bold text-muted-foreground">{initials(first.client_name)}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                        {first.plan_name?.toLowerCase().includes("gratuita") && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">Gratuita</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {goalLabel && <><span className="text-xs text-muted-foreground">{goalLabel}</span><span className="text-muted-foreground/30">·</span></>}
                         <span className="text-xs text-muted-foreground">{first.plan_name}</span>

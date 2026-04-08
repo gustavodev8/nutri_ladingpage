@@ -379,12 +379,29 @@ const BookingPage = () => {
   const handleFreeBooking = async () => {
     setStage("loading");
     const ok = await saveBookings("confirmed");
-    if (ok) {
-      setStage("approved");
-    } else {
+    if (!ok) {
       setStage("error");
       toast({ title: "Erro ao salvar agendamento. Tente novamente.", variant: "destructive" });
+      return;
     }
+
+    // Send confirmation email
+    const s = sessions[0];
+    const dateStr = s?.date ? s.date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }) : "";
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-material`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY },
+        body: JSON.stringify({
+          to: clientEmail,
+          client_name: clientName,
+          subject: "Sua consulta gratuita foi confirmada! ✅",
+          body: `Olá, ${clientName}!\n\nSua consulta gratuita de 20 minutos com Fillipe David foi confirmada.\n\n📅 Data: ${dateStr}\n⏰ Horário: ${s?.time ?? ""}\n💻 Modalidade: Online\n\nEm breve você receberá o link da videochamada.\n\nQualquer dúvida, entre em contato pelo WhatsApp.\n\nFillipe David — Nutricionista`,
+        }),
+      });
+    } catch { /* email failure should not block the user */ }
+
+    setStage("approved");
   };
 
   const handleCopy = () => {
@@ -525,41 +542,25 @@ const BookingPage = () => {
                 Escolha a data da sua primeira consulta
               </p>
 
-              {/* Per-session type toggle */}
-              <div className="flex gap-2">
-                {[
-                  { id: "online" as const, label: "Online", icon: Globe },
-                  { id: "presencial" as const, label: "Presencial", icon: MapPin },
-                ].filter(t => !planType || planType === "both" || planType === t.id)
-                 .map(({ id, label, icon: Icon }) => (
-                  <button key={id} onClick={() => handleSessionTypeChange(id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                      sessions[currentSessionIdx]?.type === id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border text-muted-foreground hover:border-primary/30"
-                    }`}>
-                    <Icon className="h-3.5 w-3.5" />{label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Per-session type toggle */}
-              <div className="flex gap-2">
-                {[
-                  { id: "online" as const, label: "Online", icon: Globe },
-                  { id: "presencial" as const, label: "Presencial", icon: MapPin },
-                ].filter(t => !planType || planType === "both" || planType === t.id)
-                 .map(({ id, label, icon: Icon }) => (
-                  <button key={id} onClick={() => handleSessionTypeChange(id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                      sessions[currentSessionIdx]?.type === id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border text-muted-foreground hover:border-primary/30"
-                    }`}>
-                    <Icon className="h-3.5 w-3.5" />{label}
-                  </button>
-                ))}
-              </div>
+              {/* Session type toggle — hidden when free (always online) */}
+              {!isFree && (
+                <div className="flex gap-2">
+                  {[
+                    { id: "online" as const, label: "Online", icon: Globe },
+                    { id: "presencial" as const, label: "Presencial", icon: MapPin },
+                  ].filter(t => !planType || planType === "both" || planType === t.id)
+                   .map(({ id, label, icon: Icon }) => (
+                    <button key={id} onClick={() => handleSessionTypeChange(id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                        sessions[currentSessionIdx]?.type === id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                      }`}>
+                      <Icon className="h-3.5 w-3.5" />{label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {loadingSlots ? (
                 <div className="flex items-center justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
