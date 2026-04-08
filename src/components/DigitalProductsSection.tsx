@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
@@ -59,6 +59,10 @@ const DigitalProductsSection = () => {
                 <h3 className="font-bold text-base text-foreground">{item.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.desc}</p>
                 <p className="text-2xl font-extrabold text-primary">{item.price}</p>
+                <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                  <Gift className="h-3.5 w-3.5 shrink-0" />
+                  Inclui consulta gratuita de 20 min
+                </div>
                 <Button
                   asChild
                   variant={item.badge ? "default" : "outline"}

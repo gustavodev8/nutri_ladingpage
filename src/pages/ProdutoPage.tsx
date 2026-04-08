@@ -250,8 +250,17 @@ const ProdutoPage = () => {
                     Verifique sua caixa de entrada e a pasta de spam caso não encontre o email.
                   </div>
 
-                  {/* CTA */}
-                  <Button asChild variant="outline" size="sm" className="rounded-full gap-2 w-full">
+                  {/* Free consultation CTA */}
+                  <div className="w-full rounded-xl border border-border bg-muted/40 px-4 py-4 space-y-2 text-center">
+                    <p className="text-sm font-semibold text-foreground">Sua consulta gratuita de 20 min</p>
+                    <p className="text-xs text-muted-foreground">Como bônus da sua compra, agende agora sua consulta grátis com Fillipe David.</p>
+                    <Button asChild size="sm" className="rounded-full gap-2 w-full mt-1">
+                      <Link to="/consultas">Agendar consulta gratuita</Link>
+                    </Button>
+                  </div>
+
+                  {/* Back */}
+                  <Button asChild variant="ghost" size="sm" className="rounded-full gap-2 w-full text-muted-foreground">
                     <Link to="/">
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao início
@@ -295,6 +304,15 @@ const ProdutoPage = () => {
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-extrabold text-primary">{produto.price}</span>
                     <span className="text-sm text-muted-foreground">pagamento único</span>
+                  </div>
+
+                  {/* Free consultation badge */}
+                  <div className="flex items-start gap-3 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
+                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <p className="text-sm text-foreground leading-snug">
+                      <span className="font-semibold">Ganhe uma consulta gratuita de 20 min</span>
+                      {" "}— após a compra, você receberá um link para agendar com Fillipe David.
+                    </p>
                   </div>
 
                   {/* Form */}
