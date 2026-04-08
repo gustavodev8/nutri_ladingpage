@@ -238,7 +238,7 @@ const BookingPage = () => {
 
   const handleDateSelect = async (date: Date) => {
     const newSessions = [...sessions];
-    newSessions[currentSessionIdx] = { date, time: null };
+    newSessions[currentSessionIdx] = { date, time: null, type: sessions[currentSessionIdx]?.type || consultationType };
     setSessions(newSessions);
     setLoadingBooked(true);
     const booked = await fetchBookingsForDate(toLocalISO(date), sessions[currentSessionIdx]?.type || consultationType!);
