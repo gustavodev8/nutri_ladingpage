@@ -129,6 +129,17 @@ export async function uploadPdf(file: File): Promise<string | null> {
   return urlData.publicUrl;
 }
 
+export async function uploadVideo(file: File): Promise<string | null> {
+  const ext = file.name.split(".").pop();
+  const path = `videos/${Date.now()}.${ext}`;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (error) { console.error("[Supabase] uploadVideo error:", error.message); return null; }
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+  return urlData.publicUrl;
+}
+
 // ─── Booking System ───────────────────────────────────────────────────────────
 
 export interface AvailabilitySlot {

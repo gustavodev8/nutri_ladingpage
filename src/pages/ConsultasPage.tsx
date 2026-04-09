@@ -233,6 +233,51 @@ const ConsultasPage = () => {
         </div>
       </section>
 
+      {/* ── Vídeo apresentação ───────────────────────────────────────────── */}
+      {loja.videoUrl && (
+        <section className="py-16 lg:py-20 bg-background border-b border-border/50">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+
+              {/* Video */}
+              <div className="rounded-2xl overflow-hidden bg-black shadow-lg aspect-video w-full">
+                <video
+                  src={loja.videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  playsInline
+                />
+              </div>
+
+              {/* Text */}
+              <div className="space-y-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-primary">Como funciona</p>
+                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-snug">
+                  Veja como é uma consulta com Fillipe David
+                </h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Assista ao vídeo e entenda o método que já transformou mais de 7.000 vidas — do diagnóstico ao protocolo personalizado, acompanhamento real e resultados duradouros.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Avaliação completa do seu perfil e histórico",
+                    "Cardápio 100% adaptado à sua rotina",
+                    "Acompanhamento a cada 21 dias",
+                    "Suporte contínuo entre as consultas",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm text-foreground/80">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Planos ───────────────────────────────────────────────────────── */}
       <section className="py-16 lg:py-20 bg-background">
         <div

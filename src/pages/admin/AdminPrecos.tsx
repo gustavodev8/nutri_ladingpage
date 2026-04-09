@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Plus, Trash2, Star } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, Trash2, Star, Upload, X, Video, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import AdminFormWrapper from "@/components/admin/AdminFormWrapper";
 import { useContent, type SiteContent } from "@/contexts/ContentContext";
+import { uploadVideo } from "@/lib/supabase";
 
 type Plan = SiteContent["loja"]["plans"][number];
 type LojaContent = SiteContent["loja"];
@@ -13,6 +14,25 @@ type LojaContent = SiteContent["loja"];
 const AdminPrecos = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<LojaContent>(content.loja);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoError, setVideoError] = useState("");
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleVideoFile = async (file: File) => {
+    if (!file.type.startsWith("video/")) {
+      setVideoError("Selecione um arquivo de vídeo (MP4, MOV, WebM).");
+      return;
+    }
+    setVideoError("");
+    setVideoUploading(true);
+    const url = await uploadVideo(file);
+    setVideoUploading(false);
+    if (url) {
+      setForm((p) => ({ ...p, videoUrl: url }));
+    } else {
+      setVideoError("Erro ao enviar vídeo. Verifique o bucket no Supabase Storage.");
+    }
+  };
 
   const setHeader = (key: "sectionTitle" | "sectionSubtitle", value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -73,6 +93,76 @@ const AdminPrecos = () => {
           <Label>Subtítulo</Label>
           <Input value={form.sectionSubtitle} onChange={(e) => setHeader("sectionSubtitle", e.target.value)} />
         </div>
+      </div>
+
+      <div className="border-t border-border pt-6 space-y-3">
+        <Label>Vídeo de apresentação (opcional)</Label>
+        <p className="text-xs text-muted-foreground">
+          Aparece entre o hero e os planos na página de consultas.
+        </p>
+        {form.videoUrl ? (
+          <div className="relative rounded-xl overflow-hidden bg-black aspect-video w-full max-w-md">
+            <video src={form.videoUrl} controls className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setForm((p) => ({ ...p, videoUrl: "" }))}
+              className="absolute top-2 right-2 bg-background/80 rounded-full p-1 hover:bg-destructive hover:text-white transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="flex flex-col items-center justify-center gap-2 w-full max-w-md h-36 rounded-xl border-2 border-dashed border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-muted-foreground"
+            onClick={() => !videoUploading && videoInputRef.current?.click()}
+          >
+            {videoUploading ? (
+              <>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm">Enviando vídeo...</span>
+              </>
+            ) : (
+              <>
+                <Video className="h-8 w-8 opacity-40" />
+                <span className="text-sm">Clique para fazer upload do vídeo</span>
+                <span className="text-xs opacity-60">MP4, MOV, WebM</span>
+              </>
+            )}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={videoUploading}
+            onClick={() => videoInputRef.current?.click()}
+            className="gap-1.5 text-xs"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {videoUploading ? "Enviando..." : form.videoUrl ? "Trocar vídeo" : "Fazer upload"}
+          </Button>
+          {form.videoUrl && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setForm((p) => ({ ...p, videoUrl: "" }))}
+              className="gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+              Remover
+            </Button>
+          )}
+        </div>
+        {videoError && <p className="text-xs text-destructive">{videoError}</p>}
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleVideoFile(e.target.files[0])}
+        />
       </div>
 
       <div className="border-t border-border pt-6 space-y-4">

@@ -93,6 +93,7 @@ export interface SiteContent {
   loja: {
     sectionTitle: string;
     sectionSubtitle: string;
+    videoUrl?: string;
     plans: {
       name: string;
       desc: string;
@@ -280,6 +281,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   loja: {
     sectionTitle: "Escolha o plano ideal para você",
     sectionSubtitle: "Consultas avulsas ou pacotes com acompanhamento contínuo — do jeito certo, do seu jeito.",
+    videoUrl: "",
     plans: [
       {
         name: "Consulta Online",
