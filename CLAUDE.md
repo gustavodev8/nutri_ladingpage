@@ -17,7 +17,7 @@ Painel administrativo completo para o nutricionista gerenciar conteúdo, agendam
 - `/` → `src/pages/Index.tsx` (home)
 - `/consultas` → `src/pages/ConsultasPage.tsx`
 - `/resultados` → `src/pages/ResultadosPage.tsx`
-- `/admin` → painel admin protegido por Supabase Auth
+- `/admin` → painel admin protegido por Supabase Auth aaa
 
 ## Regras de codificação
 - Todo conteúdo editável do site passa pelo `ContentContext` (`src/contexts/ContentContext.tsx`)
