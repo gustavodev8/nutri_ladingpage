@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Search, Plus, X, ChevronRight, Sparkles } from "lucide-react";
 import { searchFoods, type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // ── Sync external value ──────────────────────────────────────────────────
   useEffect(() => {
@@ -118,6 +120,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
       if (!seen.has(f.id)) { seen.add(f.id); merged.push(f); }
     }
     setResults(merged.slice(0, 30));
+    updatePos();
     setIsOpen(true);
   }, []);
 
@@ -125,19 +128,39 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     const q = e.target.value;
     setQuery(q);
     onCustomName(q);
+    updatePos();
     runSearch(q);
   };
+
+  // ── Compute dropdown position (portal needs fixed coords) ───────────────
+  const updatePos = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
 
   // ── Close on outside click ───────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inPortal = (document.getElementById("food-search-portal"))?.contains(target);
+      if (!inContainer && !inPortal) setIsOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // ── Update position on scroll/resize ────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [isOpen, updatePos]);
 
   // ── Select food from dropdown ────────────────────────────────────────────
   const handleSelect = (food: FoodItem) => {
@@ -239,7 +262,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
             type="text"
             value={query}
             onChange={handleInputChange}
-            onFocus={() => { if (query.trim().length >= 2) setIsOpen(true); }}
+            onFocus={() => { if (query.trim().length >= 2) { updatePos(); setIsOpen(true); } }}
             placeholder="Buscar alimento..."
             className={cn(
               "flex h-10 w-full rounded-lg border border-input bg-background",
@@ -261,11 +284,15 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
           )}
         </div>
 
-        {/* Dropdown */}
-        {isOpen && (
-          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+        {/* Dropdown rendered as portal to escape overflow clipping */}
+        {isOpen && dropdownPos && createPortal(
+          <div
+            id="food-search-portal"
+            style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 380), zIndex: 9999 }}
+            className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
+          >
             {/* Results list */}
-            <ul className="max-h-60 overflow-y-auto divide-y divide-border/50">
+            <ul className="max-h-80 overflow-y-auto divide-y divide-border/50">
               {results.length === 0 ? (
                 <li className="px-4 py-3 text-sm text-muted-foreground text-center">
                   Nenhum alimento encontrado para "{query}"
@@ -275,21 +302,19 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
                   <li key={food.id}>
                     <button
                       type="button"
-                      onClick={() => handleSelect(food)}
+                      onMouseDown={(e) => { e.preventDefault(); handleSelect(food); }}
                       className="w-full text-left"
                     >
-                      <div className="flex items-center justify-between px-3 py-2 hover:bg-muted/60 cursor-pointer transition-colors">
-                        <div className="min-w-0 flex-1 pr-3">
-                          <p className="text-sm font-medium text-foreground truncate">{food.name}</p>
-                          <p className="text-xs text-muted-foreground">{food.category}</p>
+                      <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/60 cursor-pointer transition-colors gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground">{food.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{food.category}</p>
                         </div>
-                        <div className="text-right text-xs text-muted-foreground tabular-nums space-y-0.5 shrink-0">
-                          <p className="font-semibold text-orange-600">{food.kcal} kcal</p>
-                          <p>
-                            P {food.protein}g · C {food.carbs}g · G {food.fat}g
-                          </p>
+                        <div className="text-right text-xs tabular-nums shrink-0">
+                          <p className="font-semibold text-foreground/80">{food.kcal} kcal</p>
+                          <p className="text-muted-foreground mt-0.5">P {food.protein}g · C {food.carbs}g · G {food.fat}g</p>
                         </div>
-                        <ChevronRight className="ml-2 h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                       </div>
                     </button>
                   </li>
@@ -301,7 +326,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
             <div className="border-t border-border">
               <button
                 type="button"
-                onClick={openModal}
+                onMouseDown={(e) => { e.preventDefault(); openModal(); }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-primary hover:bg-primary/5 transition-colors font-medium"
               >
                 <Plus className="h-4 w-4 shrink-0" />
@@ -310,7 +335,8 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
                 </span>
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 
