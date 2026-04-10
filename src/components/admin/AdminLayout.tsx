@@ -5,6 +5,7 @@ import {
   Clock, MessageSquareQuote, HelpCircle, MapPin, Megaphone, LogOut,
   Menu, ExternalLink, KeyRound, Globe, Loader2, ReceiptText,
   CalendarDays, CalendarCheck, ChevronDown, FileText, Star, Settings,
+  Stethoscope, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +34,13 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin/precos",   icon: ShoppingBag, label: "Loja de Consultas" },
       { to: "/admin/produtos", icon: BookOpen,    label: "Produtos Digitais" },
+    ],
+  },
+  {
+    label: "Clínica",
+    icon: Stethoscope,
+    items: [
+      { to: "/admin/pacientes", icon: Users, label: "Pacientes" },
     ],
   },
   {

@@ -140,6 +140,259 @@ export async function uploadVideo(file: File): Promise<string | null> {
   return urlData.publicUrl;
 }
 
+// ─── Clínica – Types ──────────────────────────────────────────────────────────
+
+export interface Patient {
+  id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  birth_date?: string;
+  gender?: "M" | "F" | "outro";
+  occupation?: string;
+  city?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface Anamnesis {
+  id?: number;
+  patient_id: number;
+  chief_complaint?: string;
+  medical_history?: string;
+  current_medications?: string;
+  allergies?: string;
+  food_aversions?: string;
+  food_preferences?: string;
+  meals_per_day?: number;
+  water_intake?: string;
+  physical_activity?: string;
+  sleep_hours?: number;
+  bowel_function?: string;
+  goals?: string;
+  updated_at?: string;
+}
+
+export interface Measurement {
+  id?: number;
+  patient_id: number;
+  assessment_date: string;
+  weight?: number;
+  height?: number;
+  waist?: number;
+  hip?: number;
+  arm?: number;
+  neck?: number;
+  body_fat?: number;
+  lean_mass?: number;
+  visceral_fat?: number;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface MealPlan {
+  id?: number;
+  patient_id: number;
+  title: string;
+  start_date?: string;
+  end_date?: string;
+  daily_calories?: number;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface Meal {
+  id?: number;
+  plan_id: number;
+  meal_name: string;
+  time_suggestion?: string;
+  sort_order?: number;
+  foods?: MealFood[];
+}
+
+export interface MealFood {
+  id?: number;
+  meal_id: number;
+  food_name: string;
+  quantity?: number;
+  unit?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  notes?: string;
+  sort_order?: number;
+  // Base per-100g values — used for auto-calculation when quantity changes
+  kcal_per_100g?: number;
+  protein_per_100g?: number;
+  carbs_per_100g?: number;
+  fat_per_100g?: number;
+}
+
+// ─── Clínica – CRUD ───────────────────────────────────────────────────────────
+
+// Patients
+export async function fetchPatients(): Promise<Patient[]> {
+  const { data, error } = await supabase
+    .from("patients")
+    .select("*")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchPatients:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function fetchPatient(id: number): Promise<Patient | null> {
+  const { data, error } = await supabase
+    .from("patients")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) { console.error("[Supabase] fetchPatient:", error.message); return null; }
+  return data;
+}
+
+export async function upsertPatient(patient: Patient): Promise<Patient | null> {
+  const { id, ...fields } = patient;
+  if (id) {
+    const { error } = await supabase.from("patients").update(fields).eq("id", id);
+    if (error) { console.error("[Supabase] upsertPatient update:", error.message); return null; }
+    return { id, ...fields };
+  } else {
+    const { data, error } = await supabase.from("patients").insert(fields).select().single();
+    if (error) { console.error("[Supabase] upsertPatient insert:", error.message); return null; }
+    return data;
+  }
+}
+
+export async function deletePatient(id: number): Promise<boolean> {
+  const { error } = await supabase.from("patients").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deletePatient:", error.message); return false; }
+  return true;
+}
+
+// Anamnesis
+export async function fetchAnamnesis(patientId: number): Promise<Anamnesis | null> {
+  const { data, error } = await supabase
+    .from("anamnesis")
+    .select("*")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+  if (error) { console.error("[Supabase] fetchAnamnesis:", error.message); return null; }
+  return data;
+}
+
+export async function upsertAnamnesis(a: Anamnesis): Promise<boolean> {
+  const payload = { ...a, updated_at: new Date().toISOString() };
+  if (a.id) {
+    const { id, ...fields } = payload;
+    const { error } = await supabase.from("anamnesis").update(fields).eq("id", id);
+    if (error) { console.error("[Supabase] upsertAnamnesis update:", error.message); return false; }
+  } else {
+    const { error } = await supabase.from("anamnesis").insert(payload);
+    if (error) { console.error("[Supabase] upsertAnamnesis insert:", error.message); return false; }
+  }
+  return true;
+}
+
+// Measurements
+export async function fetchMeasurements(patientId: number): Promise<Measurement[]> {
+  const { data, error } = await supabase
+    .from("measurements")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("assessment_date", { ascending: false });
+  if (error) { console.error("[Supabase] fetchMeasurements:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function insertMeasurement(m: Measurement): Promise<Measurement | null> {
+  const { id, ...fields } = m;
+  const { data, error } = await supabase.from("measurements").insert(fields).select().single();
+  if (error) { console.error("[Supabase] insertMeasurement:", error.message); return null; }
+  return data;
+}
+
+export async function deleteMeasurement(id: number): Promise<boolean> {
+  const { error } = await supabase.from("measurements").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteMeasurement:", error.message); return false; }
+  return true;
+}
+
+// Meal Plans
+export async function fetchMealPlans(patientId: number): Promise<MealPlan[]> {
+  const { data, error } = await supabase
+    .from("meal_plans")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchMealPlans:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function upsertMealPlan(plan: MealPlan): Promise<MealPlan | null> {
+  const { id, ...fields } = plan;
+  if (id) {
+    const { error } = await supabase.from("meal_plans").update(fields).eq("id", id);
+    if (error) { console.error("[Supabase] upsertMealPlan update:", error.message); return null; }
+    return { id, ...fields };
+  } else {
+    const { data, error } = await supabase.from("meal_plans").insert(fields).select().single();
+    if (error) { console.error("[Supabase] upsertMealPlan insert:", error.message); return null; }
+    return data;
+  }
+}
+
+export async function deleteMealPlan(id: number): Promise<boolean> {
+  const { error } = await supabase.from("meal_plans").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteMealPlan:", error.message); return false; }
+  return true;
+}
+
+// Full plan (meals + foods)
+export async function fetchFullMealPlan(planId: number): Promise<Meal[]> {
+  const { data, error } = await supabase
+    .from("meals")
+    .select("*, foods:meal_foods(*)")
+    .eq("plan_id", planId)
+    .order("sort_order");
+  if (error) { console.error("[Supabase] fetchFullMealPlan:", error.message); return []; }
+  return (data ?? []).map((m: any) => ({ ...m, foods: m.foods ?? [] }));
+}
+
+export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean> {
+  // Delete all existing meals for this plan (cascade deletes foods)
+  const { error: delError } = await supabase.from("meals").delete().eq("plan_id", planId);
+  if (delError) { console.error("[Supabase] saveMeals delete:", delError.message); return false; }
+
+  for (let i = 0; i < meals.length; i++) {
+    const meal = meals[i];
+    const { data: mealData, error: mealErr } = await supabase
+      .from("meals")
+      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i })
+      .select()
+      .single();
+    if (mealErr || !mealData) { console.error("[Supabase] saveMeals insert meal:", mealErr?.message); return false; }
+
+    if (meal.foods && meal.foods.length > 0) {
+      const foodRows = meal.foods.map((f, fi) => ({
+        meal_id: mealData.id,
+        food_name: f.food_name,
+        quantity: f.quantity ?? null,
+        unit: f.unit ?? "g",
+        calories: f.calories ?? null,
+        protein: f.protein ?? null,
+        carbs: f.carbs ?? null,
+        fat: f.fat ?? null,
+        notes: f.notes ?? "",
+        sort_order: fi,
+      }));
+      const { error: foodErr } = await supabase.from("meal_foods").insert(foodRows);
+      if (foodErr) { console.error("[Supabase] saveMeals insert foods:", foodErr.message); return false; }
+    }
+  }
+  return true;
+}
+
 // ─── Booking System ───────────────────────────────────────────────────────────
 
 export interface AvailabilitySlot {

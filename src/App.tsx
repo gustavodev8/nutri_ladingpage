@@ -45,6 +45,9 @@ import AdminPagamentos from "./pages/admin/AdminPagamentos";
 import AdminDisponibilidade from "./pages/admin/AdminDisponibilidade";
 import AdminAgendamentos from "./pages/admin/AdminAgendamentos";
 import AdminBlog from "./pages/admin/AdminBlog";
+import AdminPacientes from "./pages/admin/AdminPacientes";
+import AdminPaciente from "./pages/admin/AdminPaciente";
+import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +118,9 @@ const App = () => (
                 <Route path="disponibilidade" element={<AdminDisponibilidade />} />
                 <Route path="agendamentos" element={<AdminAgendamentos />} />
                 <Route path="blog" element={<AdminBlog />} />
+                <Route path="pacientes" element={<AdminPacientes />} />
+                <Route path="pacientes/:id" element={<AdminPaciente />} />
+                <Route path="pacientes/:id/plano/:planId" element={<AdminPlanoAlimentar />} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>
