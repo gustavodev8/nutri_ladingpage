@@ -353,7 +353,7 @@ export default function AdminPacientes() {
               </div>
 
               {/* Email + Telefone */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="email">E-mail</Label>
                   <Input
@@ -390,7 +390,7 @@ export default function AdminPacientes() {
               </div>
 
               {/* Nascimento + Gênero */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="birth_date">Data de nascimento</Label>
                   <Input

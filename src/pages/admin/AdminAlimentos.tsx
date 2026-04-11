@@ -312,12 +312,15 @@ export default function AdminAlimentos() {
       {/* ── Tabela ───────────────────────────────────────────────────────── */}
       <div className="bg-card border border-border/60 rounded-lg overflow-hidden">
         {/* Cabeçalho */}
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] gap-x-4 px-4 py-2 bg-muted/30 border-b border-border/40">
-          {["Alimento", "Categoria", "kcal", "Prot.", "Carb.", "Gord.", "Fibras", ""].map((h) => (
-            <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              {h}
-            </span>
-          ))}
+        <div className="flex sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] gap-x-4 px-4 py-2 bg-muted/30 border-b border-border/40">
+          <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Alimento</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Categoria</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">kcal</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Prot.</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Carb.</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Gord.</span>
+          <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Fibras</span>
+          <span className="w-14" />
         </div>
 
         {/* Linhas */}
@@ -330,11 +333,12 @@ export default function AdminAlimentos() {
             {filtered.map((food) => (
               <div
                 key={food.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/20 transition-colors group"
+                className="flex sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto_auto_auto_auto] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/20 transition-colors group"
               >
                 {/* Nome */}
-                <div className="min-w-0">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{food.name}</p>
+                  <p className="text-[10px] text-muted-foreground sm:hidden">{food.category} · {n1(food.kcal)} kcal · P{n1(food.protein)}g C{n1(food.carbs)}g G{n1(food.fat)}g</p>
                   {food.isCustom && (
                     <span className="text-[10px] font-semibold text-primary/70 uppercase tracking-wider">
                       personalizado
@@ -342,20 +346,20 @@ export default function AdminAlimentos() {
                   )}
                 </div>
 
-                {/* Categoria */}
-                <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">{food.category}</span>
+                {/* Categoria — hidden on mobile */}
+                <span className="hidden sm:block text-xs text-muted-foreground whitespace-nowrap">{food.category}</span>
 
-                {/* Macros */}
-                <span className="text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.kcal)}</span>
-                <span className="text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.protein)}g</span>
-                <span className="text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.carbs)}g</span>
-                <span className="text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.fat)}g</span>
-                <span className="text-xs tabular-nums text-muted-foreground w-10 text-right">
+                {/* Macros — hidden on mobile */}
+                <span className="hidden sm:block text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.kcal)}</span>
+                <span className="hidden sm:block text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.protein)}g</span>
+                <span className="hidden sm:block text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.carbs)}g</span>
+                <span className="hidden sm:block text-xs tabular-nums text-foreground/80 w-10 text-right">{n1(food.fat)}g</span>
+                <span className="hidden sm:block text-xs tabular-nums text-muted-foreground w-10 text-right">
                   {food.fiber ? `${n1(food.fiber)}g` : "—"}
                 </span>
 
                 {/* Ações */}
-                <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 justify-end w-14 shrink-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     type="button"
                     onClick={() => openEdit(food, food.isCustom)}

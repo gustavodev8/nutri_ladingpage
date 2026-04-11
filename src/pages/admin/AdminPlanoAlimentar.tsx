@@ -81,7 +81,7 @@ function FoodRow({ food, idx, onChange, onRemove }: {
     onChange(calcMacros({ ...food, quantity: val === "" ? undefined : parseFloat(val) }));
 
   const numCell = (v?: number) => (
-    <td className="py-2 pr-3 text-right tabular-nums text-sm text-foreground/80 w-16 align-middle">
+    <td className="hidden sm:table-cell py-2 pr-3 text-right tabular-nums text-sm text-foreground/80 w-16 align-middle">
       {v !== undefined && v > 0 ? v.toFixed(1) : <span className="text-muted-foreground/30">—</span>}
     </td>
   );
@@ -176,7 +176,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
           type="text"
           value={meal.time_suggestion ?? ""}
           onChange={(e) => onUpdate({ ...meal, time_suggestion: e.target.value })}
-          className="text-xs bg-transparent border-0 focus:outline-none w-28 text-muted-foreground text-right flex-shrink-0"
+          className="hidden sm:block text-xs bg-transparent border-0 focus:outline-none w-28 text-muted-foreground text-right flex-shrink-0"
           placeholder="00:00 – 00:00"
         />
 
@@ -203,10 +203,10 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
               <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Alimento</th>
               <th className="py-1.5 pr-2 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-20">Qtd</th>
               <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-24">Un.</th>
-              <th className="py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">kcal</th>
-              <th className="py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
-              <th className="py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
-              <th className="py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Gord. g</th>
+              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">kcal</th>
+              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
+              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
+              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Gord. g</th>
               <th className="w-9" />
             </tr>
           </thead>
@@ -232,12 +232,13 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
             <tfoot>
               <tr className="border-t border-border/50 bg-muted/20">
                 <td colSpan={4} className="pl-4 py-1.5 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  Subtotal
+                  <span className="sm:hidden">{n0(totals.cal)} kcal</span>
+                  <span className="hidden sm:inline">Subtotal</span>
                 </td>
-                <td className="py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n0(totals.cal)}</td>
-                <td className="py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.prot)}</td>
-                <td className="py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.carbs)}</td>
-                <td className="py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.fat)}</td>
+                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n0(totals.cal)}</td>
+                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.prot)}</td>
+                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.carbs)}</td>
+                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.fat)}</td>
                 <td />
               </tr>
             </tfoot>
@@ -415,14 +416,14 @@ export default function AdminPlanoAlimentar() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
           {/* 4 colunas de dados */}
-          <div className="grid grid-cols-4 divide-x divide-border/60 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:divide-x sm:divide-border/60 mb-5">
             {[
               { label: "Energia total",  value: grand.cal  > 0 ? `${n0(grand.cal)} kcal`  : "— kcal"  },
               { label: "Proteínas",      value: grand.prot  > 0 ? `${n1(grand.prot)} g`    : "— g"     },
               { label: "Carboidratos",   value: grand.carbs > 0 ? `${n1(grand.carbs)} g`   : "— g"     },
               { label: "Gorduras",       value: grand.fat   > 0 ? `${n1(grand.fat)} g`     : "— g"     },
             ].map(({ label, value }) => (
-              <div key={label} className="px-4 first:pl-0 last:pr-0">
+              <div key={label} className="sm:px-4 sm:first:pl-0 sm:last:pr-0 bg-muted/20 sm:bg-transparent rounded-lg sm:rounded-none p-3 sm:p-0">
                 <p className="text-[10px] text-primary uppercase tracking-wider mb-1.5">{label}</p>
                 <p className="text-xl font-bold tabular-nums text-foreground leading-none">{value}</p>
               </div>
