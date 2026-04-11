@@ -229,6 +229,118 @@ export const BUILT_IN_FOODS: FoodItem[] = [
   { id: "su-06", name: "Maltodextrina", category: "Suplementos", kcal: 378, protein: 0.0, carbs: 96.0, fat: 0.0 },
   { id: "su-07", name: "Proteína vegana (ervilha)", category: "Suplementos", kcal: 360, protein: 75.0, carbs: 8.0, fat: 5.0 },
   { id: "su-08", name: "Creatina", category: "Suplementos", kcal: 0, protein: 0.0, carbs: 0.0, fat: 0.0 },
+  { id: "su-09", name: "BCAA em pó", category: "Suplementos", kcal: 240, protein: 50.0, carbs: 7.0, fat: 1.5 },
+  { id: "su-10", name: "Colágeno hidrolisado", category: "Suplementos", kcal: 363, protein: 90.0, carbs: 0.0, fat: 0.0 },
+  { id: "su-11", name: "Ômega 3 (óleo de peixe)", category: "Suplementos", kcal: 900, protein: 0.0, carbs: 0.0, fat: 100.0 },
+  { id: "su-12", name: "Spirulina em pó", category: "Suplementos", kcal: 290, protein: 57.0, carbs: 24.0, fat: 8.0 },
+
+  // ── Frutas — adicionados via FatSecret ─────────────────────────────────────
+  { id: "fr-37", name: "Pitaia vermelha", category: "Frutas", kcal: 51, protein: 0.8, carbs: 12.4, fat: 0.4 },
+  { id: "fr-38", name: "Framboesa", category: "Frutas", kcal: 52, protein: 1.2, carbs: 11.9, fat: 0.7, fiber: 6.5 },
+  { id: "fr-39", name: "Romã", category: "Frutas", kcal: 68, protein: 1.0, carbs: 17.2, fat: 0.3, fiber: 0.6 },
+  { id: "fr-40", name: "Mirtilo (blueberry)", category: "Frutas", kcal: 57, protein: 0.7, carbs: 14.5, fat: 0.3, fiber: 2.4 },
+  { id: "fr-41", name: "Amora preta", category: "Frutas", kcal: 43, protein: 1.4, carbs: 9.6, fat: 0.5, fiber: 5.3 },
+  { id: "fr-42", name: "Nectarina", category: "Frutas", kcal: 44, protein: 1.1, carbs: 10.6, fat: 0.3, fiber: 1.7 },
+  { id: "fr-43", name: "Carambola", category: "Frutas", kcal: 31, protein: 1.0, carbs: 6.7, fat: 0.3, fiber: 2.8 },
+  { id: "fr-44", name: "Lichia", category: "Frutas", kcal: 66, protein: 0.8, carbs: 17.0, fat: 0.4, fiber: 1.3 },
+  { id: "fr-45", name: "Manga palmer", category: "Frutas", kcal: 60, protein: 0.8, carbs: 15.0, fat: 0.4, fiber: 1.6 },
+  { id: "fr-46", name: "Banana verde cozida", category: "Frutas", kcal: 98, protein: 1.4, carbs: 25.8, fat: 0.1, fiber: 4.9 },
+
+  // ── Cereais e derivados — adicionados via FatSecret ────────────────────────
+  { id: "ce-14", name: "Arroz parboilizado cozido", category: "Cereais e derivados", kcal: 123, protein: 2.9, carbs: 26.1, fat: 0.4 },
+  { id: "ce-15", name: "Farinha de mandioca torrada", category: "Cereais e derivados", kcal: 357, protein: 1.3, carbs: 87.4, fat: 0.2, fiber: 6.5 },
+  { id: "ce-16", name: "Polenta cozida", category: "Cereais e derivados", kcal: 70, protein: 1.7, carbs: 14.9, fat: 0.4, fiber: 0.7 },
+  { id: "ce-17", name: "Farinha de trigo integral", category: "Cereais e derivados", kcal: 340, protein: 13.2, carbs: 72.0, fat: 2.5, fiber: 11.6 },
+  { id: "ce-18", name: "Farinha de trigo branca", category: "Cereais e derivados", kcal: 361, protein: 9.8, carbs: 76.2, fat: 1.4, fiber: 2.3 },
+  { id: "ce-19", name: "Arroz 7 grãos cozido", category: "Cereais e derivados", kcal: 130, protein: 3.2, carbs: 27.0, fat: 0.8, fiber: 2.4 },
+  { id: "ce-20", name: "Granola sem açúcar", category: "Cereais e derivados", kcal: 350, protein: 16.0, carbs: 67.5, fat: 7.0, fiber: 8.0 },
+  { id: "ce-21", name: "Farinha de aveia", category: "Cereais e derivados", kcal: 382, protein: 15.0, carbs: 60.0, fat: 7.2, fiber: 7.0 },
+  { id: "ce-22", name: "Trigo para quibe (cru)", category: "Cereais e derivados", kcal: 340, protein: 10.7, carbs: 75.9, fat: 1.5, fiber: 15.0 },
+
+  // ── Pães, bolos e biscoitos — adicionados via FatSecret ────────────────────
+  { id: "pa-11", name: "Tortilha wrap", category: "Pães, bolos e biscoitos", kcal: 296, protein: 7.9, carbs: 49.4, fat: 7.0 },
+  { id: "pa-12", name: "Pão de hambúrguer", category: "Pães, bolos e biscoitos", kcal: 265, protein: 8.5, carbs: 48.0, fat: 4.5 },
+  { id: "pa-13", name: "Pão de hot dog", category: "Pães, bolos e biscoitos", kcal: 266, protein: 8.0, carbs: 49.0, fat: 3.8 },
+  { id: "pa-14", name: "Pão de centeio", category: "Pães, bolos e biscoitos", kcal: 259, protein: 8.5, carbs: 48.3, fat: 3.3, fiber: 5.8 },
+  { id: "pa-15", name: "Pão de batata", category: "Pães, bolos e biscoitos", kcal: 258, protein: 7.8, carbs: 49.0, fat: 3.2 },
+  { id: "pa-16", name: "Bolo de cenoura com cobertura", category: "Pães, bolos e biscoitos", kcal: 343, protein: 4.2, carbs: 56.0, fat: 12.0 },
+  { id: "pa-17", name: "Biscoito de arroz", category: "Pães, bolos e biscoitos", kcal: 387, protein: 7.8, carbs: 81.6, fat: 3.8 },
+  { id: "pa-18", name: "Waffle", category: "Pães, bolos e biscoitos", kcal: 291, protein: 7.9, carbs: 42.0, fat: 10.0 },
+
+  // ── Carnes e aves — adicionados via FatSecret ──────────────────────────────
+  { id: "ca-19", name: "Carne bovina coxão mole", category: "Carnes e aves", kcal: 130, protein: 23.0, carbs: 2.0, fat: 4.5 },
+  { id: "ca-20", name: "Carne bovina coxão duro", category: "Carnes e aves", kcal: 142, protein: 21.6, carbs: 0.0, fat: 5.5 },
+  { id: "ca-21", name: "Carne bovina picanha grelhada", category: "Carnes e aves", kcal: 271, protein: 27.0, carbs: 0.0, fat: 17.5 },
+  { id: "ca-22", name: "Frango coração cozido", category: "Carnes e aves", kcal: 185, protein: 26.4, carbs: 0.1, fat: 7.9 },
+  { id: "ca-23", name: "Linguiça de frango grelhada", category: "Carnes e aves", kcal: 237, protein: 14.1, carbs: 5.5, fat: 17.2 },
+  { id: "ca-24", name: "Carne bovina moída grelhada", category: "Carnes e aves", kcal: 217, protein: 26.1, carbs: 0.0, fat: 11.7 },
+  { id: "ca-25", name: "Pato assado (sem pele)", category: "Carnes e aves", kcal: 201, protein: 23.5, carbs: 0.0, fat: 11.2 },
+  { id: "ca-26", name: "Frango asa assada", category: "Carnes e aves", kcal: 290, protein: 26.9, carbs: 0.0, fat: 19.5 },
+  { id: "ca-27", name: "Carne suína bisteca grelhada", category: "Carnes e aves", kcal: 231, protein: 24.6, carbs: 0.0, fat: 14.0 },
+  { id: "ca-28", name: "Salsicha cozida", category: "Carnes e aves", kcal: 241, protein: 10.3, carbs: 4.6, fat: 20.0 },
+
+  // ── Peixes e frutos do mar — adicionados via FatSecret ─────────────────────
+  { id: "pe-09", name: "Salmão cru", category: "Peixes e frutos do mar", kcal: 146, protein: 21.6, carbs: 0.0, fat: 5.9 },
+  { id: "pe-10", name: "Atum fresco grelhado", category: "Peixes e frutos do mar", kcal: 184, protein: 29.9, carbs: 0.0, fat: 6.3 },
+  { id: "pe-11", name: "Cação cozido", category: "Peixes e frutos do mar", kcal: 120, protein: 22.7, carbs: 0.0, fat: 2.5 },
+  { id: "pe-12", name: "Dourado grelhado", category: "Peixes e frutos do mar", kcal: 118, protein: 24.8, carbs: 0.0, fat: 1.6 },
+  { id: "pe-13", name: "Truta grelhada", category: "Peixes e frutos do mar", kcal: 190, protein: 26.6, carbs: 0.0, fat: 8.9 },
+  { id: "pe-14", name: "Polvo cozido", category: "Peixes e frutos do mar", kcal: 164, protein: 29.8, carbs: 4.4, fat: 2.1 },
+  { id: "pe-15", name: "Lula grelhada", category: "Peixes e frutos do mar", kcal: 175, protein: 17.9, carbs: 7.8, fat: 7.5 },
+  { id: "pe-16", name: "Ostra crua", category: "Peixes e frutos do mar", kcal: 68, protein: 7.1, carbs: 3.9, fat: 2.5 },
+
+  // ── Verduras e legumes — adicionados via FatSecret ─────────────────────────
+  { id: "vl-23", name: "Palmito cozido", category: "Verduras e legumes", kcal: 28, protein: 2.5, carbs: 4.6, fat: 0.6 },
+  { id: "vl-24", name: "Couve-flor cozida", category: "Verduras e legumes", kcal: 25, protein: 1.9, carbs: 4.1, fat: 0.3, fiber: 2.0 },
+  { id: "vl-25", name: "Cebola crua", category: "Verduras e legumes", kcal: 39, protein: 1.7, carbs: 8.9, fat: 0.1, fiber: 1.7 },
+  { id: "vl-26", name: "Aspargo cozido", category: "Verduras e legumes", kcal: 22, protein: 2.4, carbs: 4.1, fat: 0.2, fiber: 2.1 },
+  { id: "vl-27", name: "Batata doce roxa cozida", category: "Verduras e legumes", kcal: 82, protein: 2.4, carbs: 18.3, fat: 0.1, fiber: 3.3 },
+  { id: "vl-28", name: "Aipim/mandioca frita", category: "Verduras e legumes", kcal: 197, protein: 0.9, carbs: 30.5, fat: 7.9 },
+  { id: "vl-29", name: "Milho verde enlatado", category: "Verduras e legumes", kcal: 86, protein: 3.2, carbs: 19.7, fat: 0.9, fiber: 1.8 },
+  { id: "vl-30", name: "Alho cru", category: "Verduras e legumes", kcal: 149, protein: 6.4, carbs: 33.1, fat: 0.5, fiber: 2.1 },
+  { id: "vl-31", name: "Ervilha torta cozida", category: "Verduras e legumes", kcal: 42, protein: 2.8, carbs: 7.6, fat: 0.2, fiber: 2.6 },
+  { id: "vl-32", name: "Acelga cozida", category: "Verduras e legumes", kcal: 19, protein: 1.8, carbs: 3.6, fat: 0.1, fiber: 1.6 },
+  { id: "vl-33", name: "Pimentão vermelho cru", category: "Verduras e legumes", kcal: 31, protein: 1.0, carbs: 6.0, fat: 0.3, fiber: 2.1 },
+  { id: "vl-34", name: "Pimentão amarelo cru", category: "Verduras e legumes", kcal: 27, protein: 1.0, carbs: 6.3, fat: 0.2, fiber: 0.9 },
+  { id: "vl-35", name: "Agrião cru", category: "Verduras e legumes", kcal: 22, protein: 2.3, carbs: 1.3, fat: 0.1, fiber: 0.5 },
+
+  // ── Leguminosas — adicionadas via FatSecret ────────────────────────────────
+  { id: "le-08", name: "Feijão vermelho cozido", category: "Leguminosas", kcal: 127, protein: 8.7, carbs: 22.8, fat: 0.5, fiber: 6.4 },
+  { id: "le-09", name: "Feijão de corda cozido", category: "Leguminosas", kcal: 65, protein: 5.1, carbs: 14.0, fat: 0.6, fiber: 4.2 },
+  { id: "le-10", name: "Feijão fradinho cozido", category: "Leguminosas", kcal: 116, protein: 7.6, carbs: 20.7, fat: 0.7, fiber: 4.3 },
+  { id: "le-11", name: "Amendoim cozido", category: "Leguminosas", kcal: 318, protein: 13.5, carbs: 21.3, fat: 22.0, fiber: 6.7 },
+  { id: "le-12", name: "Ervilha partida cozida", category: "Leguminosas", kcal: 118, protein: 8.3, carbs: 21.1, fat: 0.4, fiber: 8.3 },
+
+  // ── Oleaginosas e sementes — adicionadas via FatSecret ─────────────────────
+  { id: "og-06", name: "Pistache torrado", category: "Oleaginosas e sementes", kcal: 562, protein: 20.2, carbs: 27.7, fat: 45.4, fiber: 10.3 },
+  { id: "og-07", name: "Macadâmia torrada", category: "Oleaginosas e sementes", kcal: 718, protein: 7.9, carbs: 13.7, fat: 76.1, fiber: 8.6 },
+  { id: "og-08", name: "Sementes de girassol", category: "Oleaginosas e sementes", kcal: 584, protein: 20.8, carbs: 20.0, fat: 51.5, fiber: 8.6 },
+  { id: "og-09", name: "Sementes de gergelim", category: "Oleaginosas e sementes", kcal: 573, protein: 17.7, carbs: 23.5, fat: 49.7, fiber: 11.8 },
+  { id: "og-10", name: "Castanha de baru", category: "Oleaginosas e sementes", kcal: 559, protein: 23.9, carbs: 23.9, fat: 40.0, fiber: 13.4 },
+  { id: "og-11", name: "Hemp seeds (sementes de cânhamo)", category: "Oleaginosas e sementes", kcal: 553, protein: 31.6, carbs: 8.7, fat: 48.7, fiber: 4.0 },
+
+  // ── Óleos e gorduras — adicionados via FatSecret ───────────────────────────
+  { id: "ol-11", name: "Manteiga ghee", category: "Óleos e gorduras", kcal: 876, protein: 0.3, carbs: 0.0, fat: 99.5 },
+  { id: "ol-12", name: "Óleo de abacate", category: "Óleos e gorduras", kcal: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+  { id: "ol-13", name: "Azeite de dendê", category: "Óleos e gorduras", kcal: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+
+  // ── Doces e sobremesas — adicionados via FatSecret ────────────────────────
+  { id: "do-11", name: "Brigadeiro", category: "Doces e sobremesas", kcal: 400, protein: 5.5, carbs: 60.0, fat: 14.0 },
+  { id: "do-12", name: "Paçoca", category: "Doces e sobremesas", kcal: 470, protein: 14.5, carbs: 55.5, fat: 21.0, fiber: 3.5 },
+  { id: "do-13", name: "Pé de moleque", category: "Doces e sobremesas", kcal: 464, protein: 11.0, carbs: 55.0, fat: 22.0, fiber: 2.5 },
+  { id: "do-14", name: "Mousse de maracujá", category: "Doces e sobremesas", kcal: 160, protein: 3.5, carbs: 22.0, fat: 6.5 },
+  { id: "do-15", name: "Torta de limão", category: "Doces e sobremesas", kcal: 253, protein: 3.2, carbs: 36.0, fat: 10.8 },
+  { id: "do-16", name: "Açaí com guaraná (tigela)", category: "Doces e sobremesas", kcal: 170, protein: 2.1, carbs: 28.0, fat: 6.5 },
+  { id: "do-17", name: "Canjica com leite condensado", category: "Doces e sobremesas", kcal: 180, protein: 4.5, carbs: 34.0, fat: 3.0 },
+
+  // ── Bebidas e sucos — adicionados via FatSecret ────────────────────────────
+  { id: "be-11", name: "Chá verde (infusão)", category: "Bebidas e sucos", kcal: 1, protein: 0.0, carbs: 0.5, fat: 0.0 },
+  { id: "be-12", name: "Chá mate gelado", category: "Bebidas e sucos", kcal: 4, protein: 0.0, carbs: 1.0, fat: 0.0 },
+  { id: "be-13", name: "Vitamina de banana com leite", category: "Bebidas e sucos", kcal: 90, protein: 3.5, carbs: 16.5, fat: 1.8 },
+  { id: "be-14", name: "Suco de acerola natural", category: "Bebidas e sucos", kcal: 23, protein: 0.4, carbs: 5.5, fat: 0.1 },
+  { id: "be-15", name: "Suco verde (couve + limão)", category: "Bebidas e sucos", kcal: 18, protein: 0.9, carbs: 3.5, fat: 0.1 },
+  { id: "be-16", name: "Isofénico (isotônico)", category: "Bebidas e sucos", kcal: 28, protein: 0.0, carbs: 7.0, fat: 0.0 },
+  { id: "be-17", name: "Leite de amendoim", category: "Bebidas e sucos", kcal: 33, protein: 1.5, carbs: 2.0, fat: 2.5 },
 ];
 
 export function searchFoods(query: string, limit = 20): FoodItem[] {

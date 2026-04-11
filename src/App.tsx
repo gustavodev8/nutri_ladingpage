@@ -48,6 +48,7 @@ import AdminBlog from "./pages/admin/AdminBlog";
 import AdminPacientes from "./pages/admin/AdminPacientes";
 import AdminPaciente from "./pages/admin/AdminPaciente";
 import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
+import AdminAlimentos from "./pages/admin/AdminAlimentos";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="pacientes" element={<AdminPacientes />} />
                 <Route path="pacientes/:id" element={<AdminPaciente />} />
                 <Route path="pacientes/:id/plano/:planId" element={<AdminPlanoAlimentar />} />
+                <Route path="alimentos" element={<AdminAlimentos />} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>

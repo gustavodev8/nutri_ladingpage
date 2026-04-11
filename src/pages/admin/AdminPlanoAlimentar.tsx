@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
-  type Meal, type MealFood, type MealPlan,
+  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans, fetchPatient,
+  type Meal, type MealFood, type MealPlan, type Patient,
 } from "@/lib/supabase";
+import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -157,7 +158,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/30 border-b border-border/40">
         {/* Número da refeição */}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 w-5 flex-shrink-0 select-none">
+        <span className="text-xs font-bold text-muted-foreground/60 w-5 flex-shrink-0 select-none tabular-nums">
           {String(idx + 1).padStart(2, "0")}
         </span>
 
@@ -166,7 +167,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
           type="text"
           value={meal.meal_name}
           onChange={(e) => onUpdate({ ...meal, meal_name: e.target.value })}
-          className="text-sm font-semibold bg-transparent border-0 focus:outline-none text-foreground flex-1 min-w-0 placeholder:text-muted-foreground"
+          className="text-base font-bold bg-transparent border-0 focus:outline-none text-foreground flex-1 min-w-0 placeholder:text-muted-foreground"
           placeholder="Nome da refeição"
         />
 
@@ -212,7 +213,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
           <tbody>
             {foods.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-5 text-center text-xs text-muted-foreground/35 italic">
+                <td colSpan={9} className="py-5 text-center text-sm text-primary/60 italic">
                   Nenhum alimento adicionado a esta refeição
                 </td>
               </tr>
@@ -247,7 +248,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
       {/* ── Adicionar alimento ── */}
       <div className="px-4 py-2 border-t border-border/30 bg-background/40">
         <button type="button" onClick={addFood}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
+          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
           <Plus size={12} />
           Adicionar alimento
         </button>
@@ -271,12 +272,16 @@ export default function AdminPlanoAlimentar() {
     start_date: "", end_date: "", daily_calories: undefined, notes: "",
   });
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
 
   const loadPlan = useCallback(async () => {
     setLoading(true);
     try {
+      const [patientData] = await Promise.all([fetchPatient(patientId)]);
+      setPatient(patientData);
       if (isNew) {
         setMeals(DEFAULT_MEALS.map((p) => ({ plan_id: 0, ...p, foods: [] })));
       } else {
@@ -290,6 +295,7 @@ export default function AdminPlanoAlimentar() {
   }, [isNew, patientId, resolvedPlanId]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
+
 
   const handleSave = async () => {
     if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
@@ -355,10 +361,22 @@ export default function AdminPlanoAlimentar() {
             {isNew && <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex-shrink-0">Novo</span>}
           </div>
 
-          <Button onClick={handleSave} disabled={saving} size="sm" className="gap-2 flex-shrink-0">
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            {saving ? "Salvando…" : "Salvar plano"}
-          </Button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowEmail(true)}
+              disabled={isNew}
+              title={isNew ? "Salve o plano primeiro" : "Enviar por e-mail"}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Mail size={13} />
+              <span className="hidden sm:inline">Enviar</span>
+            </button>
+            <Button onClick={handleSave} disabled={saving} size="sm" className="gap-2">
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              {saving ? "Salvando…" : "Salvar plano"}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -366,7 +384,7 @@ export default function AdminPlanoAlimentar() {
 
         {/* ── Metadados ───────────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-4">Dados do Plano</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Dados do Plano</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Início</Label>
@@ -394,10 +412,10 @@ export default function AdminPlanoAlimentar() {
 
         {/* ── Resumo nutricional ──────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-4">Resumo Nutricional do Dia</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
           {/* 4 colunas de dados */}
-          <div className="grid grid-cols-4 divide-x divide-border/60 mb-4">
+          <div className="grid grid-cols-4 divide-x divide-border/60 mb-5">
             {[
               { label: "Energia total",  value: grand.cal  > 0 ? `${n0(grand.cal)} kcal`  : "— kcal"  },
               { label: "Proteínas",      value: grand.prot  > 0 ? `${n1(grand.prot)} g`    : "— g"     },
@@ -405,46 +423,64 @@ export default function AdminPlanoAlimentar() {
               { label: "Gorduras",       value: grand.fat   > 0 ? `${n1(grand.fat)} g`     : "— g"     },
             ].map(({ label, value }) => (
               <div key={label} className="px-4 first:pl-0 last:pr-0">
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">{label}</p>
+                <p className="text-[10px] text-primary uppercase tracking-wider mb-1.5">{label}</p>
                 <p className="text-xl font-bold tabular-nums text-foreground leading-none">{value}</p>
               </div>
             ))}
           </div>
 
+          {/* Barras de macros */}
+          <div className="space-y-2 mb-4">
+            {(() => {
+              const totalCal = grand.cal || 1;
+              const macros = [
+                { label: "Proteínas",    pct: Math.round((grand.prot  * 4 / totalCal) * 100) },
+                { label: "Carboidratos", pct: Math.round((grand.carbs * 4 / totalCal) * 100) },
+                { label: "Gorduras",     pct: Math.round((grand.fat   * 9 / totalCal) * 100) },
+              ];
+              return macros.map(({ label, pct }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${grand.cal > 0 ? pct : 0}%` }} />
+                  </div>
+                  <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
+                    {grand.cal > 0 ? `${pct}%` : "0%"}
+                  </span>
+                </div>
+              ));
+            })()}
+          </div>
+
           {/* Barra de progresso calórico */}
-          {plan.daily_calories && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-muted-foreground">
-                  Progresso calórico — meta: <strong>{plan.daily_calories} kcal</strong>
-                </span>
-                <span className={`text-xs font-semibold tabular-nums ${grand.cal > plan.daily_calories ? "text-destructive" : "text-foreground"}`}>
-                  {goalPct}%
-                  {grand.cal > 0 && (
-                    <span className="text-muted-foreground font-normal ml-2">
-                      {grand.cal > plan.daily_calories
-                        ? `(+${n0(grand.cal - plan.daily_calories)} kcal acima)`
-                        : `(−${n0(plan.daily_calories - grand.cal)} kcal abaixo)`}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${grand.cal > plan.daily_calories ? "bg-destructive" : "bg-primary"}`}
-                  style={{ width: `${goalPct}%` }}
-                />
-              </div>
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              Progresso calórico{plan.daily_calories ? <> — meta: <strong>{plan.daily_calories} kcal</strong></> : null}
+            </span>
+            <span className={`text-xs font-semibold tabular-nums ${plan.daily_calories && grand.cal > plan.daily_calories ? "text-destructive" : "text-foreground"}`}>
+              {goalPct}%
+            </span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-border overflow-hidden mt-1.5">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${plan.daily_calories && grand.cal > plan.daily_calories ? "bg-destructive" : "bg-primary"}`}
+              style={{ width: `${goalPct}%` }}
+            />
+          </div>
         </section>
 
         {/* ── Refeições ───────────────────────────────────────────────────── */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Refeições — {meals.length} cadastradas
             </p>
+            <button type="button" onClick={addMeal}
+              className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+              <Plus size={13} />
+              Nova refeição
+            </button>
           </div>
 
           <div className="space-y-2">
@@ -454,12 +490,6 @@ export default function AdminPlanoAlimentar() {
                 onRemove={() => removeMeal(i)}
               />
             ))}
-
-            <button type="button" onClick={addMeal}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium px-1 py-2">
-              <Plus size={14} />
-              Adicionar refeição
-            </button>
           </div>
         </div>
 
@@ -471,6 +501,16 @@ export default function AdminPlanoAlimentar() {
           </Button>
         </div>
       </main>
+
+      {/* ── Modal de e-mail ─────────────────────────────────────────────── */}
+      {showEmail && (
+        <EmailPlanModal
+          plan={plan}
+          meals={meals}
+          patient={patient}
+          onClose={() => setShowEmail(false)}
+        />
+      )}
     </div>
   );
 }

@@ -40,7 +40,8 @@ const NAV_GROUPS = [
     label: "Clínica",
     icon: Stethoscope,
     items: [
-      { to: "/admin/pacientes", icon: Users, label: "Pacientes" },
+      { to: "/admin/pacientes",  icon: Users,     label: "Pacientes"  },
+      { to: "/admin/alimentos",  icon: Leaf,       label: "Alimentos"  },
     ],
   },
   {
