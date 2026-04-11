@@ -56,8 +56,24 @@ export async function saveContent(content: StoredContent): Promise<boolean> {
 
 const BUCKET = "images";
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "gif"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/ogg"];
+const ALLOWED_VIDEO_EXTS = ["mp4", "webm", "ogg"];
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
+const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50MB
+
 export async function uploadImage(file: File): Promise<string | null> {
-  const ext = file.name.split(".").pop();
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type) || !ALLOWED_IMAGE_EXTS.includes(ext)) {
+    console.error("[uploadImage] Tipo de arquivo não permitido:", file.type);
+    return null;
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    console.error("[uploadImage] Arquivo muito grande:", file.size);
+    return null;
+  }
   const path = `products/${Date.now()}.${ext}`;
 
   const { data, error } = await supabase.storage
@@ -119,8 +135,16 @@ export async function uploadRecordFile(file: File, groupId: string): Promise<str
 }
 
 export async function uploadPdf(file: File): Promise<string | null> {
-  const ext = file.name.split(".").pop();
-  const path = `pdfs/${Date.now()}.${ext}`;
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  if (file.type !== "application/pdf" || ext !== "pdf") {
+    console.error("[uploadPdf] Apenas PDFs são permitidos.");
+    return null;
+  }
+  if (file.size > MAX_PDF_SIZE) {
+    console.error("[uploadPdf] PDF muito grande:", file.size);
+    return null;
+  }
+  const path = `pdfs/${Date.now()}.pdf`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { upsert: true, contentType: "application/pdf" });
@@ -130,7 +154,15 @@ export async function uploadPdf(file: File): Promise<string | null> {
 }
 
 export async function uploadVideo(file: File): Promise<string | null> {
-  const ext = file.name.split(".").pop();
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  if (!ALLOWED_VIDEO_TYPES.includes(file.type) || !ALLOWED_VIDEO_EXTS.includes(ext)) {
+    console.error("[uploadVideo] Tipo de vídeo não permitido:", file.type);
+    return null;
+  }
+  if (file.size > MAX_VIDEO_SIZE) {
+    console.error("[uploadVideo] Vídeo muito grande:", file.size);
+    return null;
+  }
   const path = `videos/${Date.now()}.${ext}`;
   const { data, error } = await supabase.storage
     .from(BUCKET)

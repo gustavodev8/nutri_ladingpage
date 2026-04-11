@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,23 +22,18 @@ const AdminSenha = () => {
     e.preventDefault();
     setError("");
 
-    if (form.next.length < 6) {
-      setError("A nova senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
     if (form.next !== form.confirm) {
       setError("As senhas não coincidem.");
       return;
     }
 
-    const ok = changePassword(form.current, form.next);
-    if (!ok) {
-      setError("Senha atual incorreta.");
-      return;
+    const result = changePassword(form.current, form.next);
+    if (result === true) {
+      setSuccess(true);
+      setForm({ current: "", next: "", confirm: "" });
+    } else {
+      setError(typeof result === "string" ? result : "Erro ao alterar a senha.");
     }
-
-    setSuccess(true);
-    setForm({ current: "", next: "", confirm: "" });
   };
 
   return (
@@ -48,7 +43,17 @@ const AdminSenha = () => {
         <p className="text-muted-foreground text-sm">Atualize a senha de acesso ao painel admin.</p>
       </div>
 
-      <div className="bg-card border border-border rounded-3xl p-6 lg:p-8">
+      <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 space-y-6">
+        {/* Security tip */}
+        <div className="flex items-start gap-2.5 p-3.5 bg-primary/5 border border-primary/15 rounded-xl text-sm">
+          <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+          <div className="text-muted-foreground leading-relaxed">
+            A nova senha deve ter <strong className="text-foreground">mínimo 8 caracteres</strong>,
+            pelo menos <strong className="text-foreground">uma letra maiúscula</strong> e
+            um <strong className="text-foreground">número</strong>.
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6 max-w-sm">
           {/* Current password */}
           <div className="space-y-2">
@@ -61,6 +66,7 @@ const AdminSenha = () => {
                 onChange={(e) => set("current", e.target.value)}
                 className="pr-10"
                 required
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -84,7 +90,8 @@ const AdminSenha = () => {
                 onChange={(e) => set("next", e.target.value)}
                 className="pr-10"
                 required
-                minLength={6}
+                minLength={8}
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -106,13 +113,14 @@ const AdminSenha = () => {
               value={form.confirm}
               onChange={(e) => set("confirm", e.target.value)}
               required
-              minLength={6}
+              minLength={8}
+              autoComplete="new-password"
             />
           </div>
 
           {error && (
             <p className="text-sm text-destructive flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               {error}
             </p>
           )}

@@ -169,9 +169,9 @@ const BookingPage = () => {
           visual: { hideFormTitle: true, style: { theme: "default" } },
         },
         callbacks: {
-          onReady: () => { console.log("MP Brick ready ✓"); },
+          onReady: () => { /* Brick loaded */ },
           onError: (err: unknown) => {
-            console.error("MP Brick error:", err);
+            void err; // suppress lint warning
             brickRendered.current = false;
             toast({ title: "Erro ao carregar formulário de cartão. Tente usar o Pix.", variant: "destructive" });
           },
