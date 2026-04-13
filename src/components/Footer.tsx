@@ -99,8 +99,16 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/10 pt-8 text-center text-sm">
+        <div className="border-t border-primary-foreground/10 pt-8 text-center text-sm space-y-2">
           <p>© {new Date().getFullYear()} {identity.brandName} — Todos os direitos reservados</p>
+          <p>
+            <a
+              href="/privacidade"
+              className="text-primary-foreground/50 hover:text-primary-foreground/80 transition-colors underline-offset-2 hover:underline text-xs"
+            >
+              Política de Privacidade
+            </a>
+          </p>
         </div>
       </div>
     </footer>

@@ -20,6 +20,7 @@ import BookingPage from "./pages/BookingPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPending from "./pages/PaymentPending";
 import PaymentFailure from "./pages/PaymentFailure";
+import PrivacidadePage from "./pages/PrivacidadePage";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/resultados" element={<ResultadosPage />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/privacidade" element={<PrivacidadePage />} />
 
               {/* Product detail pages */}
               <Route path="/produto/:id" element={<ProdutoPage />} />

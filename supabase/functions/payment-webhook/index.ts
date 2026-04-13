@@ -103,12 +103,26 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
+    // ── Idempotency: skip if already processed ────────────────────────────────
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (supabaseUrl && supabaseServiceKey) {
+      const existsRes = await fetch(
+        `${supabaseUrl}/rest/v1/payment_logs?payment_id=eq.${encodeURIComponent(String(payment.id))}&status=eq.approved&select=id&limit=1`,
+        { headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` } }
+      );
+      if (existsRes.ok) {
+        const existing = await existsRes.json().catch(() => []);
+        if (Array.isArray(existing) && existing.length > 0) {
+          return new Response("ok", { status: 200 }); // already processed
+        }
+      }
+    }
+
     // Parse external_reference to determine payment type
     const parts = (payment.external_reference || "").split("|");
     if (parts.length < 2) return new Response("ok", { status: 200 });
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     // ── Consultation payment ──────────────────────────────────────────────────
     if (parts[0] === "consultation") {
@@ -233,7 +247,7 @@ serve(async (req) => {
     // ── Ebook payment ─────────────────────────────────────────────────────────
     const customerEmail = parts[1] ? parts[1].trim() : "";
     const pdfUrl = parts[2] ? decodeURIComponent(parts[2]) : "";
-    const customerCpf = parts[4] ? parts[4].replace(/\D/g, "") : null;
+    const cpfHash = parts[4] ? parts[4].trim() : null; // already SHA-256 hashed
     const productName = escapeHtml(
       payment.additional_info?.items?.[0]?.title || payment.description || "E-book"
     );
@@ -312,7 +326,7 @@ serve(async (req) => {
           payment_id: String(payment.id),
           customer_name: customerName,
           customer_email: customerEmail,
-          customer_cpf: customerCpf,
+          customer_cpf_hash: cpfHash,
           product_name: productName,
           product_index: Number(parts[0]),
           amount: payment.transaction_amount,

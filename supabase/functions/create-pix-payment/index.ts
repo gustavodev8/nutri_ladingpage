@@ -23,7 +23,13 @@ serve(async (req) => {
     const { productIndex, productName, priceAmount, customerEmail, pdfUrl, customerName, customerCpf } = await req.json();
 
     const cpfDigits = (customerCpf || "").replace(/\D/g, "") || "00000000000";
-    const externalRef = `${productIndex}|${customerEmail}|${encodeURIComponent(pdfUrl || "")}|${encodeURIComponent(customerName || "")}|${cpfDigits}`;
+
+    // Hash CPF with SHA-256 — never store raw CPF in external_reference or logs
+    const cpfMsgBuf  = new TextEncoder().encode(cpfDigits);
+    const cpfHashBuf = await crypto.subtle.digest("SHA-256", cpfMsgBuf);
+    const cpfHash    = Array.from(new Uint8Array(cpfHashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
+
+    const externalRef = `${productIndex}|${customerEmail}|${encodeURIComponent(pdfUrl || "")}|${encodeURIComponent(customerName || "")}|${cpfHash}`;
 
     const nameParts = (customerName || "Cliente").trim().split(" ");
     const firstName = nameParts[0];

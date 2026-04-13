@@ -74,7 +74,7 @@ export async function uploadImage(file: File): Promise<string | null> {
     console.error("[uploadImage] Arquivo muito grande:", file.size);
     return null;
   }
-  const path = `products/${Date.now()}.${ext}`;
+  const path = `products/${crypto.randomUUID()}.${ext}`;
 
   const { data, error } = await supabase.storage
     .from(BUCKET)
@@ -135,7 +135,7 @@ export async function uploadPatientPhoto(file: File): Promise<string | null> {
     return null;
   }
   const { blob, mime } = await compressFileIfImage(file, 1200, 0.78);
-  const path = `patients/${Date.now()}.jpg`;
+  const path = `patients/${crypto.randomUUID()}.jpg`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, blob, { upsert: false, contentType: mime });
@@ -147,7 +147,7 @@ export async function uploadPatientPhoto(file: File): Promise<string | null> {
 export async function uploadRecordFile(file: File, groupId: string): Promise<string | null> {
   const { blob, ext, mime } = await compressFileIfImage(file);
   const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `records/${groupId}/${Date.now()}_${baseName}.${ext}`;
+  const path = `records/${groupId}/${crypto.randomUUID()}_${baseName}.${ext}`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, blob, { upsert: false, contentType: mime });
@@ -166,7 +166,7 @@ export async function uploadPdf(file: File): Promise<string | null> {
     console.error("[uploadPdf] PDF muito grande:", file.size);
     return null;
   }
-  const path = `pdfs/${Date.now()}.pdf`;
+  const path = `pdfs/${crypto.randomUUID()}.pdf`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { upsert: true, contentType: "application/pdf" });
@@ -185,7 +185,7 @@ export async function uploadVideo(file: File): Promise<string | null> {
     console.error("[uploadVideo] Vídeo muito grande:", file.size);
     return null;
   }
-  const path = `videos/${Date.now()}.${ext}`;
+  const path = `videos/${crypto.randomUUID()}.${ext}`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { upsert: true, contentType: file.type });
@@ -788,7 +788,7 @@ export async function deleteBlogPost(id: number): Promise<boolean> {
 
 export async function uploadBlogImage(file: File): Promise<string | null> {
   const { blob, ext, mime } = await compressFileIfImage(file);
-  const path = `blog/${Date.now()}.${ext}`;
+  const path = `blog/${crypto.randomUUID()}.${ext}`;
   const { data, error } = await supabase.storage
     .from(BUCKET).upload(path, blob, { upsert: true, contentType: mime });
   if (error) { console.error('uploadBlogImage error:', error); return null; }

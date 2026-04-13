@@ -32,14 +32,17 @@ serve(async (req) => {
     const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-      // If not configured, allow by default
       return new Response(JSON.stringify({ eligible: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if this CPF already received a free consultation via an ebook purchase
-    const checkUrl = `${SUPABASE_URL}/rest/v1/payment_logs?customer_cpf=eq.${encodeURIComponent(digits)}&product_index=not.is.null&status=eq.approved&select=id&limit=1`;
+    // Hash the CPF with SHA-256 before querying — never compare raw CPF
+    const msgBuf  = new TextEncoder().encode(digits);
+    const hashBuf = await crypto.subtle.digest("SHA-256", msgBuf);
+    const cpfHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    const checkUrl = `${SUPABASE_URL}/rest/v1/payment_logs?customer_cpf_hash=eq.${encodeURIComponent(cpfHash)}&product_index=not.is.null&status=eq.approved&select=id&limit=1`;
     const res = await fetch(checkUrl, {
       headers: {
         apikey: SUPABASE_SERVICE_KEY,
