@@ -5,15 +5,19 @@ import {
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
   UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
   Send, Paperclip, Trash2, Pencil, Search, SlidersHorizontal, Clock,
+  Plus, CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   fetchBookings, updateBookingStatus, autoCompleteBookings, autoExpirePendingBookings,
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
-  fetchAvailabilitySlots, fetchBookingsForDate,
+  fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
   type Booking, type ConsultationRecord, type RecordFile
 } from "@/lib/supabase";
+import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -102,6 +106,10 @@ const BORDER_COLOR: Record<string, string> = {
 };
 
 const AdminAgendamentos = () => {
+  const { content } = useContent();
+  const planOptions    = content.loja.plans.map(p => p.name);
+  const planSessionMap = Object.fromEntries(content.loja.plans.map(p => [p.name, p.sessionCount ?? 1]));
+
   const [bookings, setBookings]   = useState<Booking[]>([]);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState<number | null>(null);
@@ -155,6 +163,189 @@ const AdminAgendamentos = () => {
   const [compNextSteps, setCompNextSteps]     = useState("");
   const [compFiles, setCompFiles]             = useState<File[]>([]);
   const [savingRecord, setSavingRecord]       = useState(false);
+
+  // ── Editar agendamento ────────────────────────────────────────────────────
+  const [editingDetail, setEditingDetail]   = useState(false);
+  const [editDName, setEditDName]           = useState("");
+  const [editDEmail, setEditDEmail]         = useState("");
+  const [editDPhone, setEditDPhone]         = useState("");
+  const [editDGoal, setEditDGoal]           = useState("");
+  const [editDRestrictions, setEditDRestrictions] = useState("");
+  const [editDAllergies, setEditDAllergies] = useState("");
+  const [editDHealth, setEditDHealth]       = useState("");
+  const [editDMeds, setEditDMeds]           = useState("");
+  const [editDHadNutri, setEditDHadNutri]   = useState("");
+  const [editDHowFound, setEditDHowFound]   = useState("");
+  const [editDObs, setEditDObs]             = useState("");
+  const [savingDetailEdit, setSavingDetailEdit] = useState(false);
+
+  const openDetailEdit = (first: typeof detailFirst, notes: typeof detailNotes) => {
+    setEditDName(first?.client_name || "");
+    setEditDEmail(first?.client_email || "");
+    setEditDPhone(first?.client_phone || "");
+    setEditDGoal(notes.goal || "");
+    setEditDRestrictions(notes.restrictions || "");
+    setEditDAllergies(notes.allergies || "");
+    setEditDHealth(notes.healthConditions || "");
+    setEditDMeds(notes.medications || "");
+    setEditDHadNutri(notes.hadNutritionist || "");
+    setEditDHowFound(notes.howFound || "");
+    setEditDObs((notes as Record<string,unknown>).obs as string || "");
+    setEditingDetail(true);
+  };
+
+  const handleSaveDetailEdit = async () => {
+    if (!detail) return;
+    setSavingDetailEdit(true);
+    const updatedNotes = {
+      ...detailNotes,
+      goal:             editDGoal        || undefined,
+      restrictions:     editDRestrictions || undefined,
+      allergies:        editDAllergies   || undefined,
+      healthConditions: editDHealth      || undefined,
+      medications:      editDMeds        || undefined,
+      hadNutritionist:  editDHadNutri    || undefined,
+      howFound:         editDHowFound    || undefined,
+      obs:              editDObs         || undefined,
+    };
+    const ok = await updateBookingGroup(detail, {
+      client_name:  editDName.trim(),
+      client_email: editDEmail.trim(),
+      client_phone: editDPhone.trim(),
+      notes:        JSON.stringify(updatedNotes),
+    });
+    setSavingDetailEdit(false);
+    if (ok) {
+      setBookings(prev => prev.map(b =>
+        b.booking_group_id === detail
+          ? { ...b, client_name: editDName.trim(), client_email: editDEmail.trim(), client_phone: editDPhone.trim(), notes: JSON.stringify(updatedNotes) }
+          : b
+      ));
+      setEditingDetail(false);
+      toast({ title: "Dados atualizados!" });
+    } else {
+      toast({ title: "Erro ao salvar.", variant: "destructive" });
+    }
+  };
+
+  // ── Excluir agendamento ───────────────────────────────────────────────────
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<string | null>(null);
+  const [deletingGroup, setDeletingGroup]           = useState(false);
+
+  const handleDeleteGroup = async (groupId: string) => {
+    setDeletingGroup(true);
+    const ok = await deleteBookingGroup(groupId);
+    setDeletingGroup(false);
+    if (ok) {
+      setBookings(prev => prev.filter(b => b.booking_group_id !== groupId));
+      setConfirmDeleteGroup(null);
+      setDetail(null);
+      toast({ title: "Agendamento excluído." });
+    } else {
+      toast({ title: "Erro ao excluir agendamento.", variant: "destructive" });
+    }
+  };
+
+  // ── Nova consulta manual ──────────────────────────────────────────────────
+  const [newModal, setNewModal]           = useState(false);
+  const [newName, setNewName]             = useState("");
+  const [newEmail, setNewEmail]           = useState("");
+  const [newPhone, setNewPhone]           = useState("");
+  const [newPlan, setNewPlan]             = useState("");
+  const [newCustomPlan, setNewCustomPlan] = useState("");
+  const [newType, setNewType]             = useState<"online" | "presencial">("online");
+  const [manualDate, setManualDate]       = useState("");
+  const [manualTime, setManualTime]       = useState("");
+  const [newSessions, setNewSessions]     = useState(1);
+  const [newNotes, setNewNotes]           = useState("");
+  const [savingNew, setSavingNew]         = useState(false);
+
+  // Availability calendar for manual modal
+  const [modalSlots, setModalSlots]           = useState<Array<{date: string; start_time: string; type: string}>>([]);
+  const [modalSlotsBusy, setModalSlotsBusy]   = useState<string[]>([]);
+  const [loadingModalSlots, setLoadingModalSlots] = useState(false);
+  const [modalCalYear, setModalCalYear]       = useState(new Date().getFullYear());
+  const [modalCalMonth, setModalCalMonth]     = useState(new Date().getMonth());
+
+  // Fetch slots whenever modal type changes
+  useEffect(() => {
+    if (!newModal) return;
+    setLoadingModalSlots(true);
+    fetchAvailabilitySlots()
+      .then(slots => setModalSlots(slots.filter(s => s.type === newType)))
+      .finally(() => setLoadingModalSlots(false));
+    setManualDate(""); setManualTime("");
+  }, [newModal, newType]);
+
+  // Fetch booked times when date is selected
+  useEffect(() => {
+    if (!manualDate) { setModalSlotsBusy([]); return; }
+    fetchBookingsForDate(manualDate, newType)
+      .then(booked => setModalSlotsBusy(booked.map(b => (b.appointment_time || "").substring(0, 5))));
+  }, [manualDate, newType]);
+
+  const modalCanSelectDate = (dateStr: string) => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(dateStr + "T12:00:00");
+    if (d < today) return false;
+    return modalSlots.some(s => s.date === dateStr);
+  };
+
+  const modalTimesForDate = () =>
+    modalSlots
+      .filter(s => s.date === manualDate)
+      .map(s => s.start_time.substring(0, 5))
+      .sort();
+
+  const openNewModal = () => {
+    setNewName(""); setNewEmail(""); setNewPhone("");
+    setNewPlan(""); setNewCustomPlan("");
+    setNewType("online");
+    setManualDate(""); setManualTime("");
+    setNewSessions(1); setNewNotes("");
+    setModalCalYear(new Date().getFullYear());
+    setModalCalMonth(new Date().getMonth());
+    setNewModal(true);
+  };
+
+  const handleCreateManual = async () => {
+    if (!newName.trim()) { toast({ title: "Informe o nome do paciente.", variant: "destructive" }); return; }
+    if (!manualDate)     { toast({ title: "Informe a data da consulta.", variant: "destructive" }); return; }
+    if (!manualTime)     { toast({ title: "Informe o horário.", variant: "destructive" }); return; }
+    const planName = newPlan === "__custom__" ? newCustomPlan.trim() : newPlan;
+    if (!planName) { toast({ title: "Selecione ou informe o plano.", variant: "destructive" }); return; }
+
+    setSavingNew(true);
+    const groupId = crypto.randomUUID();
+    const total   = Math.max(1, Math.min(20, newSessions));
+
+    const b: Booking = {
+      booking_group_id: groupId,
+      session_number:   1,
+      total_sessions:   total,
+      client_name:      newName.trim(),
+      client_email:     newEmail.trim(),
+      client_phone:     newPhone.trim(),
+      plan_name:        planName,
+      plan_index:       0,
+      appointment_date: manualDate,
+      appointment_time: manualTime,
+      type:             newType,
+      status:           "confirmed",
+      notes:            newNotes ? JSON.stringify({ _manual: true, obs: newNotes }) : JSON.stringify({ _manual: true }),
+    };
+
+    const ok = await insertBooking(b);
+    setSavingNew(false);
+
+    if (ok) {
+      toast({ title: "Consulta criada!" });
+      setNewModal(false);
+      load();
+    } else {
+      toast({ title: "Erro ao criar consulta.", variant: "destructive" });
+    }
+  };
 
   // Calendário de retorno
   const [returnAvailSlots, setReturnAvailSlots]   = useState<Array<{date: string; start_time: string; type: string}>>([]);
@@ -624,6 +815,11 @@ const AdminAgendamentos = () => {
           <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
           <p className="text-sm text-muted-foreground">Gerencie as consultas agendadas</p>
         </div>
+        <Button onClick={openNewModal} size="sm" className="gap-1.5 shrink-0">
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Nova consulta</span>
+          <span className="sm:hidden">Nova</span>
+        </Button>
       </div>
 
       {/* Search + Filter */}
@@ -803,160 +999,345 @@ const AdminAgendamentos = () => {
 
       {/* ── Detail Modal ── */}
       {detail && detailFirst && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]" onClick={() => setDetail(null)}>
-          <div className="w-full md:max-w-4xl bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col max-h-[92svh] md:max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 bg-black/60 backdrop-blur-[2px]"
+          onClick={() => setDetail(null)}
+        >
+          <div
+            className="w-full md:max-w-4xl bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "min(92dvh, 90vh)" }}
+            onClick={e => e.stopPropagation()}
+          >
 
             {/* ── Header ── */}
-            <div className="flex items-center gap-4 px-6 py-5 border-b border-border shrink-0">
-              <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-white">{initials(detailFirst.client_name)}</span>
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-primary-foreground">{initials(detailFirst.client_name)}</span>
               </div>
+
+              {/* Info */}
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-base text-foreground leading-tight truncate">{detailFirst.client_name}</h2>
+                <h2 className="font-bold text-sm text-foreground leading-tight truncate">{detailFirst.client_name}</h2>
                 <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                  <span>{detailFirst.plan_name}</span>
-                  <span className="opacity-30">·</span>
-                  <span className="flex items-center gap-1">
+                  <span className="truncate max-w-[160px]">{detailFirst.plan_name}</span>
+                  <span className="opacity-30 shrink-0">·</span>
+                  <span className="flex items-center gap-1 shrink-0">
                     {detailFirst.type === "online" ? <Globe className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
                     {detailFirst.type === "online" ? "Online" : "Presencial"}
                   </span>
-                  <span className="opacity-30">·</span>
-                  <span>{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
+                  <span className="opacity-30 shrink-0">·</span>
+                  <span className="shrink-0">{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
                 >
-                  <Send className="h-3.5 w-3.5" />Enviar material
+                  <Send className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Enviar material</span>
                 </button>
-                {/* Mobile: icon-only send button */}
+                {confirmDeleteGroup === detail ? (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900">
+                    <span className="text-xs text-red-600 dark:text-red-400 font-medium hidden sm:inline">Excluir?</span>
+                    <button
+                      onClick={() => handleDeleteGroup(detail!)}
+                      disabled={deletingGroup}
+                      className="text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded transition-colors disabled:opacity-40"
+                    >
+                      {deletingGroup ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Sim"}
+                    </button>
+                    <span className="text-red-300 text-xs">|</span>
+                    <button
+                      onClick={() => setConfirmDeleteGroup(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded transition-colors"
+                    >
+                      Não
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteGroup(detail)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
+                    title="Excluir agendamento"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
-                  onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
-                  className="sm:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                  title="Enviar material"
+                  onClick={() => { setDetail(null); setConfirmDeleteGroup(null); }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                 >
-                  <Send className="h-4 w-4" />
-                </button>
-                <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            {/* ── Body: stacked on mobile, 2 columns on desktop ── */}
-            <div className="flex flex-col md:flex-row flex-1 min-h-0">
+            {/* ── Body: sidebar + main panel ── */}
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
 
-              {/* ── Left sidebar ── */}
-              <div className="md:w-56 shrink-0 overflow-y-auto border-b md:border-b-0 md:border-r border-border p-4 md:p-5 space-y-4 md:space-y-5 bg-muted/20">
-                {/* On mobile: show as horizontal scrollable row */}
-                <div className="md:hidden flex gap-4 overflow-x-auto pb-1">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground/40" />
-                    <span className="text-xs text-foreground">{detailFirst.client_email}</span>
-                  </div>
+              {/* ── Sidebar ── */}
+              <div className="md:w-52 shrink-0 md:border-r border-border md:overflow-y-auto bg-muted/20">
+
+                {/* Mobile: compact horizontal strip */}
+                <div className="md:hidden flex items-center gap-3 px-5 py-3 border-b border-border overflow-x-auto scrollbar-none">
+                  {detailFirst.client_email && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Mail className="h-3 w-3 text-muted-foreground/50" />
+                      <span className="text-xs text-foreground">{detailFirst.client_email}</span>
+                    </div>
+                  )}
                   {detailFirst.client_phone && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground/40" />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Phone className="h-3 w-3 text-muted-foreground/50" />
                       <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
                     </div>
                   )}
-                  {detailNotes.birthDate && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Cake className="h-3.5 w-3.5 text-muted-foreground/40" />
-                      <span className="text-xs text-foreground">{new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}{detailNotes.sex && ` · ${detailNotes.sex}`}</span>
-                    </div>
-                  )}
                   {detailNotes.goal && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Target className="h-3.5 w-3.5 text-muted-foreground/40" />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Target className="h-3 w-3 text-muted-foreground/50" />
                       <span className="text-xs text-foreground">{GOAL_LABELS[detailNotes.goal] || detailNotes.goal}</span>
                     </div>
                   )}
                 </div>
-                {/* Desktop sidebar content */}
-                <div className="hidden md:contents">
 
-                {/* Contato */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
-                  <div className="space-y-2.5">
-                    <div className="flex items-start gap-2.5">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-px" />
-                      <span className="text-xs text-foreground break-all leading-snug">{detailFirst.client_email}</span>
+                {/* Desktop: full vertical sidebar */}
+                <div className="hidden md:flex flex-col h-full">
+                  {editingDetail ? (
+                    /* ── EDIT MODE ── */
+                    <div className="flex flex-col h-full overflow-y-auto p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Editar dados</p>
+                        <button
+                          onClick={() => setEditingDetail(false)}
+                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Nome */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Nome</Label>
+                        <Input value={editDName} onChange={e => setEditDName(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Email</Label>
+                        <Input value={editDEmail} onChange={e => setEditDEmail(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      {/* Telefone */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Telefone</Label>
+                        <Input value={editDPhone} onChange={e => setEditDPhone(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      <div className="h-px bg-border/50" />
+
+                      {/* Objetivo */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Objetivo</Label>
+                        <select
+                          value={editDGoal}
+                          onChange={e => setEditDGoal(e.target.value)}
+                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">—</option>
+                          {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Restrições */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Restrições</Label>
+                        <select
+                          value={editDRestrictions}
+                          onChange={e => setEditDRestrictions(e.target.value)}
+                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">—</option>
+                          {Object.entries(RESTRICT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Alergias */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Alergias</Label>
+                        <Input value={editDAllergies} onChange={e => setEditDAllergies(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      {/* Condições de saúde */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Condições de saúde</Label>
+                        <Input value={editDHealth} onChange={e => setEditDHealth(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      {/* Medicamentos */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Medicamentos</Label>
+                        <Input value={editDMeds} onChange={e => setEditDMeds(e.target.value)} className="h-7 text-xs" />
+                      </div>
+
+                      {/* Acompanhamento anterior */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Acomp. anterior</Label>
+                        <select
+                          value={editDHadNutri}
+                          onChange={e => setEditDHadNutri(e.target.value)}
+                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">—</option>
+                          <option value="sim">Sim</option>
+                          <option value="nao">Não</option>
+                        </select>
+                      </div>
+
+                      {/* Como encontrou */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Como chegou</Label>
+                        <select
+                          value={editDHowFound}
+                          onChange={e => setEditDHowFound(e.target.value)}
+                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">—</option>
+                          {Object.entries(FOUND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Observações */}
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Observações</Label>
+                        <textarea
+                          value={editDObs}
+                          onChange={e => setEditDObs(e.target.value)}
+                          rows={3}
+                          className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+
+                      {/* Botões */}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={handleSaveDetailEdit}
+                          disabled={savingDetailEdit}
+                          className="flex-1 h-8 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {savingDetailEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar"}
+                        </button>
+                        <button
+                          onClick={() => setEditingDetail(false)}
+                          disabled={savingDetailEdit}
+                          className="flex-1 h-8 rounded-lg border border-border text-muted-foreground text-xs font-medium hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
-                    {detailFirst.client_phone && (
-                      <div className="flex items-center gap-2.5">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                        <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
-                      </div>
-                    )}
-                    {detailNotes.birthDate && (
-                      <div className="flex items-center gap-2.5">
-                        <Cake className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                        <span className="text-xs text-foreground">
-                          {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
-                          {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Ficha Clínica */}
-                {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
-                  detailNotes.healthConditions || detailNotes.medications ||
-                  detailNotes.hadNutritionist || detailNotes.howFound) && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
-                    <div className="space-y-3">
-                      {[
-                        { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
-                        { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
-                        { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
-                        { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
-                        { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
-                        { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
-                        { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
-                      ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
-                        <div key={label}>
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1 mb-0.5">
-                            <Icon className="h-2.5 w-2.5" />{label}
-                          </p>
-                          <p className="text-xs font-semibold text-foreground leading-snug pl-3.5">{val}</p>
+                  ) : (
+                    /* ── VIEW MODE ── */
+                    <div className="p-4 space-y-5 overflow-y-auto">
+                      {/* Contato */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
+                          <button
+                            onClick={() => openDetailEdit(detailFirst, detailNotes)}
+                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            title="Editar dados"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
                         </div>
-                      ))}
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-px" />
+                            <span className="text-xs text-foreground break-all leading-snug">{detailFirst.client_email}</span>
+                          </div>
+                          {detailFirst.client_phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
+                            </div>
+                          )}
+                          {detailNotes.birthDate && (
+                            <div className="flex items-center gap-2">
+                              <Cake className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              <span className="text-xs text-foreground">
+                                {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                                {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Ficha Clínica */}
+                      {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
+                        detailNotes.healthConditions || detailNotes.medications ||
+                        detailNotes.hadNutritionist || detailNotes.howFound) && (
+                        <div className="space-y-2.5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
+                          <div className="space-y-2.5">
+                            {[
+                              { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
+                              { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
+                              { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
+                              { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
+                              { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
+                              { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
+                              { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
+                            ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
+                              <div key={label}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1 mb-0.5">
+                                  <Icon className="h-2.5 w-2.5" />{label}
+                                </p>
+                                <p className="text-xs font-medium text-foreground leading-snug pl-3.5">{val}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>{/* end hidden md:contents */}
-              </div>{/* end sidebar */}
+                  )}
+                </div>
+              </div>
 
               {/* ── Right panel ── */}
-              <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-                {/* Underline tabs */}
-                <div className="flex border-b border-border shrink-0 px-6 overflow-x-auto scrollbar-none">
+                {/* Tabs */}
+                <div className="flex border-b border-border shrink-0 px-5">
                   {([
                     { id: "sessions" as const, label: "Sessões",    count: detailGroup.length },
                     { id: "records"  as const, label: "Prontuário", count: records.length },
                   ]).map(tab => (
-                    <button key={tab.id} onClick={() => setDetailTab(tab.id)}
-                      className={`relative py-3 pr-6 text-sm font-medium transition-colors ${
+                    <button
+                      key={tab.id}
+                      onClick={() => setDetailTab(tab.id)}
+                      className={`relative py-3 mr-5 text-sm font-medium transition-colors shrink-0 ${
                         detailTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {tab.label}
-                      {tab.count > 0 && <span className="ml-1.5 text-muted-foreground/60 text-xs">{tab.count}</span>}
-                      {detailTab === tab.id && <span className="absolute bottom-0 left-0 right-6 h-0.5 bg-foreground rounded-full" />}
+                      {tab.count > 0 && (
+                        <span className="ml-1.5 text-muted-foreground/60 text-xs">{tab.count}</span>
+                      )}
+                      {detailTab === tab.id && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
+                      )}
                     </button>
                   ))}
                 </div>
 
                 {/* ── SESSIONS TAB ── */}
                 {detailTab === "sessions" && (
-                  <div className="flex-1 overflow-y-auto divide-y divide-border/50">
+                  <div className="flex-1 overflow-y-auto divide-y divide-border/40">
                     {detailGroup.map((session) => {
                       const isActive = session.status === "confirmed" || session.status === "pending";
                       const isConfirming = confirmAction?.id === session.id;
@@ -965,137 +1346,83 @@ const AdminAgendamentos = () => {
                         session.status === "confirmed"  ? "bg-blue-400" :
                         session.status === "no_show"    ? "bg-orange-400" :
                         session.status === "cancelled"  ? "bg-red-400" : "bg-amber-400";
+                      const sessionLabel = session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`;
 
                       return (
-                        <div key={session.id} className={`group transition-colors ${isActive ? "hover:bg-muted/20" : "opacity-50"}`}>
+                        <div key={session.id} className={`transition-colors ${isActive ? "hover:bg-muted/20" : "opacity-50"}`}>
+                          <div className="flex items-start gap-3 px-5 py-3.5">
 
-                          {/* ── Mobile layout ── */}
-                          <div className="md:hidden flex items-start gap-3 px-4 py-3 border-b border-border/40 last:border-b-0">
-                            <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${dotColor}`} />
+                            {/* Dot */}
+                            <span className={`w-2 h-2 rounded-full shrink-0 mt-[5px] ${dotColor}`} />
+
+                            {/* Info block — takes available space */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium text-foreground">
-                                  {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
-                                </span>
-                                <StatusPill status={session.status || "pending"} />
-                              </div>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+
+                              {/* Row 1: label + date + time + status */}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span className="text-sm font-medium text-foreground shrink-0">{sessionLabel}</span>
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums shrink-0">
                                   <CalendarCheck className="h-3 w-3 text-muted-foreground/40" />
                                   {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
                                 </span>
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums shrink-0">
                                   <Clock className="h-3 w-3 text-muted-foreground/40" />
                                   {(session.appointment_time || "").substring(0, 5)}
                                 </span>
+                                <div className="shrink-0">
+                                  <StatusPill status={session.status || "pending"} />
+                                </div>
                               </div>
+
+                              {/* Row 2: actions */}
                               {isActive && !isConfirming && (
-                                <div className="flex items-center gap-3 mt-2 text-xs">
-                                  <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
-                                    className="text-muted-foreground hover:text-foreground font-medium transition-colors">Realocar</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                                  <button
+                                    onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
+                                    className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+                                  >Realocar</button>
+                                  <span className="text-border text-xs">·</span>
+                                  <button
+                                    disabled={updating === session.id}
                                     onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
-                                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40">Concluir</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
+                                    className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40"
+                                  >Concluir</button>
+                                  <span className="text-border text-xs">·</span>
+                                  <button
+                                    disabled={updating === session.id}
                                     onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
-                                    className="text-muted-foreground hover:text-orange-500 font-medium transition-colors">Faltou</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
+                                    className="text-xs text-muted-foreground hover:text-orange-500 font-medium transition-colors"
+                                  >Faltou</button>
+                                  <span className="text-border text-xs">·</span>
+                                  <button
+                                    disabled={updating === session.id}
                                     onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
-                                    className="text-muted-foreground hover:text-red-500 font-medium transition-colors">Cancelar</button>
+                                    className="text-xs text-muted-foreground hover:text-red-500 font-medium transition-colors"
+                                  >Cancelar</button>
                                 </div>
                               )}
+
+                              {/* Confirm no_show */}
                               {isConfirming && confirmAction!.status === "no_show" && (
-                                <div className="flex items-center gap-2 mt-2 text-xs">
+                                <div className="flex items-center gap-2 mt-1.5 text-xs">
                                   <span className="text-muted-foreground">Marcar falta?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500 hover:text-orange-600">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
                                 </div>
                               )}
+
+                              {/* Confirm cancel */}
                               {isConfirming && confirmAction!.status === "cancelled" && (
-                                <div className="flex items-center gap-2 mt-2 text-xs">
-                                  <span className="text-muted-foreground">Cancelar?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
+                                <div className="flex items-center gap-2 mt-1.5 text-xs">
+                                  <span className="text-muted-foreground">Cancelar sessão?</span>
+                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500 hover:text-red-600">Sim</button>
+                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
                                 </div>
                               )}
+
+                              {/* Completed badge */}
                               {session.status === "completed" && (
-                                <span className="flex items-center gap-1 mt-2 text-xs text-emerald-600 font-medium">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />Realizada
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* ── Desktop layout ── */}
-                          <div className="hidden md:flex items-center gap-4 px-6 py-3.5">
-                            {/* dot + name */}
-                            <div className="flex items-center gap-2.5 w-36 shrink-0">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                              <span className="text-sm font-medium text-foreground truncate">
-                                {session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`}
-                              </span>
-                            </div>
-
-                            {/* date */}
-                            <div className="flex items-center gap-1.5 w-36 shrink-0">
-                              <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                              <span className="text-xs text-muted-foreground tabular-nums">
-                                {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                              </span>
-                            </div>
-
-                            {/* time */}
-                            <div className="flex items-center gap-1.5 w-16 shrink-0">
-                              <Clock className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                              <span className="text-xs text-muted-foreground tabular-nums">
-                                {(session.appointment_time || "").substring(0, 5)}
-                              </span>
-                            </div>
-
-                            {/* status */}
-                            <div className="w-28 shrink-0">
-                              <StatusPill status={session.status || "pending"} />
-                            </div>
-
-                            {/* actions — hover */}
-                            <div className={`flex items-center gap-3 ml-auto text-xs whitespace-nowrap transition-opacity ${isConfirming ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                              {isActive && !isConfirming && (
-                                <>
-                                  <button onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
-                                    className="text-muted-foreground hover:text-foreground font-medium transition-colors">Realocar</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
-                                    onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
-                                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40">Concluir</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
-                                    onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
-                                    className="text-muted-foreground hover:text-orange-500 font-medium transition-colors">Faltou</button>
-                                  <span className="text-border">·</span>
-                                  <button disabled={updating === session.id}
-                                    onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
-                                    className="text-muted-foreground hover:text-red-500 font-medium transition-colors">Cancelar</button>
-                                </>
-                              )}
-                              {isConfirming && confirmAction!.status === "no_show" && (
-                                <>
-                                  <span className="text-muted-foreground">Marcar falta?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
-                                </>
-                              )}
-                              {isConfirming && confirmAction!.status === "cancelled" && (
-                                <>
-                                  <span className="text-muted-foreground">Cancelar?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground">Não</button>
-                                </>
-                              )}
-                              {session.status === "completed" && (
-                                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                                <span className="flex items-center gap-1 mt-1.5 text-xs text-emerald-600 font-medium">
                                   <CheckCircle2 className="h-3.5 w-3.5" />Realizada
                                 </span>
                               )}
@@ -1194,16 +1521,6 @@ const AdminAgendamentos = () => {
                             {isEditing && (
                               <div className="px-4 py-4 space-y-3">
                                 <p className="text-xs font-semibold text-foreground">{sessionLabel}</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Scale className="h-3 w-3" />Peso (kg)</label>
-                                    <input type="number" step="0.1" value={editWeight} onChange={e => setEditWeight(e.target.value)} placeholder="72.5" className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Altura (cm)</label>
-                                    <input type="number" step="0.1" value={editHeight} onChange={e => setEditHeight(e.target.value)} placeholder="165" className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                  </div>
-                                </div>
                                 <div className="space-y-1.5">
                                   <label className="text-xs font-medium text-muted-foreground">Observações</label>
                                   <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40" placeholder="Observações da consulta…" />
@@ -1347,41 +1664,6 @@ const AdminAgendamentos = () => {
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
 
-                {/* Medidas */}
-                {(rec.weight || rec.height) && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Medidas</p>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {rec.weight && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/60 border border-border/50">
-                          <Scale className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                          <div>
-                            <p className="text-[10px] text-muted-foreground/50 leading-none">Peso</p>
-                            <p className="text-sm font-bold text-foreground mt-0.5">{rec.weight} kg</p>
-                          </div>
-                        </div>
-                      )}
-                      {rec.height && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/60 border border-border/50">
-                          <Ruler className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                          <div>
-                            <p className="text-[10px] text-muted-foreground/50 leading-none">Altura</p>
-                            <p className="text-sm font-bold text-foreground mt-0.5">{rec.height} cm</p>
-                          </div>
-                        </div>
-                      )}
-                      {bmi && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-                          <div>
-                            <p className="text-[10px] text-primary/60 leading-none">IMC</p>
-                            <p className="text-sm font-bold text-primary mt-0.5">{bmi}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Observações */}
                 {rec.notes && (
                   <div className="space-y-2">
@@ -1488,26 +1770,6 @@ const AdminAgendamentos = () => {
 
             {/* Scrollable body */}
             <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-
-              {/* Medidas */}
-              <div className="space-y-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Medidas</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Scale className="h-3 w-3" />Peso (kg)</label>
-                    <input type="number" step="0.1" value={compWeight} onChange={e => setCompWeight(e.target.value)} placeholder="72.5"
-                      className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Altura (cm)</label>
-                    <input type="number" step="0.1" value={compHeight} onChange={e => setCompHeight(e.target.value)} placeholder="165"
-                      className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                </div>
-                {compWeight && compHeight && (
-                  <p className="text-xs text-muted-foreground">IMC: <span className="font-semibold text-foreground">{calcBMI(parseFloat(compWeight), parseFloat(compHeight))}</span></p>
-                )}
-              </div>
 
               {/* Observações */}
               <div className="space-y-1.5">
@@ -1846,6 +2108,301 @@ const AdminAgendamentos = () => {
               <Button className="flex-1 rounded-md gap-2" onClick={handleReschedule} disabled={rescheduling || !newDate || !newTime}>
                 {rescheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
                 Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Nova Consulta Manual Modal ─────────────────────────────────────── */}
+      {newModal && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 bg-black/60 backdrop-blur-[2px]"
+          onClick={() => setNewModal(false)}>
+          <div className="w-full md:max-w-lg bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "min(92dvh, 90vh)" }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CalendarPlus className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Nova consulta</p>
+                  <p className="text-xs text-muted-foreground">Criação manual pelo admin</p>
+                </div>
+              </div>
+              <button onClick={() => setNewModal(false)} className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+
+              {/* Paciente */}
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paciente</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs">Nome completo *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                    <Input value={newName} onChange={e => setNewName(e.target.value)}
+                      placeholder="Nome do paciente" className="pl-8 h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                    <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                      placeholder="email@exemplo.com" className="pl-8 h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Telefone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                    <Input value={newPhone} onChange={e => setNewPhone(e.target.value)}
+                      placeholder="(00) 00000-0000" className="pl-8 h-9 text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Plano + Tipo */}
+              {(() => {
+                const isOnline     = newPlan === planOptions[0]; // "Consulta Online"
+                const isPresencial = newPlan === planOptions[1]; // "Consulta Clínica Presencial"
+                const isAutoType   = isOnline || isPresencial;
+                const isProtocol   = newPlan !== "" && !isAutoType; // protocolos + custom
+
+                // Auto-set tipo when plan implies it
+                if (isOnline     && newType !== "online")     setNewType("online");
+                if (isPresencial && newType !== "presencial") setNewType("presencial");
+
+                const TypeButtons = ({ label }: { label: string }) => (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{label}</Label>
+                    <div className="flex gap-2 h-9">
+                      {(["online", "presencial"] as const).map(t => (
+                        <button key={t} type="button"
+                          onClick={() => setNewType(t)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border text-xs font-medium transition-all ${
+                            newType === t
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:border-primary/30"
+                          }`}>
+                          {t === "online" ? <Globe className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                          {t === "online" ? "Online" : "Presencial"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div className="pt-1 border-t border-border/50">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Plano e tipo</p>
+                    <div className={`grid gap-3 ${isAutoType || !newPlan ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+
+                      {/* Plan select */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Plano *</Label>
+                        <select
+                          value={newPlan}
+                          onChange={e => {
+                            const p = e.target.value;
+                            setNewPlan(p);
+                            if (planSessionMap[p]) setNewSessions(planSessionMap[p]);
+                          }}
+                          className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Selecionar plano…</option>
+                          {planOptions.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                          <option value="__custom__">Outro (digitar)</option>
+                        </select>
+                      </div>
+
+                      {/* For consultas avulsas: tipo fica ao lado */}
+                      {isAutoType && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Tipo</Label>
+                          <div className="h-9 flex items-center px-3 rounded-lg border border-border bg-muted/30 gap-2 text-sm text-muted-foreground">
+                            {newType === "online"
+                              ? <><Globe className="h-3.5 w-3.5 text-primary" /><span>Online</span></>
+                              : <><MapPin className="h-3.5 w-3.5 text-primary" /><span>Presencial</span></>
+                            }
+                            <span className="ml-auto text-xs text-muted-foreground/50">definido pelo plano</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Custom plan name */}
+                      {newPlan === "__custom__" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Nome do plano</Label>
+                          <Input value={newCustomPlan} onChange={e => setNewCustomPlan(e.target.value)}
+                            placeholder="Ex: Protocolo Personalizado" className="h-9 text-sm" />
+                        </div>
+                      )}
+
+                      {/* For protocols: tipo perguntado abaixo com label diferente */}
+                      {isProtocol && (
+                        <TypeButtons label="Modelo da primeira consulta *" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Agenda — calendário de disponibilidade */}
+              <div className="pt-1 border-t border-border/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Agenda</p>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Limite de retornos:</Label>
+                    <input type="number" min={1} max={20} value={newSessions}
+                      onChange={e => setNewSessions(Number(e.target.value))}
+                      className="w-14 h-7 rounded-lg border border-input bg-background px-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                </div>
+
+                {loadingModalSlots ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                    {/* Mini calendar */}
+                    <div className="rounded-xl border border-border bg-muted/20 p-3">
+                      {/* Month nav */}
+                      <div className="flex items-center justify-between mb-2">
+                        <button type="button"
+                          onClick={() => { const d = new Date(modalCalYear, modalCalMonth - 1, 1); setModalCalYear(d.getFullYear()); setModalCalMonth(d.getMonth()); }}
+                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="text-xs font-semibold text-foreground capitalize">
+                          {new Date(modalCalYear, modalCalMonth).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                        </span>
+                        <button type="button"
+                          onClick={() => { const d = new Date(modalCalYear, modalCalMonth + 1, 1); setModalCalYear(d.getFullYear()); setModalCalMonth(d.getMonth()); }}
+                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {/* Day headers */}
+                      <div className="grid grid-cols-7 mb-1">
+                        {["D","S","T","Q","Q","S","S"].map((d,i) => (
+                          <div key={i} className="text-center text-[10px] font-medium text-muted-foreground/50 py-0.5">{d}</div>
+                        ))}
+                      </div>
+                      {/* Days */}
+                      {(() => {
+                        const firstDay = new Date(modalCalYear, modalCalMonth, 1).getDay();
+                        const daysInMonth = new Date(modalCalYear, modalCalMonth + 1, 0).getDate();
+                        const cells: React.ReactNode[] = [];
+                        for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
+                        for (let d = 1; d <= daysInMonth; d++) {
+                          const dateStr = `${modalCalYear}-${String(modalCalMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                          const available = modalCanSelectDate(dateStr);
+                          const selected  = manualDate === dateStr;
+                          const today     = new Date().toISOString().split("T")[0] === dateStr;
+                          cells.push(
+                            <button key={d} type="button"
+                              disabled={!available}
+                              onClick={() => { setManualDate(dateStr); setManualTime(""); }}
+                              className={`relative aspect-square flex items-center justify-center rounded-lg text-[11px] font-medium transition-all
+                                ${selected  ? "bg-primary text-primary-foreground" :
+                                  today     ? "bg-primary/10 text-primary" :
+                                  available ? "hover:bg-muted text-foreground" :
+                                              "text-muted-foreground/30 cursor-default"}`}>
+                              {d}
+                              {available && !selected && (
+                                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary/60" />
+                              )}
+                            </button>
+                          );
+                        }
+                        return <div className="grid grid-cols-7 gap-0.5">{cells}</div>;
+                      })()}
+                      <p className="text-[10px] text-muted-foreground/50 mt-2 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" /> horários disponíveis
+                      </p>
+                    </div>
+
+                    {/* Time slots */}
+                    <div className="rounded-xl border border-border bg-muted/20 p-3">
+                      {!manualDate ? (
+                        <div className="flex flex-col items-center justify-center h-full py-8 gap-2 text-center">
+                          <CalendarCheck className="h-8 w-8 text-muted-foreground/20" />
+                          <p className="text-xs text-muted-foreground/50">Selecione uma data no calendário</p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-xs font-semibold text-foreground mb-1">
+                            {new Date(manualDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mb-3 capitalize">
+                            {newType === "online" ? "Atendimento online" : "Atendimento presencial"}
+                          </p>
+                          {modalTimesForDate().length === 0 ? (
+                            <p className="text-xs text-muted-foreground/50 py-4 text-center">Sem horários para esta data</p>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {modalTimesForDate().map(t => {
+                                const busy     = modalSlotsBusy.includes(t);
+                                const selected = manualTime === t;
+                                return (
+                                  <button key={t} type="button"
+                                    disabled={busy}
+                                    onClick={() => setManualTime(t)}
+                                    className={`py-1.5 rounded-lg text-xs font-medium transition-all border
+                                      ${selected ? "bg-primary text-primary-foreground border-primary" :
+                                        busy    ? "text-muted-foreground/30 border-border/30 line-through cursor-default" :
+                                                  "border-border hover:border-primary/40 hover:bg-primary/5 text-foreground"}`}>
+                                    {t}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {newSessions > 1 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    1 consulta inicial agendada. Os {newSessions - 1} retorno{newSessions - 1 > 1 ? "s" : ""} serão marcados ao concluir cada sessão.
+                  </p>
+                )}
+              </div>
+
+              {/* Observações */}
+              <div className="pt-1 border-t border-border/50 space-y-1.5">
+                <Label className="text-xs">Observações (opcional)</Label>
+                <textarea value={newNotes} onChange={e => setNewNotes(e.target.value)}
+                  placeholder="Objetivo, condições, anotações iniciais…"
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border shrink-0 bg-muted/30">
+              <Button variant="ghost" size="sm" onClick={() => setNewModal(false)} disabled={savingNew}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleCreateManual} disabled={savingNew} className="gap-1.5">
+                {savingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {savingNew ? "Criando…" : "Criar consulta"}
               </Button>
             </div>
           </div>

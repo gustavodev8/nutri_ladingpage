@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,6 +147,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
   const foods = meal.foods ?? [];
   const totals = sum(foods);
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
+  const [showNotes, setShowNotes] = useState(!!meal.notes);
 
   const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
   const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
@@ -246,13 +247,40 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
         </table>
       </div>
 
-      {/* ── Adicionar alimento ── */}
-      <div className="px-4 py-2 border-t border-border/30 bg-background/40">
-        <button type="button" onClick={addFood}
-          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
-          <Plus size={12} />
-          Adicionar alimento
-        </button>
+      {/* ── Footer: adicionar alimento + observação ── */}
+      <div className="border-t border-border/30 bg-background/40">
+        <div className="flex items-center justify-between px-4 py-2">
+          <button type="button" onClick={addFood}
+            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
+            <Plus size={12} />
+            Adicionar alimento
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowNotes(v => !v); if (showNotes) onUpdate({ ...meal, notes: "" }); }}
+            className={`flex items-center gap-1 text-xs font-medium transition-colors ${
+              showNotes || meal.notes
+                ? "text-primary hover:text-primary/80"
+                : "text-muted-foreground/50 hover:text-muted-foreground"
+            }`}
+          >
+            <MessageSquare size={12} />
+            {showNotes ? "Remover observação" : "Adicionar observação"}
+          </button>
+        </div>
+
+        {/* Observação textarea */}
+        {showNotes && (
+          <div className="px-4 pb-3">
+            <textarea
+              rows={2}
+              value={meal.notes ?? ""}
+              onChange={e => onUpdate({ ...meal, notes: e.target.value })}
+              placeholder="Observações para esta refeição (substituições, preparo, orientações…)"
+              className="w-full text-sm bg-muted/30 border border-border/50 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary placeholder:text-muted-foreground/30 text-foreground/80"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

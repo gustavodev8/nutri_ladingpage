@@ -91,7 +91,11 @@ export async function uploadImage(file: File): Promise<string | null> {
 
 // Comprime imagens via Canvas antes do upload.
 // PDFs e docs são enviados sem alteração.
-async function compressFileIfImage(file: File): Promise<{ blob: Blob; ext: string; mime: string }> {
+async function compressFileIfImage(
+  file: File,
+  maxPx = 1920,
+  quality = 0.82,
+): Promise<{ blob: Blob; ext: string; mime: string }> {
   const isImage = file.type.startsWith("image/") && file.type !== "image/gif";
   if (!isImage) return { blob: file, ext: file.name.split(".").pop() || "bin", mime: file.type };
 
@@ -100,12 +104,10 @@ async function compressFileIfImage(file: File): Promise<{ blob: Blob; ext: strin
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      // Redimensiona mantendo proporção — máx 1920px no lado maior
-      const MAX = 1920;
       let { width, height } = img;
-      if (width > MAX || height > MAX) {
-        if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
-        else                { width = Math.round((width * MAX) / height); height = MAX; }
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round((height * maxPx) / width); width = maxPx; }
+        else                { width = Math.round((width * maxPx) / height); height = maxPx; }
       }
       const canvas = document.createElement("canvas");
       canvas.width  = width;
@@ -114,12 +116,32 @@ async function compressFileIfImage(file: File): Promise<{ blob: Blob; ext: strin
       canvas.toBlob(
         (blob) => resolve({ blob: blob ?? file, ext: "jpg", mime: "image/jpeg" }),
         "image/jpeg",
-        0.82 // qualidade 82% — bom equilíbrio entre tamanho e nitidez
+        quality,
       );
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve({ blob: file, ext: file.name.split(".").pop() || "bin", mime: file.type }); };
     img.src = url;
   });
+}
+
+// Upload de foto de paciente — comprimida (max 1200px, JPEG 78%).
+export async function uploadPatientPhoto(file: File): Promise<string | null> {
+  if (!file.type.startsWith("image/")) {
+    console.error("[uploadPatientPhoto] Apenas imagens são permitidas.");
+    return null;
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    console.error("[uploadPatientPhoto] Arquivo muito grande:", file.size);
+    return null;
+  }
+  const { blob, mime } = await compressFileIfImage(file, 1200, 0.78);
+  const path = `patients/${Date.now()}.jpg`;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, { upsert: false, contentType: mime });
+  if (error) { console.error("[Supabase] uploadPatientPhoto error:", error.message); return null; }
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+  return urlData.publicUrl;
 }
 
 export async function uploadRecordFile(file: File, groupId: string): Promise<string | null> {
@@ -187,12 +209,20 @@ export interface Patient {
   created_at?: string;
 }
 
+export interface PatientPhoto {
+  id?: number;
+  patient_id: number;
+  url: string;
+  label?: string;
+  created_at?: string;
+}
+
 export interface Anamnesis {
   id?: number;
   patient_id: number;
-  chief_complaint?: string;
+  main_complaint?: string;
   medical_history?: string;
-  current_medications?: string;
+  medications?: string;
   allergies?: string;
   food_aversions?: string;
   food_preferences?: string;
@@ -239,6 +269,7 @@ export interface Meal {
   meal_name: string;
   time_suggestion?: string;
   sort_order?: number;
+  notes?: string;
   foods?: MealFood[];
 }
 
@@ -302,6 +333,30 @@ export async function deletePatient(id: number): Promise<boolean> {
   return true;
 }
 
+// Patient Photos
+export async function fetchPatientPhotos(patientId: number): Promise<PatientPhoto[]> {
+  const { data, error } = await supabase
+    .from("patient_photos")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchPatientPhotos:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function insertPatientPhoto(photo: Omit<PatientPhoto, "id" | "created_at">): Promise<PatientPhoto | null> {
+  const { data, error } = await supabase.from("patient_photos").insert(photo).select().single();
+  if (error) { console.error("[Supabase] insertPatientPhoto:", error.message); return null; }
+  return data;
+}
+
+export async function deletePatientPhoto(id: number): Promise<boolean> {
+  const { error } = await supabase.from("patient_photos").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deletePatientPhoto:", error.message); return false; }
+  return true;
+}
+
+
 // Anamnesis
 export async function fetchAnamnesis(patientId: number): Promise<Anamnesis | null> {
   const { data, error } = await supabase
@@ -313,15 +368,15 @@ export async function fetchAnamnesis(patientId: number): Promise<Anamnesis | nul
   return data;
 }
 
-export async function upsertAnamnesis(a: Anamnesis): Promise<boolean> {
+export async function upsertAnamnesis(a: Anamnesis): Promise<boolean | string> {
   const payload = { ...a, updated_at: new Date().toISOString() };
   if (a.id) {
     const { id, ...fields } = payload;
     const { error } = await supabase.from("anamnesis").update(fields).eq("id", id);
-    if (error) { console.error("[Supabase] upsertAnamnesis update:", error.message); return false; }
+    if (error) { console.error("[Supabase] upsertAnamnesis update:", error.message); return error.message; }
   } else {
     const { error } = await supabase.from("anamnesis").insert(payload);
-    if (error) { console.error("[Supabase] upsertAnamnesis insert:", error.message); return false; }
+    if (error) { console.error("[Supabase] upsertAnamnesis insert:", error.message); return error.message; }
   }
   return true;
 }
@@ -400,7 +455,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
     const meal = meals[i];
     const { data: mealData, error: mealErr } = await supabase
       .from("meals")
-      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i })
+      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "" })
       .select()
       .single();
     if (mealErr || !mealData) { console.error("[Supabase] saveMeals insert meal:", mealErr?.message); return false; }
@@ -547,6 +602,27 @@ export async function updateBookingStatus(id: number, status: string, extra?: Re
   const { error } = await supabase.from('bookings').update(payload).eq('id', id);
   if (error) console.error('updateBookingStatus error:', JSON.stringify(error));
   return !error;
+}
+
+export async function updateBookingGroup(
+  bookingGroupId: string,
+  fields: Partial<Pick<Booking, "client_name" | "client_email" | "client_phone" | "notes">>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('bookings')
+    .update(fields)
+    .eq('booking_group_id', bookingGroupId);
+  if (error) { console.error('updateBookingGroup error:', error.message); return false; }
+  return true;
+}
+
+export async function deleteBookingGroup(bookingGroupId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('booking_group_id', bookingGroupId);
+  if (error) { console.error('deleteBookingGroup error:', error.message); return false; }
+  return true;
 }
 
 /** Filtra bookings com status 'pending' criados há mais de 24h (client-side, sem delete via anon key) */

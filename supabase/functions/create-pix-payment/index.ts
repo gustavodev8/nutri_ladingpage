@@ -20,9 +20,10 @@ serve(async (req) => {
       });
     }
 
-    const { productIndex, productName, priceAmount, customerEmail, pdfUrl, customerName } = await req.json();
+    const { productIndex, productName, priceAmount, customerEmail, pdfUrl, customerName, customerCpf } = await req.json();
 
-    const externalRef = `${productIndex}|${customerEmail}|${encodeURIComponent(pdfUrl || "")}|${encodeURIComponent(customerName || "")}`;
+    const cpfDigits = (customerCpf || "").replace(/\D/g, "") || "00000000000";
+    const externalRef = `${productIndex}|${customerEmail}|${encodeURIComponent(pdfUrl || "")}|${encodeURIComponent(customerName || "")}|${cpfDigits}`;
 
     const nameParts = (customerName || "Cliente").trim().split(" ");
     const firstName = nameParts[0];
@@ -38,7 +39,7 @@ serve(async (req) => {
         email: customerEmail,
         first_name: firstName,
         last_name: lastName,
-        identification: { type: "CPF", number: "00000000000" },
+        identification: { type: "CPF", number: cpfDigits },
       },
     };
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, BookOpen, Loader2, Mail, CheckCircle2,
-  Copy, Check, X, User
+  Copy, Check, X, User, CreditCard
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
+
+// ── CPF helpers ───────────────────────────────────────────────────────────────
+
+function validateCpf(cpf: string): boolean {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const calc = (n: number) => {
+    const sum = Array.from({ length: n - 1 }, (_, i) => parseInt(d[i]) * (n - i)).reduce((a, b) => a + b, 0);
+    const rem = (sum * 10) % 11;
+    return rem >= 10 ? 0 : rem;
+  };
+  return calc(10) === parseInt(d[9]) && calc(11) === parseInt(d[10]);
+}
+
+function maskCpf(value: string): string {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -31,6 +52,8 @@ const ProdutoPage = () => {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [freeEligible, setFreeEligible] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [pixData, setPixData] = useState<PixData | null>(null);
@@ -70,6 +93,10 @@ const ProdutoPage = () => {
       setErrorMsg("Informe um email válido.");
       return;
     }
+    if (!validateCpf(cpf)) {
+      setErrorMsg("CPF inválido. Verifique e tente novamente.");
+      return;
+    }
     if (!produto.priceAmount || produto.priceAmount <= 0) {
       setErrorMsg("Preço não configurado. Entre em contato.");
       return;
@@ -77,6 +104,19 @@ const ProdutoPage = () => {
 
     setStage("loading");
     setErrorMsg("");
+
+    // Check CPF eligibility for free consultation
+    try {
+      const eligRes = await fetch(`${SUPABASE_URL}/functions/v1/check-cpf-eligible`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf }),
+      });
+      const eligData = await eligRes.json();
+      setFreeEligible(eligData.eligible !== false);
+    } catch {
+      setFreeEligible(true); // allow on error
+    }
 
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-pix-payment`, {
@@ -89,6 +129,7 @@ const ProdutoPage = () => {
           customerEmail: email,
           pdfUrl: produto.pdfUrl || "",
           customerName: name,
+          customerCpf: cpf,
         }),
       });
 
@@ -251,13 +292,21 @@ const ProdutoPage = () => {
                   </div>
 
                   {/* Free consultation CTA */}
-                  <div className="w-full rounded-xl border border-border bg-muted/40 px-4 py-4 space-y-2 text-center">
-                    <p className="text-sm font-semibold text-foreground">Sua consulta gratuita de 20 min</p>
-                    <p className="text-xs text-muted-foreground">Como bônus da sua compra, agende agora sua consulta grátis com Fillipe David.</p>
-                    <Button asChild size="sm" className="rounded-full gap-2 w-full mt-1">
-                      <Link to="/agendar/0?free=1">Agendar consulta gratuita</Link>
-                    </Button>
-                  </div>
+                  {freeEligible === true ? (
+                    <div className="w-full rounded-xl border border-border bg-muted/40 px-4 py-4 space-y-2 text-center">
+                      <p className="text-sm font-semibold text-foreground">Sua consulta gratuita de 20 min</p>
+                      <p className="text-xs text-muted-foreground">Como bônus da sua compra, agende agora sua consulta grátis com Fillipe David.</p>
+                      <Button asChild size="sm" className="rounded-full gap-2 w-full mt-1">
+                        <Link to="/agendar/0?free=1">Agendar consulta gratuita</Link>
+                      </Button>
+                    </div>
+                  ) : freeEligible === false ? (
+                    <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        Este CPF já utilizou a consulta gratuita em uma compra anterior. O e-book foi enviado normalmente para seu email.
+                      </p>
+                    </div>
+                  ) : null}
 
                   {/* Back */}
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-2 w-full text-muted-foreground">
@@ -350,6 +399,26 @@ const ProdutoPage = () => {
                           required
                         />
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cpf" className="text-sm font-medium text-foreground">
+                        CPF
+                      </Label>
+                      <div className="relative">
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="cpf"
+                          type="text"
+                          placeholder="000.000.000-00"
+                          value={cpf}
+                          onChange={(e) => { setCpf(maskCpf(e.target.value)); setErrorMsg(""); }}
+                          className="pl-9 rounded-xl"
+                          inputMode="numeric"
+                          maxLength={14}
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Usado apenas para verificar elegibilidade da consulta gratuita.</p>
                       {errorMsg && <p className="text-xs text-destructive">{errorMsg}</p>}
                     </div>
 

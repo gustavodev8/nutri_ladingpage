@@ -14,6 +14,10 @@ import {
   ChevronRight,
   Scale,
   Ruler,
+  Camera,
+  X,
+  ImageIcon,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +34,15 @@ import {
   fetchMealPlans,
   upsertMealPlan,
   deleteMealPlan,
+  fetchPatientPhotos,
+  insertPatientPhoto,
+  deletePatientPhoto,
+  uploadPatientPhoto,
   type Patient,
   type Anamnesis,
   type Measurement,
   type MealPlan,
+  type PatientPhoto,
 } from "@/lib/supabase";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -272,6 +281,20 @@ function PerfilTab({
   const [form, setForm] = useState<Patient>({ ...patient });
   const [saving, setSaving] = useState(false);
 
+  // Photos
+  const [photos, setPhotos] = useState<PatientPhoto[]>([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!patient.id) return;
+    fetchPatientPhotos(patient.id)
+      .then(setPhotos)
+      .finally(() => setLoadingPhotos(false));
+  }, [patient.id]);
+
   const set = (field: keyof Patient, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -290,6 +313,29 @@ function PerfilTab({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !patient.id) return;
+    e.target.value = "";
+    setUploading(true);
+    let added = 0;
+    for (const file of files) {
+      const url = await uploadPatientPhoto(file);
+      if (!url) { toast.error(`Falha ao enviar ${file.name}`); continue; }
+      const saved = await insertPatientPhoto({ patient_id: patient.id, url });
+      if (saved) { setPhotos(prev => [saved, ...prev]); added++; }
+    }
+    setUploading(false);
+    if (added > 0) toast.success(added === 1 ? "Foto adicionada!" : `${added} fotos adicionadas!`);
+  };
+
+  const handleDeletePhoto = async (photo: PatientPhoto) => {
+    if (!photo.id) return;
+    const ok = await deletePatientPhoto(photo.id);
+    if (ok) setPhotos(prev => prev.filter(p => p.id !== photo.id));
+    else toast.error("Erro ao remover foto.");
   };
 
   return (
@@ -393,6 +439,104 @@ function PerfilTab({
           Salvar perfil
         </Button>
       </div>
+
+      {/* ── Fotos do paciente ───────────────────────────────────────── */}
+      <div className="space-y-3 pt-4 border-t border-border/60">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Camera size={16} className="text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Fotos</span>
+            {photos.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{photos.length}</span>
+            )}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-lg gap-1.5 text-xs h-8"
+            disabled={uploading}
+            onClick={() => photoInputRef.current?.click()}
+          >
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+            {uploading ? "Enviando..." : "Adicionar foto"}
+          </Button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
+        </div>
+
+        {loadingPhotos ? (
+          <div className="flex items-center justify-center h-24">
+            <Loader2 size={20} className="animate-spin text-muted-foreground/40" />
+          </div>
+        ) : photos.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all py-8 text-muted-foreground hover:text-primary"
+          >
+            <ImageIcon size={28} className="opacity-40" />
+            <span className="text-sm">Clique para adicionar fotos do paciente</span>
+          </button>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            {photos.map((photo) => (
+              <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-muted border border-border">
+                <img
+                  src={photo.url}
+                  alt="Foto do paciente"
+                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                  onClick={() => setLightbox(photo.url)}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDeletePhoto(photo)}
+                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            {/* Add more button */}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploading}
+              className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary"
+            >
+              {uploading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+              <span className="text-[10px]">Mais</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            <X size={18} />
+          </button>
+          <img
+            src={lightbox}
+            alt="Visualizar foto"
+            className="max-w-full max-h-[90vh] rounded-xl object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -404,18 +548,19 @@ function PerfilTab({
 type AnamnesisForm = Omit<Anamnesis, "id" | "created_at" | "updated_at">;
 
 function AnamneseTab({ patientId }: { patientId: string }) {
-  const [form, setForm] = useState<AnamnesisForm>({ patient_id: patientId });
+  const pid = Number(patientId);
+  const [form, setForm] = useState<AnamnesisForm>({ patient_id: pid });
   const [anamnesisId, setAnamnesisId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchAnamnesis(patientId)
+    fetchAnamnesis(pid)
       .then((data) => {
         if (data) {
           setAnamnesisId(data.id ?? null);
           const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = data as Anamnesis & { id?: string; created_at?: string; updated_at?: string };
-          setForm({ ...rest, patient_id: patientId });
+          setForm({ ...rest, patient_id: pid });
         }
       })
       .catch(() => toast.error("Erro ao carregar anamnese."))
@@ -432,13 +577,10 @@ function AnamneseTab({ patientId }: { patientId: string }) {
         ? { ...form, id: anamnesisId }
         : { ...form };
       const result = await upsertAnamnesis(payload);
-      if (result) {
-        if (!anamnesisId && (result as Anamnesis & { id?: string }).id) {
-          setAnamnesisId((result as Anamnesis & { id?: string }).id!);
-        }
+      if (result === true) {
         toast.success("Anamnese salva com sucesso!");
       } else {
-        toast.error("Erro ao salvar anamnese.");
+        toast.error(`Erro: ${result || "falha desconhecida"}`);
       }
     } catch {
       toast.error("Erro inesperado ao salvar.");
@@ -615,6 +757,7 @@ type MeasurementForm = {
 };
 
 function AntropometriaTab({ patientId }: { patientId: string }) {
+  const pid = Number(patientId);
   const emptyForm = (): MeasurementForm => ({
     assessment_date: todayISO(),
   });
@@ -623,9 +766,10 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
   const [form, setForm] = useState<MeasurementForm>(emptyForm());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [detailMeasurement, setDetailMeasurement] = useState<Measurement | null>(null);
 
   useEffect(() => {
-    fetchMeasurements(patientId)
+    fetchMeasurements(pid)
       .then(setMeasurements)
       .catch(() => toast.error("Erro ao carregar avaliações."))
       .finally(() => setLoading(false));
@@ -638,7 +782,7 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
     setSaving(true);
     try {
       const payload: Partial<Measurement> = {
-        patient_id: patientId,
+        patient_id: pid,
         assessment_date: form.assessment_date,
         weight: form.weight ? parseFloat(form.weight) : undefined,
         height: form.height ? parseFloat(form.height) : undefined,
@@ -895,13 +1039,22 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
                         {m.waist ? `${m.waist} cm` : "—"}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDelete(m.id!)}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                          title="Remover avaliação"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setDetailMeasurement(m)}
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(m.id!)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            title="Remover avaliação"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -911,6 +1064,96 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
           </div>
         </div>
       )}
+
+      {/* ── Detail Modal ── */}
+      {detailMeasurement && (() => {
+        const m = detailMeasurement;
+        const bmi = calcBMI(m.weight, m.height);
+        const bmiInfo = bmi ? bmiClass(parseFloat(bmi)) : null;
+
+        const rows: { label: string; value: string | null; unit?: string }[] = [
+          { label: "Peso",              value: m.weight     != null ? String(m.weight)     : null, unit: "kg"  },
+          { label: "Altura",            value: m.height     != null ? String(m.height)     : null, unit: "cm"  },
+          { label: "Cintura",           value: m.waist      != null ? String(m.waist)      : null, unit: "cm"  },
+          { label: "Quadril",           value: m.hip        != null ? String(m.hip)        : null, unit: "cm"  },
+          { label: "Braço",             value: m.arm        != null ? String(m.arm)        : null, unit: "cm"  },
+          { label: "Pescoço",           value: m.neck       != null ? String(m.neck)       : null, unit: "cm"  },
+          { label: "% Gordura corporal",value: m.body_fat   != null ? String(m.body_fat)   : null, unit: "%"   },
+          { label: "Massa magra",       value: m.lean_mass  != null ? String(m.lean_mass)  : null, unit: "kg"  },
+          { label: "Gordura visceral",  value: m.visceral_fat != null ? String(m.visceral_fat) : null },
+        ];
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4"
+            onClick={() => setDetailMeasurement(null)}
+          >
+            <div
+              className="bg-background rounded-2xl shadow-2xl w-full max-w-sm border border-border flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                <div>
+                  <p className="text-sm font-bold text-foreground">Avaliação detalhada</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {m.assessment_date ? formatDate(m.assessment_date) : "—"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDetailMeasurement(null)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* IMC highlight */}
+              {bmi && bmiInfo && (
+                <div className="mx-5 mt-4 flex items-center justify-between px-4 py-3 rounded-xl bg-muted/50 border border-border">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 mb-0.5">IMC</p>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{bmi}</p>
+                  </div>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${bmiInfo.cls}`}>
+                    {bmiInfo.label}
+                  </span>
+                </div>
+              )}
+
+              {/* Grid of metrics */}
+              <div className="px-5 py-4 grid grid-cols-2 gap-3">
+                {rows.filter(r => r.value !== null).map(r => (
+                  <div key={r.label} className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">{r.label}</p>
+                    <p className="text-sm font-bold text-foreground tabular-nums">
+                      {r.value}{r.unit ? <span className="text-xs font-normal text-muted-foreground ml-0.5">{r.unit}</span> : null}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Notes */}
+              {m.notes && (
+                <div className="px-5 pb-4 space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Observações</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">{m.notes}</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="px-5 py-4 border-t border-border">
+                <button
+                  onClick={() => setDetailMeasurement(null)}
+                  className="w-full h-9 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -928,22 +1171,23 @@ function PlanosTab({
   patientRouteId: string;
   navigate: ReturnType<typeof useNavigate>;
 }) {
+  const pid = Number(patientId);
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    fetchMealPlans(patientId)
+    fetchMealPlans(pid)
       .then(setPlans)
       .catch(() => toast.error("Erro ao carregar planos."))
       .finally(() => setLoading(false));
-  }, [patientId]);
+  }, [pid]);
 
   const handleNew = async () => {
     setCreating(true);
     try {
       const newPlan = await upsertMealPlan({
-        patient_id: patientId,
+        patient_id: pid,
         title: "Plano Alimentar",
       } as MealPlan);
 

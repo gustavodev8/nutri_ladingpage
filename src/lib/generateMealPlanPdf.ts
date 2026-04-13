@@ -223,7 +223,31 @@ export function generateMealPlanPdf(
       tableLineWidth: 0.2,
     });
 
-    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+
+    // Observação da refeição
+    if (meal.notes?.trim()) {
+      const noteLines = doc.splitTextToSize(`Obs.: ${meal.notes.trim()}`, contentW - 8);
+      const noteH = noteLines.length * 4 + 5;
+
+      // Nova página se não couber
+      if (y + noteH > doc.internal.pageSize.getHeight() - 25) {
+        doc.addPage();
+        y = margin;
+      }
+
+      doc.setFillColor(245, 250, 246);
+      doc.setDrawColor(...BORDER);
+      doc.roundedRect(margin, y, contentW, noteH, 1, 1, "FD");
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(...GRAY);
+      doc.text(noteLines, margin + 4, y + 4);
+      y += noteH + 4;
+    } else {
+      y += 4;
+    }
 
     // Nova página se necessário (deixa 25mm de margem inferior)
     if (y > doc.internal.pageSize.getHeight() - 25) {

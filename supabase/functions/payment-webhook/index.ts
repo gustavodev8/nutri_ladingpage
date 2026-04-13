@@ -233,6 +233,7 @@ serve(async (req) => {
     // ── Ebook payment ─────────────────────────────────────────────────────────
     const customerEmail = parts[1] ? parts[1].trim() : "";
     const pdfUrl = parts[2] ? decodeURIComponent(parts[2]) : "";
+    const customerCpf = parts[4] ? parts[4].replace(/\D/g, "") : null;
     const productName = escapeHtml(
       payment.additional_info?.items?.[0]?.title || payment.description || "E-book"
     );
@@ -311,6 +312,7 @@ serve(async (req) => {
           payment_id: String(payment.id),
           customer_name: customerName,
           customer_email: customerEmail,
+          customer_cpf: customerCpf,
           product_name: productName,
           product_index: Number(parts[0]),
           amount: payment.transaction_amount,
