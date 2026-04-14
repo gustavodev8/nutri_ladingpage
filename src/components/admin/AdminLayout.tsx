@@ -246,20 +246,23 @@ const AdminLayout = () => {
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end">
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="font-display font-bold text-sm text-foreground">{content.identity.brandName}</span>
+        <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="lg:hidden flex items-center gap-2 flex-1 min-w-0">
+            <span className="font-display font-bold text-sm text-foreground truncate">{content.identity.brandName}</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground shrink-0 hidden sm:block">
             Olá, <span className="font-medium text-foreground">Admin</span>
           </p>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:pb-8 max-w-4xl w-full mx-auto pb-28">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:pb-8 max-w-4xl w-full mx-auto pb-24">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -271,56 +274,56 @@ const AdminLayout = () => {
       </div>
 
       {/* ── Mobile Bottom Navigation Bar ──────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border"
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="flex items-stretch h-16">
+        <div className="flex items-stretch h-[58px]">
           {/* Dashboard */}
           <NavLink to="/admin" end
             className={({ isActive }) =>
-              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
+              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-70",
                 isActive ? "text-primary" : "text-muted-foreground")
             }
           >
-            <LayoutDashboard className="h-5 w-5" />
+            <LayoutDashboard className="h-[22px] w-[22px]" />
             <span>Início</span>
           </NavLink>
 
           {/* Pacientes */}
           <NavLink to="/admin/pacientes"
             className={({ isActive }) =>
-              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
+              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-70",
                 isActive ? "text-primary" : "text-muted-foreground")
             }
           >
-            <Users className="h-5 w-5" />
+            <Users className="h-[22px] w-[22px]" />
             <span>Pacientes</span>
           </NavLink>
 
           {/* Agendamentos */}
           <NavLink to="/admin/agendamentos"
             className={({ isActive }) =>
-              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
+              cn("flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-70",
                 isActive ? "text-primary" : "text-muted-foreground")
             }
           >
-            <CalendarCheck className="h-5 w-5" />
+            <CalendarCheck className="h-[22px] w-[22px]" />
             <span>Agenda</span>
           </NavLink>
 
           {/* Ver site */}
           <a href="/" target="_blank" rel="noopener noreferrer"
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground transition-colors active:opacity-70"
           >
-            <Globe className="h-5 w-5" />
+            <Globe className="h-[22px] w-[22px]" />
             <span>Site</span>
           </a>
 
           {/* Menu (opens sidebar) */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground transition-colors active:opacity-70"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-[22px] w-[22px]" />
             <span>Menu</span>
           </button>
         </div>

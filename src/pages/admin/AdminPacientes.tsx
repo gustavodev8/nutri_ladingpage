@@ -27,11 +27,6 @@ const formatDate = (dateStr: string) =>
     year: "numeric",
   });
 
-const isThisMonth = (dateStr: string) => {
-  const d = new Date(dateStr);
-  const now = new Date();
-  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-};
 
 interface NewPatientForm {
   name: string;
@@ -87,10 +82,6 @@ export default function AdminPacientes() {
       p.email?.toLowerCase().includes(q)
     );
   });
-
-  const thisMonthCount = patients.filter(
-    (p) => p.created_at && isThisMonth(p.created_at)
-  ).length;
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
@@ -178,17 +169,6 @@ export default function AdminPacientes() {
             <p className="text-xs text-muted-foreground mt-0.5">
               pacientes cadastrados
             </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 bg-card border border-border/50 rounded-2xl px-4 py-3 shadow-sm">
-          <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <CalendarDays className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-foreground leading-none">
-              {thisMonthCount}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">este mês</p>
           </div>
         </div>
       </div>

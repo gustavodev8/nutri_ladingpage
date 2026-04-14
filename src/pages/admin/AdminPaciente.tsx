@@ -183,24 +183,24 @@ export default function AdminPaciente() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 pt-4 pb-8 space-y-5">
       {/* ── Header bar ────────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-3">
         <Link
           to="/admin/pacientes"
-          className="mt-1 text-muted-foreground hover:text-foreground transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
           <ArrowLeft size={20} />
         </Link>
 
         {/* Avatar */}
-        <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 text-primary font-bold text-xl flex items-center justify-center select-none">
-          {patient.name ? initials(patient.name) : <User size={28} />}
+        <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-primary/10 text-primary font-bold text-base sm:text-lg flex items-center justify-center select-none">
+          {patient.name ? initials(patient.name) : <User size={20} />}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold truncate">
+            <h1 className="text-lg sm:text-2xl font-bold truncate">
               {patient.name || "Sem nome"}
             </h1>
             {isComplete ? (
@@ -978,8 +978,8 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
             Histórico de avaliações
           </h3>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">
@@ -1219,15 +1219,16 @@ function PlanosTab({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Planos alimentares</h2>
-        <Button onClick={handleNew} disabled={creating}>
+        <Button onClick={handleNew} disabled={creating} size="sm" className="shrink-0">
           {creating ? (
-            <Loader2 size={16} className="mr-2 animate-spin" />
+            <Loader2 size={15} className="mr-1.5 animate-spin" />
           ) : (
-            <Plus size={16} className="mr-2" />
+            <Plus size={15} className="mr-1.5" />
           )}
-          Novo plano alimentar
+          <span className="hidden sm:inline">Novo plano alimentar</span>
+          <span className="sm:hidden">Novo plano</span>
         </Button>
       </div>
 

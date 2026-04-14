@@ -150,8 +150,8 @@ const AdminAgendamentos = () => {
   // Confirm destructive action (no_show / cancelled)
   const [confirmAction, setConfirmAction]   = useState<{ id: number; status: "no_show" | "cancelled" } | null>(null);
 
-  // Detail inner tab
-  const [detailTab, setDetailTab] = useState<"sessions" | "records">("sessions");
+  // Detail inner tab — "dados" is mobile-only (replaces sidebar)
+  const [detailTab, setDetailTab] = useState<"sessions" | "records" | "dados">("sessions");
 
   // Completion modal
   const [completing, setCompleting]           = useState<Booking | null>(null);
@@ -618,6 +618,7 @@ const AdminAgendamentos = () => {
   const openDetail = (groupId: string) => {
     setDetail(groupId);
     setDetailTab("sessions");
+    setEditingDetail(false);
     loadRecords(groupId);
   };
 
@@ -1005,7 +1006,7 @@ const AdminAgendamentos = () => {
         >
           <div
             className="w-full md:max-w-4xl bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "min(92dvh, 90vh)" }}
+            style={{ maxHeight: "88dvh", height: "88dvh" }}
             onClick={e => e.stopPropagation()}
           >
 
@@ -1082,28 +1083,7 @@ const AdminAgendamentos = () => {
               {/* ── Sidebar ── */}
               <div className="md:w-52 shrink-0 md:border-r border-border md:overflow-y-auto bg-muted/20">
 
-                {/* Mobile: compact horizontal strip */}
-                <div className="md:hidden flex items-center gap-3 px-5 py-3 border-b border-border overflow-x-auto scrollbar-none">
-                  {detailFirst.client_email && (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Mail className="h-3 w-3 text-muted-foreground/50" />
-                      <span className="text-xs text-foreground">{detailFirst.client_email}</span>
-                    </div>
-                  )}
-                  {detailFirst.client_phone && (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Phone className="h-3 w-3 text-muted-foreground/50" />
-                      <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
-                    </div>
-                  )}
-                  {detailNotes.goal && (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Target className="h-3 w-3 text-muted-foreground/50" />
-                      <span className="text-xs text-foreground">{GOAL_LABELS[detailNotes.goal] || detailNotes.goal}</span>
-                    </div>
-                  )}
-                </div>
-
+  
                 {/* Desktop: full vertical sidebar */}
                 <div className="hidden md:flex flex-col h-full">
                   {editingDetail ? (
@@ -1314,13 +1294,14 @@ const AdminAgendamentos = () => {
                 {/* Tabs */}
                 <div className="flex border-b border-border shrink-0 px-5">
                   {([
-                    { id: "sessions" as const, label: "Sessões",    count: detailGroup.length },
-                    { id: "records"  as const, label: "Prontuário", count: records.length },
+                    { id: "sessions" as const, label: "Sessões",    count: detailGroup.length, mobileOnly: false },
+                    { id: "records"  as const, label: "Prontuário", count: records.length,     mobileOnly: false },
+                    { id: "dados"    as const, label: "Paciente",   count: 0,                  mobileOnly: true  },
                   ]).map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setDetailTab(tab.id)}
-                      className={`relative py-3 mr-5 text-sm font-medium transition-colors shrink-0 ${
+                      className={`relative py-3 mr-5 text-sm font-medium transition-colors shrink-0 ${tab.mobileOnly ? "md:hidden" : ""} ${
                         detailTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -1605,6 +1586,156 @@ const AdminAgendamentos = () => {
                   </div>
                 )}
 
+                {/* ── DADOS TAB (mobile only) ── */}
+                {detailTab === "dados" && (
+                  <div className="flex-1 overflow-y-auto md:hidden">
+                    {editingDetail ? (
+                      /* EDIT MODE */
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Editar dados</p>
+                          <button onClick={() => setEditingDetail(false)} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Nome</Label>
+                          <Input value={editDName} onChange={e => setEditDName(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Email</Label>
+                          <Input value={editDEmail} onChange={e => setEditDEmail(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Telefone</Label>
+                          <Input value={editDPhone} onChange={e => setEditDPhone(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="h-px bg-border/50" />
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Objetivo</Label>
+                          <select value={editDGoal} onChange={e => setEditDGoal(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
+                            <option value="">—</option>
+                            {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Restrições</Label>
+                          <select value={editDRestrictions} onChange={e => setEditDRestrictions(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
+                            <option value="">—</option>
+                            {Object.entries(RESTRICT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Alergias</Label>
+                          <Input value={editDAllergies} onChange={e => setEditDAllergies(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Condições de saúde</Label>
+                          <Input value={editDHealth} onChange={e => setEditDHealth(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Medicamentos</Label>
+                          <Input value={editDMeds} onChange={e => setEditDMeds(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Acomp. anterior</Label>
+                          <select value={editDHadNutri} onChange={e => setEditDHadNutri(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
+                            <option value="">—</option>
+                            <option value="sim">Sim</option>
+                            <option value="nao">Não</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Como chegou</Label>
+                          <select value={editDHowFound} onChange={e => setEditDHowFound(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
+                            <option value="">—</option>
+                            {Object.entries(FOUND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Observações</Label>
+                          <textarea value={editDObs} onChange={e => setEditDObs(e.target.value)} rows={3} className="w-full text-sm rounded-md border border-input bg-background px-3 py-2 text-foreground resize-none focus:outline-none" />
+                        </div>
+                        <div className="flex gap-2 pt-1 pb-4">
+                          <button onClick={handleSaveDetailEdit} disabled={savingDetailEdit}
+                            className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
+                            {savingDetailEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                          </button>
+                          <button onClick={() => setEditingDetail(false)} disabled={savingDetailEdit}
+                            className="flex-1 h-10 rounded-lg border border-border text-muted-foreground text-sm hover:bg-muted transition-colors">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* VIEW MODE */
+                      <div className="p-4 space-y-5">
+                        {/* Contato */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
+                            <button onClick={() => openDetailEdit(detailFirst, detailNotes)}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2.5 py-1 hover:bg-muted transition-colors">
+                              <Pencil className="h-3 w-3" />Editar
+                            </button>
+                          </div>
+                          <div className="bg-muted/30 rounded-lg p-3 space-y-2.5">
+                            {detailFirst.client_email && (
+                              <div className="flex items-start gap-2.5">
+                                <Mail className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-px" />
+                                <span className="text-sm text-foreground break-all">{detailFirst.client_email}</span>
+                              </div>
+                            )}
+                            {detailFirst.client_phone && (
+                              <div className="flex items-center gap-2.5">
+                                <Phone className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                                <span className="text-sm text-foreground">{detailFirst.client_phone}</span>
+                              </div>
+                            )}
+                            {detailNotes.birthDate && (
+                              <div className="flex items-center gap-2.5">
+                                <Cake className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                                <span className="text-sm text-foreground">
+                                  {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                                  {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Ficha Clínica */}
+                        {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
+                          detailNotes.healthConditions || detailNotes.medications ||
+                          detailNotes.hadNutritionist || detailNotes.howFound) && (
+                          <div className="space-y-3">
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
+                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                              {[
+                                { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
+                                { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
+                                { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
+                                { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
+                                { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
+                                { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
+                                { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
+                              ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
+                                <div key={label} className="flex items-start gap-2.5">
+                                  <Icon className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-px" />
+                                  <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">{label}</p>
+                                    <p className="text-sm text-foreground leading-snug mt-0.5">{val}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -1746,7 +1877,7 @@ const AdminAgendamentos = () => {
       {/* ── Completion Modal ── */}
       {completing && (
         <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg flex flex-col" style={{ maxHeight: "min(92svh, 780px)" }}>
+          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg flex flex-col" style={{ maxHeight: "90dvh" }}>
 
             {/* Header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
