@@ -1,9 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SiteContent } from "@/contexts/ContentContext";
 
-const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL         as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY    as string;
-const supabaseSvcKey  = import.meta.env.VITE_SUPABASE_SERVICE_KEY as string | undefined;
+const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL      as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -11,14 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Cliente público — usado para operações do site (agendamentos, slots, site_content)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Cliente admin — usa service_role key para bypassar RLS em operações do painel.
-// Cai de volta para anon se a chave não estiver configurada (dev sem restrição).
-export const supabaseAdmin = supabaseSvcKey
-  ? createClient(supabaseUrl, supabaseSvcKey, { auth: { persistSession: false } })
-  : supabase;
+// Alias — todas as operações usam o mesmo cliente anon.
+// A segurança do painel admin é garantida pelo login (AdminLogin + ProtectedRoute).
+// service_role key NUNCA deve estar em variáveis VITE_ (ficaria exposta no bundle).
+export const supabaseAdmin = supabase;
 
 // Content stored with a unix timestamp so we can do "newest wins" sync
 export type StoredContent = SiteContent & { _ts?: number };
