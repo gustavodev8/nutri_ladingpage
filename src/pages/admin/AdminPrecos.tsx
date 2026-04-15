@@ -10,7 +10,6 @@ import { uploadVideo } from "@/lib/supabase";
 
 type Plan = SiteContent["loja"]["plans"][number];
 type LojaContent = SiteContent["loja"];
-
 const AdminPrecos = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<LojaContent>(content.loja);
