@@ -369,17 +369,14 @@ export default function AdminPlanoAlimentar() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-card border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-13 flex items-center gap-3 py-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 flex items-center gap-2 sm:gap-3 py-3">
           <Link to={`/admin/pacientes/${id}?tab=planos`}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-            <ArrowLeft size={15} />
-            <span className="hidden sm:inline">Voltar ao paciente</span>
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 p-1">
+            <ArrowLeft size={16} />
           </Link>
 
-          <div className="h-4 w-px bg-border flex-shrink-0" />
-
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <FileText size={15} className="text-muted-foreground flex-shrink-0" />
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <FileText size={14} className="text-muted-foreground flex-shrink-0" />
             <input
               type="text"
               value={plan.title}
@@ -390,20 +387,20 @@ export default function AdminPlanoAlimentar() {
             {isNew && <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex-shrink-0">Novo</span>}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowEmail(true)}
               disabled={isNew}
               title={isNew ? "Salve o plano primeiro" : "Enviar por e-mail"}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Mail size={13} />
               <span className="hidden sm:inline">Enviar</span>
             </button>
-            <Button onClick={handleSave} disabled={saving} size="sm" className="gap-2">
+            <Button onClick={handleSave} disabled={saving} size="sm" className="gap-1.5 px-3">
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              {saving ? "Salvando…" : "Salvar plano"}
+              <span className="hidden xs:inline sm:inline">{saving ? "Salvando…" : "Salvar"}</span>
             </Button>
           </div>
         </div>

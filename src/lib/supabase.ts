@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SiteContent } from "@/contexts/ContentContext";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL      as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -11,6 +11,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Alias — todas as operações usam o mesmo cliente anon.
+// A segurança do painel admin é garantida pelo login (AdminLogin + ProtectedRoute).
+// service_role key NUNCA deve estar em variáveis VITE_ (ficaria exposta no bundle).
+export const supabaseAdmin = supabase;
 
 // Content stored with a unix timestamp so we can do "newest wins" sync
 export type StoredContent = SiteContent & { _ts?: number };
@@ -296,7 +301,7 @@ export interface MealFood {
 
 // Patients
 export async function fetchPatients(): Promise<Patient[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("patients")
     .select("*")
     .order("name");
@@ -305,7 +310,7 @@ export async function fetchPatients(): Promise<Patient[]> {
 }
 
 export async function fetchPatient(id: number): Promise<Patient | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("patients")
     .select("*")
     .eq("id", id)
@@ -317,25 +322,25 @@ export async function fetchPatient(id: number): Promise<Patient | null> {
 export async function upsertPatient(patient: Patient): Promise<Patient | null> {
   const { id, ...fields } = patient;
   if (id) {
-    const { error } = await supabase.from("patients").update(fields).eq("id", id);
+    const { error } = await supabaseAdmin.from("patients").update(fields).eq("id", id);
     if (error) { console.error("[Supabase] upsertPatient update:", error.message); return null; }
     return { id, ...fields };
   } else {
-    const { data, error } = await supabase.from("patients").insert(fields).select().single();
+    const { data, error } = await supabaseAdmin.from("patients").insert(fields).select().single();
     if (error) { console.error("[Supabase] upsertPatient insert:", error.message); return null; }
     return data;
   }
 }
 
 export async function deletePatient(id: number): Promise<boolean> {
-  const { error } = await supabase.from("patients").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("patients").delete().eq("id", id);
   if (error) { console.error("[Supabase] deletePatient:", error.message); return false; }
   return true;
 }
 
 // Patient Photos
 export async function fetchPatientPhotos(patientId: number): Promise<PatientPhoto[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("patient_photos")
     .select("*")
     .eq("patient_id", patientId)
@@ -345,21 +350,20 @@ export async function fetchPatientPhotos(patientId: number): Promise<PatientPhot
 }
 
 export async function insertPatientPhoto(photo: Omit<PatientPhoto, "id" | "created_at">): Promise<PatientPhoto | null> {
-  const { data, error } = await supabase.from("patient_photos").insert(photo).select().single();
+  const { data, error } = await supabaseAdmin.from("patient_photos").insert(photo).select().single();
   if (error) { console.error("[Supabase] insertPatientPhoto:", error.message); return null; }
   return data;
 }
 
 export async function deletePatientPhoto(id: number): Promise<boolean> {
-  const { error } = await supabase.from("patient_photos").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("patient_photos").delete().eq("id", id);
   if (error) { console.error("[Supabase] deletePatientPhoto:", error.message); return false; }
   return true;
 }
 
-
 // Anamnesis
 export async function fetchAnamnesis(patientId: number): Promise<Anamnesis | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("anamnesis")
     .select("*")
     .eq("patient_id", patientId)
@@ -372,10 +376,10 @@ export async function upsertAnamnesis(a: Anamnesis): Promise<boolean | string> {
   const payload = { ...a, updated_at: new Date().toISOString() };
   if (a.id) {
     const { id, ...fields } = payload;
-    const { error } = await supabase.from("anamnesis").update(fields).eq("id", id);
+    const { error } = await supabaseAdmin.from("anamnesis").update(fields).eq("id", id);
     if (error) { console.error("[Supabase] upsertAnamnesis update:", error.message); return error.message; }
   } else {
-    const { error } = await supabase.from("anamnesis").insert(payload);
+    const { error } = await supabaseAdmin.from("anamnesis").insert(payload);
     if (error) { console.error("[Supabase] upsertAnamnesis insert:", error.message); return error.message; }
   }
   return true;
@@ -383,7 +387,7 @@ export async function upsertAnamnesis(a: Anamnesis): Promise<boolean | string> {
 
 // Measurements
 export async function fetchMeasurements(patientId: number): Promise<Measurement[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("measurements")
     .select("*")
     .eq("patient_id", patientId)
@@ -394,20 +398,20 @@ export async function fetchMeasurements(patientId: number): Promise<Measurement[
 
 export async function insertMeasurement(m: Measurement): Promise<Measurement | null> {
   const { id, ...fields } = m;
-  const { data, error } = await supabase.from("measurements").insert(fields).select().single();
+  const { data, error } = await supabaseAdmin.from("measurements").insert(fields).select().single();
   if (error) { console.error("[Supabase] insertMeasurement:", error.message); return null; }
   return data;
 }
 
 export async function deleteMeasurement(id: number): Promise<boolean> {
-  const { error } = await supabase.from("measurements").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("measurements").delete().eq("id", id);
   if (error) { console.error("[Supabase] deleteMeasurement:", error.message); return false; }
   return true;
 }
 
 // Meal Plans
 export async function fetchMealPlans(patientId: number): Promise<MealPlan[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("meal_plans")
     .select("*")
     .eq("patient_id", patientId)
@@ -419,25 +423,25 @@ export async function fetchMealPlans(patientId: number): Promise<MealPlan[]> {
 export async function upsertMealPlan(plan: MealPlan): Promise<MealPlan | null> {
   const { id, ...fields } = plan;
   if (id) {
-    const { error } = await supabase.from("meal_plans").update(fields).eq("id", id);
+    const { error } = await supabaseAdmin.from("meal_plans").update(fields).eq("id", id);
     if (error) { console.error("[Supabase] upsertMealPlan update:", error.message); return null; }
     return { id, ...fields };
   } else {
-    const { data, error } = await supabase.from("meal_plans").insert(fields).select().single();
+    const { data, error } = await supabaseAdmin.from("meal_plans").insert(fields).select().single();
     if (error) { console.error("[Supabase] upsertMealPlan insert:", error.message); return null; }
     return data;
   }
 }
 
 export async function deleteMealPlan(id: number): Promise<boolean> {
-  const { error } = await supabase.from("meal_plans").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("meal_plans").delete().eq("id", id);
   if (error) { console.error("[Supabase] deleteMealPlan:", error.message); return false; }
   return true;
 }
 
 // Full plan (meals + foods)
 export async function fetchFullMealPlan(planId: number): Promise<Meal[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("meals")
     .select("*, foods:meal_foods(*)")
     .eq("plan_id", planId)
@@ -447,13 +451,12 @@ export async function fetchFullMealPlan(planId: number): Promise<Meal[]> {
 }
 
 export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean> {
-  // Delete all existing meals for this plan (cascade deletes foods)
-  const { error: delError } = await supabase.from("meals").delete().eq("plan_id", planId);
+  const { error: delError } = await supabaseAdmin.from("meals").delete().eq("plan_id", planId);
   if (delError) { console.error("[Supabase] saveMeals delete:", delError.message); return false; }
 
   for (let i = 0; i < meals.length; i++) {
     const meal = meals[i];
-    const { data: mealData, error: mealErr } = await supabase
+    const { data: mealData, error: mealErr } = await supabaseAdmin
       .from("meals")
       .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "" })
       .select()
@@ -473,7 +476,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
         notes: f.notes ?? "",
         sort_order: fi,
       }));
-      const { error: foodErr } = await supabase.from("meal_foods").insert(foodRows);
+      const { error: foodErr } = await supabaseAdmin.from("meal_foods").insert(foodRows);
       if (foodErr) { console.error("[Supabase] saveMeals insert foods:", foodErr.message); return false; }
     }
   }
@@ -562,7 +565,7 @@ export async function deleteAvailabilitySlot(id: number): Promise<boolean> {
 }
 
 export async function fetchBookings(): Promise<Booking[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('bookings')
     .select('*')
     .order('appointment_date', { ascending: false })
@@ -599,7 +602,7 @@ export async function insertBooking(booking: Booking): Promise<boolean> {
 
 export async function updateBookingStatus(id: number, status: string, extra?: Record<string, unknown>): Promise<boolean> {
   const payload: Record<string, unknown> = { status, ...extra };
-  const { error } = await supabase.from('bookings').update(payload).eq('id', id);
+  const { error } = await supabaseAdmin.from('bookings').update(payload).eq('id', id);
   if (error) console.error('updateBookingStatus error:', JSON.stringify(error));
   return !error;
 }
@@ -608,7 +611,7 @@ export async function updateBookingGroup(
   bookingGroupId: string,
   fields: Partial<Pick<Booking, "client_name" | "client_email" | "client_phone" | "notes">>
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('bookings')
     .update(fields)
     .eq('booking_group_id', bookingGroupId);
@@ -617,7 +620,7 @@ export async function updateBookingGroup(
 }
 
 export async function deleteBookingGroup(bookingGroupId: string): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('bookings')
     .delete()
     .eq('booking_group_id', bookingGroupId);
@@ -672,7 +675,7 @@ export interface ConsultationRecord {
 }
 
 export async function insertConsultationRecord(record: ConsultationRecord): Promise<boolean> {
-  const { error } = await supabase.from('consultation_records').insert(record);
+  const { error } = await supabaseAdmin.from('consultation_records').insert(record);
   if (error) { console.error('insertConsultationRecord error:', error); return false; }
   return true;
 }
@@ -681,7 +684,7 @@ export async function updateConsultationRecord(
   id: number,
   updates: Partial<ConsultationRecord>
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('consultation_records')
     .update(updates)
     .eq('id', id);
@@ -690,7 +693,7 @@ export async function updateConsultationRecord(
 }
 
 export async function deleteConsultationRecord(id: number): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('consultation_records')
     .delete()
     .eq('id', id);
@@ -699,7 +702,7 @@ export async function deleteConsultationRecord(id: number): Promise<boolean> {
 }
 
 export async function fetchConsultationRecords(booking_group_id: string): Promise<ConsultationRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('consultation_records')
     .select('*')
     .eq('booking_group_id', booking_group_id)

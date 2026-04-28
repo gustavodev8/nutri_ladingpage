@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, BookOpen, Loader2, Mail, CheckCircle2,
-  Copy, Check, X, User, CreditCard
+  Copy, Check, X, User, CreditCard, ChevronLeft, ChevronRight, MessageCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,121 @@ function maskCpf(value: string): string {
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+// ── Screenshots Carousel ─────────────────────────────────────────────────────
+
+interface Screenshot { imageUrl: string; caption?: string }
+
+const ScreenshotsCarousel = ({ screenshots }: { screenshots: Screenshot[] }) => {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const go = useCallback((dir: 1 | -1) => {
+    setVisible(false);
+    setTimeout(() => {
+      setIdx(i => (i + dir + screenshots.length) % screenshots.length);
+      setVisible(true);
+    }, 220);
+  }, [screenshots.length]);
+
+  const goTo = useCallback((i: number) => {
+    setVisible(false);
+    setTimeout(() => {
+      setIdx(i);
+      setVisible(true);
+    }, 220);
+  }, []);
+
+  useEffect(() => {
+    if (screenshots.length <= 1 || lightbox) return;
+    timerRef.current = setTimeout(() => go(1), 4000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [idx, go, screenshots.length, lightbox]);
+
+  if (!screenshots.length) return null;
+
+  return (
+    <>
+      {/* Slide */}
+      <div className="space-y-3">
+        <div className="relative">
+          {/* Fixed-height container — tamanho uniforme para todas as imagens */}
+          <div
+            className="relative rounded-2xl overflow-hidden bg-muted/40 border border-border cursor-zoom-in group flex items-center justify-center"
+            style={{ height: 480 }}
+            onClick={() => setLightbox(screenshots[idx].imageUrl)}
+          >
+            <img
+              src={screenshots[idx].imageUrl}
+              alt={screenshots[idx].caption || `Mensagem ${idx + 1}`}
+              className="h-full w-auto max-w-full object-contain rounded-lg"
+              style={{
+                opacity: visible ? 1 : 0,
+                transition: "opacity 0.25s ease",
+              }}
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-end justify-center pb-4">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                Clique para ampliar
+              </span>
+            </div>
+          </div>
+
+          {/* Caption */}
+          {screenshots[idx].caption && (
+            <p className="text-xs text-center text-muted-foreground mt-2">{screenshots[idx].caption}</p>
+          )}
+        </div>
+
+        {/* Dots + arrows */}
+        {screenshots.length > 1 && (
+          <div className="flex items-center justify-between gap-3">
+            <button onClick={() => go(-1)}
+              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="flex items-center justify-center gap-1.5">
+              {screenshots.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className={`rounded-full transition-all duration-300 ${i === idx ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-border hover:bg-muted-foreground/40"}`}
+                />
+              ))}
+            </div>
+            <button onClick={() => go(1)}
+              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightbox}
+            alt="Mensagem ampliada"
+            className="max-w-full max-h-[90vh] rounded-xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  );
+};
 
 type Stage = "idle" | "loading" | "pix" | "approved" | "error";
 
@@ -439,24 +554,48 @@ const ProdutoPage = () => {
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Description + Screenshots — two-column on desktop */}
               <div className="mt-14 md:mt-20 border-t border-border/50 pt-12">
-                <div className="max-w-5xl space-y-8">
-                  <div className="space-y-3">
-                    <h2 className="font-display text-xl md:text-2xl font-bold text-foreground">Sobre este produto</h2>
-                    <p className="text-muted-foreground leading-relaxed text-base">{produto.longDesc || produto.desc}</p>
-                  </div>
-                  {produto.details && produto.details.length > 0 && (
+                <div className={produto.screenshots && produto.screenshots.length > 0
+                  ? "grid lg:grid-cols-2 gap-10 lg:gap-16 items-start"
+                  : "max-w-2xl"
+                }>
+
+                  {/* Left: Sobre + Incluso */}
+                  <div className="space-y-8">
                     <div className="space-y-3">
-                      <h3 className="font-semibold text-foreground">O que está incluso</h3>
-                      <ul className="space-y-2.5">
-                        {produto.details.map((detail, i) => (
-                          <li key={i} className="flex items-start gap-2.5">
-                            <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                            <span className="text-muted-foreground text-sm leading-relaxed">{detail}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <h2 className="font-display text-xl md:text-2xl font-bold text-foreground">Sobre este produto</h2>
+                      <p className="text-muted-foreground leading-relaxed text-base">{produto.longDesc || produto.desc}</p>
+                    </div>
+                    {produto.details && produto.details.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-foreground">O que está incluso</h3>
+                        <ul className="space-y-2.5">
+                          {produto.details.map((detail, i) => (
+                            <li key={i} className="flex items-start gap-2.5">
+                              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                              <span className="text-muted-foreground text-sm leading-relaxed">{detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Screenshots Carousel */}
+                  {produto.screenshots && produto.screenshots.length > 0 && (
+                    <div className="space-y-4 lg:sticky lg:top-24">
+                      {/* Header — mesmo nível tipográfico que "Sobre este produto" */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <h2 className="font-display text-xl md:text-2xl font-bold text-foreground">O que dizem quem comprou</h2>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                            <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+                            {produto.screenshots!.length === 1 ? "1 mensagem real" : `${produto.screenshots!.length} mensagens reais`}
+                          </p>
+                        </div>
+                      </div>
+                      <ScreenshotsCarousel screenshots={produto.screenshots} />
                     </div>
                   )}
                 </div>

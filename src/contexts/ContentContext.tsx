@@ -121,6 +121,10 @@ export interface SiteContent {
       imageUrl: string;
       pdfUrl: string;
       whatsappMessage: string;
+      screenshots?: {
+        imageUrl: string;
+        caption?: string;
+      }[];
     }[];
   };
   resultados: {
@@ -372,6 +376,7 @@ export const DEFAULT_CONTENT: SiteContent = {
         imageUrl: "",
         pdfUrl: "",
         whatsappMessage: "Olá! Gostaria de comprar o Guia Completo de Reeducação Alimentar.",
+        screenshots: [],
       },
       {
         name: "30 Receitas Fit Fáceis e Rápidas",

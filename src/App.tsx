@@ -17,6 +17,7 @@ import LojaPage from "./pages/LojaPage";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import ProdutoPage from "./pages/ProdutoPage";
+import ClientGate from "@/components/ClientGate";
 import BookingPage from "./pages/BookingPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPending from "./pages/PaymentPending";
@@ -75,7 +76,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
 
               {/* Public pages */}
-              <Route path="/consultas" element={<ConsultasPage />} />
+              <Route path="/consultas" element={<ClientGate />} />
               <Route path="/resultados" element={<ResultadosPage />} />
               <Route path="/loja" element={<LojaPage />} />
               <Route path="/blog" element={<Blog />} />
