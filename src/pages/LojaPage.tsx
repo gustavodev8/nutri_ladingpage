@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, BookOpen, Calendar, Gift, Globe, MapPin,
-  MessageCircle, Wifi,
+  MessageCircle, ShoppingBag, Star, Wifi,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,23 +13,31 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FilterTab = "todos" | "consultas" | "produtos";
+type CategoryTab = "todos" | "consultas" | "produtos";
+type ModalityFilter = "all" | "online" | "presencial" | "both";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const MODALITY: Record<string, { label: string; Icon: React.ElementType }> = {
-  online:     { label: "Online",               Icon: Wifi   },
-  presencial: { label: "Presencial",           Icon: MapPin },
-  both:       { label: "Online & Presencial",  Icon: Globe  },
+  online:     { label: "Online",              Icon: Wifi   },
+  presencial: { label: "Presencial",          Icon: MapPin },
+  both:       { label: "Online & Presencial", Icon: Globe  },
 };
 
-const TABS: { id: FilterTab; label: string }[] = [
+const CATEGORY_TABS: { id: CategoryTab; label: string }[] = [
   { id: "todos",     label: "Todos"             },
   { id: "consultas", label: "Consultas"          },
   { id: "produtos",  label: "Produtos Digitais" },
 ];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const MODALITY_OPTIONS: { id: ModalityFilter; label: string }[] = [
+  { id: "all",        label: "Todas"               },
+  { id: "online",     label: "Online"              },
+  { id: "presencial", label: "Presencial"          },
+  { id: "both",       label: "Online & Presencial" },
+];
+
+// ─── ConsultaCard ─────────────────────────────────────────────────────────────
 
 interface ConsultaCardProps {
   plan: {
@@ -54,81 +62,88 @@ const ConsultaCard = ({ plan, index, whatsappUrl }: ConsultaCardProps) => {
   return (
     <Card
       className={cn(
-        "relative flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden",
+        "relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
         plan.popular
-          ? "border-primary ring-2 ring-primary/20"
-          : plan.badge
-          ? "border-gold ring-1 ring-gold/20"
-          : "border-border/50"
+          ? "border-primary ring-2 ring-primary/20 shadow-md shadow-primary/10"
+          : "border-border/60 hover:border-primary/30"
       )}
     >
-      {/* Popular top bar */}
       {plan.popular && (
-        <div className="h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
+        <div className="h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
       )}
 
-      {plan.badge && (
-        <Badge className="absolute top-4 right-4 bg-gold text-foreground border-gold/30 text-xs">
+      {plan.popular && (
+        <div className="absolute top-3.5 left-4 z-10">
+          <span className="flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+            <Star className="h-2.5 w-2.5 fill-current" />
+            Mais popular
+          </span>
+        </div>
+      )}
+
+      {!plan.popular && plan.badge && (
+        <Badge className="absolute top-4 right-4 z-10 bg-gold text-foreground border-gold/30 text-xs">
           {plan.badge}
         </Badge>
       )}
 
-      <CardContent className="p-6 flex flex-col gap-5 h-full">
-        {/* Meta badges */}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="gap-1 text-xs font-medium">
+      <CardContent className={cn("p-6 flex flex-col gap-4 flex-1", plan.popular && "pt-12")}>
+        {/* Modality + session tags */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 text-xs font-medium bg-muted/70 text-muted-foreground rounded-full px-2.5 py-1">
             <ModalityIcon className="h-3 w-3" />
             {modality.label}
-          </Badge>
+          </span>
           {plan.sessionCount > 1 && (
-            <Badge variant="outline" className="text-xs">
+            <span className="inline-flex items-center text-xs font-medium bg-primary/10 text-primary rounded-full px-2.5 py-1">
               {plan.sessionCount} sessões
-            </Badge>
+            </span>
           )}
           {plan.returnCount > 0 && (
-            <Badge variant="outline" className="text-xs text-muted-foreground">
+            <span className="inline-flex items-center text-xs font-medium bg-muted/70 text-muted-foreground rounded-full px-2.5 py-1">
               {plan.returnCount} retornos
-            </Badge>
+            </span>
           )}
         </div>
 
-        {/* Name + desc */}
+        {/* Name + description */}
         <div className="space-y-1.5">
-          <h3 className="font-display font-bold text-lg text-foreground leading-snug">
-            {plan.name}
-          </h3>
+          <h3 className="font-display font-bold text-lg text-foreground leading-snug">{plan.name}</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{plan.desc}</p>
         </div>
 
-        <p className="text-3xl font-extrabold text-primary">{plan.price}</p>
+        {/* Price */}
+        <div>
+          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Investimento</p>
+          <p className={cn("text-3xl font-extrabold leading-none", plan.popular ? "text-primary" : "text-foreground")}>
+            {plan.price}
+          </p>
+        </div>
 
         <div className="flex-1" />
 
         {/* CTAs */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-3 border-t border-border/50">
           <Button
             asChild
             className={cn(
               "w-full rounded-full gap-2",
-              plan.popular ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20" : ""
+              plan.popular
+                ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+                : ""
             )}
             variant={plan.popular ? "default" : "outline"}
           >
-            <a
-              href={whatsappUrl(plan.whatsappMessage)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={whatsappUrl(plan.whatsappMessage)} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-4 w-4 shrink-0" />
               Falar pelo WhatsApp
             </a>
           </Button>
-
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="w-full text-muted-foreground gap-1.5 hover:text-primary"
+            className="w-full text-muted-foreground gap-1.5 hover:text-primary text-xs h-8"
           >
             <Link to={`/agendar/${index}`}>
               <Calendar className="h-3.5 w-3.5 shrink-0" />
@@ -140,6 +155,8 @@ const ConsultaCard = ({ plan, index, whatsappUrl }: ConsultaCardProps) => {
     </Card>
   );
 };
+
+// ─── ProdutoCard ──────────────────────────────────────────────────────────────
 
 interface ProdutoCardProps {
   item: {
@@ -156,7 +173,7 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
   <Card
     className={cn(
       "relative group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden",
-      item.badge ? "border-gold ring-1 ring-gold/20" : "border-border/50"
+      item.badge ? "border-gold/50 ring-1 ring-gold/20" : "border-border/60 hover:border-primary/30"
     )}
   >
     {item.badge && (
@@ -166,8 +183,7 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
     )}
 
     <CardContent className="p-0 flex flex-col h-full">
-      {/* Image */}
-      <div className="w-full h-44 overflow-hidden bg-gradient-to-br from-secondary/50 to-green-light flex items-center justify-center shrink-0">
+      <div className="w-full h-44 overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 flex items-center justify-center shrink-0">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
@@ -179,21 +195,21 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
         )}
       </div>
 
-      <div className="p-6 flex flex-col gap-4 flex-1">
+      <div className="p-5 flex flex-col gap-4 flex-1">
         <div className="space-y-1.5 flex-1">
           <h3 className="font-bold text-base text-foreground leading-snug">{item.name}</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
         </div>
 
-        <p className="text-2xl font-extrabold text-primary">{item.price}</p>
+        <div>
+          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Preço</p>
+          <p className="text-2xl font-extrabold text-primary leading-none">{item.price}</p>
+        </div>
 
-        {/* Free consultation badge */}
-        <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2.5">
           <Gift className="h-4 w-4 text-primary shrink-0" />
           <div>
-            <p className="text-xs font-bold text-primary leading-tight">
-              + Consulta gratuita de 20 min
-            </p>
+            <p className="text-xs font-bold text-primary leading-tight">+ Consulta gratuita de 20 min</p>
             <p className="text-[11px] text-muted-foreground leading-tight">inclusa na compra</p>
           </div>
         </div>
@@ -209,58 +225,53 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
   </Card>
 );
 
-// ─── Section wrapper ──────────────────────────────────────────────────────────
-
-interface SectionProps {
-  eyebrow: string;
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}
-
-const Section = ({ eyebrow, title, subtitle, children }: SectionProps) => (
-  <section className="space-y-8">
-    <div className="space-y-1">
-      <p className="text-sm font-bold uppercase tracking-widest text-primary">{eyebrow}</p>
-      <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">{title}</h2>
-      {subtitle && <p className="text-muted-foreground mt-1 max-w-2xl">{subtitle}</p>}
-    </div>
-    {children}
-  </section>
-);
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const LojaPage = () => {
   const { content, whatsappUrl } = useContent();
   const { loja, produtosDigitais, marketplace } = content;
-  const [activeTab, setActiveTab]   = useState<FilterTab>("todos");
-  const [bgIndex,   setBgIndex]     = useState(0);
+  const [category, setCategory] = useState<CategoryTab>("todos");
+  const [modality, setModality] = useState<ModalityFilter>("all");
+  const [bgIndex,  setBgIndex]  = useState(0);
 
-  // Normalise: support old string[] data saved before the mobile-image update
   type HeroSlide = { desktop: string; mobile: string };
   const heroImages: HeroSlide[] = (marketplace.heroImages ?? []).map((item: unknown) =>
     typeof item === "string" ? { desktop: item, mobile: "" } : (item as HeroSlide)
   );
 
-  // Auto-advance carousel every 5 s
   useEffect(() => {
     if (heroImages.length <= 1) return;
-    const id = setInterval(() => {
-      setBgIndex((i) => (i + 1) % heroImages.length);
-    }, 5000);
+    const id = setInterval(() => setBgIndex((i) => (i + 1) % heroImages.length), 5000);
     return () => clearInterval(id);
   }, [heroImages.length]);
 
-  const showConsultas = activeTab === "todos" || activeTab === "consultas";
-  const showProdutos  = activeTab === "todos" || activeTab === "produtos";
+  const filteredPlans = useMemo(
+    () => modality === "all" ? loja.plans : loja.plans.filter((p) => p.consultationType === modality),
+    [loja.plans, modality]
+  );
 
-  const hasConsultas = loja.plans.length > 0;
-  const hasProdutos  = produtosDigitais.items.length > 0;
+  const showConsultas = category === "todos" || category === "consultas";
+  const showProdutos  = category === "todos" || category === "produtos";
+
+  const consultaCount = loja.plans.length;
+  const produtoCount  = produtosDigitais.items.length;
+  const totalCount    = consultaCount + produtoCount;
+
+  const showModalityFilter = showConsultas && consultaCount > 0;
+
+  const visibleCount =
+    (showConsultas ? filteredPlans.length : 0) +
+    (showProdutos  ? produtosDigitais.items.length : 0);
+
+  const getTabCount = (id: CategoryTab) => {
+    if (id === "todos")     return totalCount;
+    if (id === "consultas") return consultaCount;
+    return produtoCount;
+  };
 
   return (
     <PageLayout>
-      {/* ── Hero carousel (image only) ────────────────────────────────────── */}
+      {/* ── Hero carousel ───────────────────────────────────────────────────── */}
       {heroImages.length > 0 && (
         <section className="relative bg-green-dark h-[220px] sm:h-[320px] overflow-hidden">
           {heroImages.map((slide, i) => (
@@ -272,23 +283,11 @@ const LojaPage = () => {
                 i === bgIndex ? "opacity-100" : "opacity-0"
               )}
             >
-              <img
-                src={slide.mobile || slide.desktop}
-                alt=""
-                className="sm:hidden w-full h-full object-cover object-center"
-              />
-              <img
-                src={slide.desktop}
-                alt=""
-                className="hidden sm:block w-full h-full object-cover object-center"
-              />
+              <img src={slide.mobile || slide.desktop} alt="" className="sm:hidden w-full h-full object-cover object-center" />
+              <img src={slide.desktop} alt="" className="hidden sm:block w-full h-full object-cover object-center" />
             </div>
           ))}
-
-          {/* Subtle bottom fade */}
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
-
-          {/* Dot indicators */}
           {heroImages.length > 1 && (
             <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
               {heroImages.map((_, i) => (
@@ -307,96 +306,165 @@ const LojaPage = () => {
         </section>
       )}
 
-      {/* ── Filter tabs ───────────────────────────────────────────────────── */}
-      <div className="sticky top-16 lg:top-20 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+      {/* ── Sticky filter bar ───────────────────────────────────────────────── */}
+      <div className="sticky top-16 lg:top-20 z-10 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex gap-1 py-3 overflow-x-auto scrollbar-none">
-            {TABS.map((tab) => (
+
+          {/* Primary: category tabs with count badges */}
+          <div className="flex items-center gap-2 pt-3 pb-2 overflow-x-auto scrollbar-none">
+            {CATEGORY_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setCategory(tab.id);
+                  if (tab.id === "produtos") setModality("all");
+                }}
                 className={cn(
-                  "px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200",
-                  activeTab === tab.id
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200",
+                  category === tab.id
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60"
                 )}
               >
                 {tab.label}
+                <span
+                  className={cn(
+                    "text-[11px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1",
+                    category === tab.id
+                      ? "bg-white/25 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {getTabCount(tab.id)}
+                </span>
               </button>
             ))}
           </div>
+
+          {/* Secondary: modality filter (only when consultations are visible) */}
+          {showModalityFilter && (
+            <div className="flex items-center gap-2 pb-3 overflow-x-auto scrollbar-none">
+              <span className="text-xs text-muted-foreground font-semibold shrink-0">Modalidade:</span>
+              {MODALITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setModality(opt.id)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 border",
+                    modality === opt.id
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground bg-transparent"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              {modality !== "all" && (
+                <button
+                  onClick={() => setModality("all")}
+                  className="ml-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Content ───────────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-4 py-16 space-y-24">
+      {/* ── Main content ────────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-4 py-10">
 
-        {/* Consultas */}
-        {showConsultas && hasConsultas && (
-          <Section
-            eyebrow="Consultas"
-            title={loja.sectionTitle}
-            subtitle={loja.sectionSubtitle}
-          >
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loja.plans.map((plan, i) => (
-                <ConsultaCard
-                  key={i}
-                  plan={plan}
-                  index={i}
-                  whatsappUrl={whatsappUrl}
-                />
-              ))}
+        {/* Results count */}
+        {totalCount > 0 && (
+          <p className="text-sm text-muted-foreground mb-10">
+            {visibleCount} {visibleCount === 1 ? "item encontrado" : "itens encontrados"}
+            {modality !== "all" && showConsultas && (
+              <>
+                {" · "}
+                <button onClick={() => setModality("all")} className="text-primary hover:underline">
+                  limpar filtro de modalidade
+                </button>
+              </>
+            )}
+          </p>
+        )}
+
+        <div className="space-y-20">
+
+          {/* Consultas */}
+          {showConsultas && filteredPlans.length > 0 && (
+            <section className="space-y-7">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Consultas</p>
+                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{loja.sectionTitle}</h2>
+                {loja.sectionSubtitle && (
+                  <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">{loja.sectionSubtitle}</p>
+                )}
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredPlans.map((plan, i) => (
+                  <ConsultaCard key={i} plan={plan} index={i} whatsappUrl={whatsappUrl} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Empty: modality filter gave 0 results but plans exist */}
+          {showConsultas && filteredPlans.length === 0 && loja.plans.length > 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="font-medium">Nenhuma consulta disponível para esta modalidade.</p>
+              <button onClick={() => setModality("all")} className="mt-2 text-sm text-primary hover:underline">
+                Ver todas as modalidades
+              </button>
             </div>
-          </Section>
-        )}
+          )}
 
-        {/* Produtos Digitais */}
-        {showProdutos && hasProdutos && (
-          <Section
-            eyebrow="Produtos Digitais"
-            title={produtosDigitais.sectionTitle}
-            subtitle={produtosDigitais.sectionSubtitle}
-          >
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {produtosDigitais.items.map((item, i) => (
-                <ProdutoCard key={i} item={item} index={i} />
-              ))}
+          {/* Produtos Digitais */}
+          {showProdutos && produtosDigitais.items.length > 0 && (
+            <section className="space-y-7">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Produtos Digitais</p>
+                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{produtosDigitais.sectionTitle}</h2>
+                {produtosDigitais.sectionSubtitle && (
+                  <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">{produtosDigitais.sectionSubtitle}</p>
+                )}
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {produtosDigitais.items.map((item, i) => (
+                  <ProdutoCard key={i} item={item} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Global empty state */}
+          {consultaCount === 0 && produtoCount === 0 && (
+            <div className="text-center py-20 text-muted-foreground">
+              <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">Nenhum produto disponível no momento.</p>
+              <p className="text-sm mt-1">Volte em breve!</p>
             </div>
-          </Section>
-        )}
+          )}
 
-        {/* Empty state */}
-        {!hasConsultas && !hasProdutos && (
-          <div className="text-center py-20 text-muted-foreground">
-            <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p className="text-lg font-medium">Nenhum produto disponível no momento.</p>
-            <p className="text-sm mt-1">Volte em breve!</p>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* ── Bottom CTA ────────────────────────────────────────────────────── */}
+      {/* ── Bottom CTA ──────────────────────────────────────────────────────── */}
       <section className="bg-green-light border-t border-primary/10 py-16 px-4">
         <div className="container mx-auto text-center max-w-xl space-y-5">
           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
             Não sabe por onde começar?
           </h2>
           <p className="text-muted-foreground">
-            Fale diretamente com o Dr. Fillipe pelo WhatsApp e descubra qual plano ou produto
-            é ideal para o seu objetivo.
+            Fale diretamente com o Dr. Fillipe pelo WhatsApp e descubra qual plano ou produto é ideal para o seu objetivo.
           </p>
           <Button
             asChild
             size="lg"
             className="rounded-full bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20"
           >
-            <a
-              href={whatsappUrl(content.cta.whatsappMessage)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={whatsappUrl(content.cta.whatsappMessage)} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-5 w-5" />
               Falar pelo WhatsApp
             </a>
