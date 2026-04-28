@@ -275,6 +275,9 @@ const LojaPage = () => {
         {/* Gradient overlay — always on top of images */}
         <div className="absolute inset-0 bg-gradient-to-br from-green-dark/88 via-primary/80 to-green-dark/88" />
 
+        {/* Bottom fade into page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-background to-transparent" />
+
         {/* Radial texture when no images */}
         {heroImages.length === 0 && (
           <div
