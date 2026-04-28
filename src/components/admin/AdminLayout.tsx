@@ -263,7 +263,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:pb-8 max-w-4xl w-full mx-auto pb-24">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:pb-8 w-full pb-24">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
