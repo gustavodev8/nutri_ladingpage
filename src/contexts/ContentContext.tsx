@@ -145,7 +145,7 @@ export interface SiteContent {
     heroTitle: string;
     heroSubtitle: string;
     heroBadge: string;
-    heroImages: string[];
+    heroImages: { desktop: string; mobile: string }[];
   };
 }
 

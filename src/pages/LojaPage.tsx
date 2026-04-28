@@ -237,7 +237,11 @@ const LojaPage = () => {
   const [activeTab, setActiveTab]   = useState<FilterTab>("todos");
   const [bgIndex,   setBgIndex]     = useState(0);
 
-  const heroImages = marketplace.heroImages ?? [];
+  // Normalise: support old string[] data saved before the mobile-image update
+  type HeroSlide = { desktop: string; mobile: string };
+  const heroImages: HeroSlide[] = (marketplace.heroImages ?? []).map((item: unknown) =>
+    typeof item === "string" ? { desktop: item, mobile: "" } : (item as HeroSlide)
+  );
 
   // Auto-advance carousel every 5 s
   useEffect(() => {
@@ -259,16 +263,27 @@ const LojaPage = () => {
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative bg-green-dark py-24 px-4 overflow-hidden">
         {/* Carousel background images — crossfade */}
-        {heroImages.map((src, i) => (
+        {heroImages.map((slide, i) => (
           <div
-            key={src}
+            key={i}
             aria-hidden="true"
             className={cn(
               "absolute inset-0 transition-opacity duration-1000 ease-in-out",
               i === bgIndex ? "opacity-100" : "opacity-0"
             )}
           >
-            <img src={src} alt="" className="w-full h-full object-cover" />
+            {/* Mobile: dedicated image when set, otherwise fall back to desktop */}
+            <img
+              src={slide.mobile || slide.desktop}
+              alt=""
+              className="sm:hidden w-full h-full object-cover object-center"
+            />
+            {/* Desktop */}
+            <img
+              src={slide.desktop}
+              alt=""
+              className="hidden sm:block w-full h-full object-cover object-center"
+            />
           </div>
         ))}
 

@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, BookOpen, Calendar, ExternalLink, GripVertical,
-  ImageIcon, Loader2, Plus, ShoppingBag, Trash2, X,
+  ArrowRight, BookOpen, Calendar, ExternalLink,
+  ImageIcon, Loader2, Monitor, Plus, ShoppingBag, Smartphone, X,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,114 +13,189 @@ import { useContent, type SiteContent } from "@/contexts/ContentContext";
 import { uploadImage } from "@/lib/supabase";
 
 type MarketplaceForm = SiteContent["marketplace"];
+type HeroSlide = MarketplaceForm["heroImages"][number];
 
-// ─── Hero image uploader ──────────────────────────────────────────────────────
+// ─── Single image slot (desktop or mobile) ───────────────────────────────────
 
-interface HeroImagesProps {
-  images: string[];
-  onChange: (images: string[]) => void;
+interface SlotProps {
+  id: string;
+  value: string;
+  aspectClass: string;
+  label: string;
+  hint: string;
+  icon: React.ElementType;
+  onUpload: (url: string) => void;
+  onRemove: () => void;
 }
 
-const HeroImages = ({ images, onChange }: HeroImagesProps) => {
+const ImageSlot = ({ id, value, aspectClass, label, hint, icon: Icon, onUpload, onRemove }: SlotProps) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError]         = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setError("Selecione um arquivo de imagem.");
-      return;
-    }
+    if (!file.type.startsWith("image/")) { setError("Selecione uma imagem."); return; }
     setError("");
     setUploading(true);
     const url = await uploadImage(file);
     setUploading(false);
-    if (url) {
-      onChange([...images, url]);
-    } else {
-      setError("Erro ao enviar. Verifique o bucket 'images' no Supabase Storage.");
-    }
+    url ? onUpload(url) : setError("Erro ao enviar. Verifique o bucket 'images'.");
   };
 
-  const remove = (idx: number) => onChange(images.filter((_, i) => i !== idx));
-
   return (
-    <div className="space-y-3">
-      {/* Hint */}
-      <div className="rounded-xl bg-muted/40 border border-border px-4 py-3 text-sm text-muted-foreground space-y-0.5">
-        <p className="font-medium text-foreground">Proporção recomendada: <span className="text-primary">1920 × 600 px</span></p>
-        <p>Paisagem larga (16:5). JPG, PNG ou WebP · até 10 MB por imagem.</p>
-      </div>
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5" /> {label}
+      </p>
 
-      {/* Grid of current images */}
-      {images.length > 0 && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {images.map((src, i) => (
-            <div key={src} className="relative group rounded-xl overflow-hidden border border-border bg-muted/20 aspect-[16/5]">
-              <img src={src} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
-              {/* Overlay on hover */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <span className="text-white text-xs font-medium">Slide {i + 1}</span>
-              </div>
-              {/* Remove button */}
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="absolute top-2 right-2 bg-background/80 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
-                aria-label="Remover imagem"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              {/* Order badge */}
-              <span className="absolute top-2 left-2 bg-background/80 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                #{i + 1}
-              </span>
+      {/* Preview / drop zone */}
+      <label
+        htmlFor={id}
+        className={`relative group block w-full ${aspectClass} rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-colors
+          ${value ? "border-border bg-transparent" : "border-border/50 bg-muted/10 hover:bg-muted/20"}`}
+      >
+        {value ? (
+          <>
+            <img src={value} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium">Alterar</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {images.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-2 h-32 rounded-xl border-2 border-dashed border-border/50 text-muted-foreground bg-muted/10">
-          <ImageIcon className="h-8 w-8 opacity-30" />
-          <p className="text-sm">Nenhuma imagem adicionada</p>
-          <p className="text-xs opacity-60">O hero exibirá o gradiente padrão</p>
-        </div>
-      )}
-
-      {/* Upload button */}
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={uploading}
-          onClick={() => inputRef.current?.click()}
-          className="gap-2 text-primary border-primary/30 hover:bg-primary/5"
-        >
-          {uploading ? (
-            <><Loader2 className="h-4 w-4 animate-spin" />Enviando...</>
-          ) : (
-            <><Plus className="h-4 w-4" />Adicionar imagem</>
-          )}
-        </Button>
-        {images.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {images.length} {images.length === 1 ? "imagem" : "imagens"} · as imagens alternam a cada 5 s
-          </p>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); onRemove(); }}
+              className="absolute top-1.5 right-1.5 bg-background/80 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </>
+        ) : uploading ? (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-[10px]">Enviando...</span>
+          </div>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground">
+            <ImageIcon className="h-5 w-5 opacity-30" />
+            <span className="text-[10px] text-center px-2">{hint}</span>
+          </div>
         )}
-      </div>
+      </label>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-[10px] text-destructive">{error}</p>}
 
       <input
-        ref={inputRef}
+        id={id}
         type="file"
         accept="image/*"
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
+    </div>
+  );
+};
+
+// ─── Hero images manager ──────────────────────────────────────────────────────
+
+interface HeroImagesProps {
+  slides: HeroSlide[];
+  onChange: (slides: HeroSlide[]) => void;
+}
+
+const HeroImages = ({ slides, onChange }: HeroImagesProps) => {
+  const addSlide  = () => onChange([...slides, { desktop: "", mobile: "" }]);
+  const removeSlide = (i: number) => onChange(slides.filter((_, j) => j !== i));
+  const updateSlide = (i: number, field: keyof HeroSlide, url: string) => {
+    const next = slides.map((s, j) => j === i ? { ...s, [field]: url } : s);
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Proportion hints */}
+      <div className="grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <div className="rounded-lg bg-muted/40 border border-border px-3 py-2 space-y-0.5">
+          <p className="font-semibold text-foreground flex items-center gap-1.5">
+            <Monitor className="h-3.5 w-3.5 text-primary" /> Desktop
+          </p>
+          <p>1920 × 600 px · proporção 16:5</p>
+          <p className="opacity-70">JPG, PNG, WebP · até 10 MB</p>
+        </div>
+        <div className="rounded-lg bg-muted/40 border border-border px-3 py-2 space-y-0.5">
+          <p className="font-semibold text-foreground flex items-center gap-1.5">
+            <Smartphone className="h-3.5 w-3.5 text-primary" /> Mobile
+          </p>
+          <p>600 × 900 px · proporção 2:3</p>
+          <p className="opacity-70">Opcional — usa desktop como fallback</p>
+        </div>
+      </div>
+
+      {/* Slides */}
+      {slides.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed border-border/50 text-muted-foreground bg-muted/10">
+          <ImageIcon className="h-7 w-7 opacity-25" />
+          <p className="text-sm">Nenhum slide adicionado</p>
+          <p className="text-xs opacity-60">Sem slides, o fundo verde padrão é exibido</p>
+        </div>
+      )}
+
+      {slides.map((slide, i) => (
+        <div key={i} className="rounded-2xl border border-border bg-muted/5 p-4 space-y-3">
+          {/* Slide header */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Slide {i + 1}
+            </span>
+            <button
+              type="button"
+              onClick={() => removeSlide(i)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X className="h-3.5 w-3.5" /> Remover slide
+            </button>
+          </div>
+
+          {/* Two upload slots */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <ImageSlot
+              id={`desktop-${i}`}
+              value={slide.desktop}
+              aspectClass="aspect-[16/5]"
+              label="Desktop (obrigatório)"
+              hint="1920 × 600 px"
+              icon={Monitor}
+              onUpload={(url) => updateSlide(i, "desktop", url)}
+              onRemove={() => updateSlide(i, "desktop", "")}
+            />
+            <ImageSlot
+              id={`mobile-${i}`}
+              value={slide.mobile}
+              aspectClass="aspect-[2/3]"
+              label="Mobile (opcional)"
+              hint="600 × 900 px"
+              icon={Smartphone}
+              onUpload={(url) => updateSlide(i, "mobile", url)}
+              onRemove={() => updateSlide(i, "mobile", "")}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Add slide */}
+      <div className="flex items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addSlide}
+          className="gap-2 text-primary border-primary/30 hover:bg-primary/5"
+        >
+          <Plus className="h-4 w-4" /> Adicionar slide
+        </Button>
+        {slides.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {slides.length} {slides.length === 1 ? "slide" : "slides"} · alternam a cada 5 s
+          </p>
+        )}
+      </div>
     </div>
   );
 };
@@ -226,8 +301,8 @@ const AdminLoja = () => {
         </div>
 
         <HeroImages
-          images={form.heroImages ?? []}
-          onChange={(imgs) => setForm((prev) => ({ ...prev, heroImages: imgs }))}
+          slides={form.heroImages ?? []}
+          onChange={(slides) => setForm((prev) => ({ ...prev, heroImages: slides }))}
         />
       </div>
 
