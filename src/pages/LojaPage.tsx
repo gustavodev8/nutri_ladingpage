@@ -291,7 +291,7 @@ const LojaPage = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-green-dark/88 via-primary/80 to-green-dark/88" />
 
         {/* Bottom fade into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
 
         {/* Radial texture when no images */}
         {heroImages.length === 0 && (
@@ -319,20 +319,6 @@ const LojaPage = () => {
             {marketplace.heroSubtitle}
           </p>
 
-          {/* Stats strip */}
-          <div className="flex items-center justify-center gap-8 pt-4">
-            {[
-              { value: loja.plans.length.toString(),            label: "planos disponíveis" },
-              { value: produtosDigitais.items.length.toString(), label: "produtos digitais"  },
-              { value: "+7.000",                                label: "pacientes atendidos" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <p className="text-2xl font-extrabold text-white">{s.value}</p>
-                <p className="text-xs text-white/60 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
           {/* Dot indicators (only when 2+ images) */}
           {heroImages.length > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
@@ -351,6 +337,24 @@ const LojaPage = () => {
           )}
         </div>
       </section>
+
+      {/* ── Trust bar ─────────────────────────────────────────────────────── */}
+      <div className="bg-secondary/50 border-b border-border">
+        <div className="container mx-auto px-4 py-5">
+          <div className="flex items-center justify-center gap-10 sm:gap-20">
+            {[
+              { value: loja.plans.length.toString(),             label: "planos disponíveis" },
+              { value: produtosDigitais.items.length.toString(),  label: "produtos digitais"  },
+              { value: "+7.000",                                  label: "pacientes atendidos" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <p className="text-2xl font-extrabold text-primary leading-none">{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Filter tabs ───────────────────────────────────────────────────── */}
       <div className="sticky top-16 lg:top-20 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
