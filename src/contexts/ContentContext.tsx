@@ -137,6 +137,11 @@ export interface SiteContent {
       afterImageUrl: string;
     }[];
   };
+  marketplace: {
+    heroTitle: string;
+    heroSubtitle: string;
+    heroBadge: string;
+  };
 }
 
 // ─── Default content ──────────────────────────────────────────────────────────
@@ -460,6 +465,11 @@ export const DEFAULT_CONTENT: SiteContent = {
       { initials: "L.F.", text: "Minha bebê fez introdução alimentar perfeita com o acompanhamento. Super recomendo!", time: "3 meses", beforeImageUrl: "", afterImageUrl: "" },
       { initials: "R.M.", text: "Perdi 8kg e melhorei minha performance nos treinos. Resultados que eu não esperava!", time: "5 meses", beforeImageUrl: "", afterImageUrl: "" },
     ],
+  },
+  marketplace: {
+    heroTitle: "Consultas & Produtos",
+    heroSubtitle: "Invista na sua saúde com planos de acompanhamento personalizados e materiais educativos criados pelo Dr. Fillipe David.",
+    heroBadge: "Loja",
   },
 };
 
