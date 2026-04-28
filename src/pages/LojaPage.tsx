@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, BookOpen, Calendar, Gift, Globe, MapPin,
@@ -234,7 +234,19 @@ const Section = ({ eyebrow, title, subtitle, children }: SectionProps) => (
 const LojaPage = () => {
   const { content, whatsappUrl } = useContent();
   const { loja, produtosDigitais, marketplace } = content;
-  const [activeTab, setActiveTab] = useState<FilterTab>("todos");
+  const [activeTab, setActiveTab]   = useState<FilterTab>("todos");
+  const [bgIndex,   setBgIndex]     = useState(0);
+
+  const heroImages = marketplace.heroImages ?? [];
+
+  // Auto-advance carousel every 5 s
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const id = setInterval(() => {
+      setBgIndex((i) => (i + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [heroImages.length]);
 
   const showConsultas = activeTab === "todos" || activeTab === "consultas";
   const showProdutos  = activeTab === "todos" || activeTab === "produtos";
@@ -245,16 +257,36 @@ const LojaPage = () => {
   return (
     <PageLayout>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative bg-gradient-to-br from-green-dark via-primary to-green-dark py-24 px-4 overflow-hidden">
-        {/* Subtle texture overlay */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 25% 50%, hsl(40 55% 55% / 0.4) 0%, transparent 60%), radial-gradient(circle at 75% 20%, hsl(152 45% 50% / 0.3) 0%, transparent 50%)",
-          }}
-        />
+      <section className="relative bg-green-dark py-24 px-4 overflow-hidden">
+        {/* Carousel background images — crossfade */}
+        {heroImages.map((src, i) => (
+          <div
+            key={src}
+            aria-hidden="true"
+            className={cn(
+              "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+              i === bgIndex ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <img src={src} alt="" className="w-full h-full object-cover" />
+          </div>
+        ))}
 
+        {/* Gradient overlay — always on top of images */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-dark/88 via-primary/80 to-green-dark/88" />
+
+        {/* Radial texture when no images */}
+        {heroImages.length === 0 && (
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 25% 50%, hsl(40 55% 55% / 0.4) 0%, transparent 60%), radial-gradient(circle at 75% 20%, hsl(152 45% 50% / 0.3) 0%, transparent 50%)",
+            }}
+          />
+        )}
+
+        {/* Content */}
         <div className="relative container mx-auto text-center max-w-2xl space-y-5">
           <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm px-4 py-1 text-sm">
             <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
@@ -272,9 +304,9 @@ const LojaPage = () => {
           {/* Stats strip */}
           <div className="flex items-center justify-center gap-8 pt-4">
             {[
-              { value: loja.plans.length.toString(),           label: "planos disponíveis" },
+              { value: loja.plans.length.toString(),            label: "planos disponíveis" },
               { value: produtosDigitais.items.length.toString(), label: "produtos digitais"  },
-              { value: "+7.000",                               label: "pacientes atendidos" },
+              { value: "+7.000",                                label: "pacientes atendidos" },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <p className="text-2xl font-extrabold text-white">{s.value}</p>
@@ -282,6 +314,23 @@ const LojaPage = () => {
               </div>
             ))}
           </div>
+
+          {/* Dot indicators (only when 2+ images) */}
+          {heroImages.length > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              {heroImages.map((_, i) => (
+                <button
+                  key={i}
+                  aria-label={`Slide ${i + 1}`}
+                  onClick={() => setBgIndex(i)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    i === bgIndex ? "w-6 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

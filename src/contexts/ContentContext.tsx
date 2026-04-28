@@ -145,6 +145,7 @@ export interface SiteContent {
     heroTitle: string;
     heroSubtitle: string;
     heroBadge: string;
+    heroImages: string[];
   };
 }
 
@@ -475,6 +476,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     heroTitle: "Consultas & Produtos",
     heroSubtitle: "Invista na sua saúde com planos de acompanhamento personalizados e materiais educativos criados pelo Dr. Fillipe David.",
     heroBadge: "Loja",
+    heroImages: [],
   },
 };
 
