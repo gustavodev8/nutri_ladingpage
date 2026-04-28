@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, BookOpen, Calendar, Gift, Globe, MapPin,
-  MessageCircle, ShoppingBag, Wifi,
+  MessageCircle, Wifi,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/PageLayout";
@@ -260,68 +259,37 @@ const LojaPage = () => {
 
   return (
     <PageLayout>
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative bg-green-dark py-24 px-4 overflow-hidden">
-        {/* Carousel background images — crossfade */}
-        {heroImages.map((slide, i) => (
-          <div
-            key={i}
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-0 transition-opacity duration-1000 ease-in-out",
-              i === bgIndex ? "opacity-100" : "opacity-0"
-            )}
-          >
-            {/* Mobile: dedicated image when set, otherwise fall back to desktop */}
-            <img
-              src={slide.mobile || slide.desktop}
-              alt=""
-              className="sm:hidden w-full h-full object-cover object-center"
-            />
-            {/* Desktop */}
-            <img
-              src={slide.desktop}
-              alt=""
-              className="hidden sm:block w-full h-full object-cover object-center"
-            />
-          </div>
-        ))}
+      {/* ── Hero carousel (image only) ────────────────────────────────────── */}
+      {heroImages.length > 0 && (
+        <section className="relative bg-green-dark h-[220px] sm:h-[320px] overflow-hidden">
+          {heroImages.map((slide, i) => (
+            <div
+              key={i}
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+                i === bgIndex ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <img
+                src={slide.mobile || slide.desktop}
+                alt=""
+                className="sm:hidden w-full h-full object-cover object-center"
+              />
+              <img
+                src={slide.desktop}
+                alt=""
+                className="hidden sm:block w-full h-full object-cover object-center"
+              />
+            </div>
+          ))}
 
-        {/* Gradient overlay — always on top of images */}
-        <div className="absolute inset-0 bg-gradient-to-br from-green-dark/88 via-primary/80 to-green-dark/88" />
+          {/* Subtle bottom fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
 
-        {/* Bottom fade into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
-
-        {/* Radial texture when no images */}
-        {heroImages.length === 0 && (
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 25% 50%, hsl(40 55% 55% / 0.4) 0%, transparent 60%), radial-gradient(circle at 75% 20%, hsl(152 45% 50% / 0.3) 0%, transparent 50%)",
-            }}
-          />
-        )}
-
-        {/* Content */}
-        <div className="relative container mx-auto text-center max-w-2xl space-y-5">
-          <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm px-4 py-1 text-sm">
-            <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
-            {marketplace.heroBadge}
-          </Badge>
-
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white leading-tight">
-            {marketplace.heroTitle}
-          </h1>
-
-          <p className="text-white/75 text-lg leading-relaxed">
-            {marketplace.heroSubtitle}
-          </p>
-
-          {/* Dot indicators (only when 2+ images) */}
+          {/* Dot indicators */}
           {heroImages.length > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
               {heroImages.map((_, i) => (
                 <button
                   key={i}
@@ -329,32 +297,14 @@ const LojaPage = () => {
                   onClick={() => setBgIndex(i)}
                   className={cn(
                     "h-1.5 rounded-full transition-all duration-300",
-                    i === bgIndex ? "w-6 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"
+                    i === bgIndex ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
                   )}
                 />
               ))}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ── Trust bar ─────────────────────────────────────────────────────── */}
-      <div className="bg-secondary/50 border-b border-border">
-        <div className="container mx-auto px-4 py-5">
-          <div className="flex items-center justify-center gap-10 sm:gap-20">
-            {[
-              { value: loja.plans.length.toString(),             label: "planos disponíveis" },
-              { value: produtosDigitais.items.length.toString(),  label: "produtos digitais"  },
-              { value: "+7.000",                                  label: "pacientes atendidos" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <p className="text-2xl font-extrabold text-primary leading-none">{s.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        </section>
+      )}
 
       {/* ── Filter tabs ───────────────────────────────────────────────────── */}
       <div className="sticky top-16 lg:top-20 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
