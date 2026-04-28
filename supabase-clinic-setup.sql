@@ -1,6 +1,7 @@
 -- ================================================================
 -- NutriVida — Setup das tabelas clínicas
 -- Execute este SQL no Supabase > SQL Editor
+-- (ou aplique via: supabase db push)
 -- ================================================================
 
 -- ─── PATIENTS ────────────────────────────────────────────────────────────────
@@ -23,14 +24,35 @@ ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all_patients" ON patients
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+CREATE POLICY "auth_all_patients" ON patients
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- ─── PATIENT PHOTOS ───────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS patient_photos (
+  id          BIGSERIAL PRIMARY KEY,
+  patient_id  BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  url         TEXT NOT NULL,
+  label       TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE patient_photos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anon_all_patient_photos" ON patient_photos
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_patient_photos" ON patient_photos
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
 -- ─── ANAMNESIS ────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS anamnesis (
   id                   BIGSERIAL PRIMARY KEY,
   patient_id           BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-  chief_complaint      TEXT,
+  main_complaint       TEXT,
   medical_history      TEXT,
-  current_medications  TEXT,
+  medications          TEXT,
   allergies            TEXT,
   food_aversions       TEXT,
   food_preferences     TEXT,
@@ -48,6 +70,9 @@ ALTER TABLE anamnesis ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon_all_anamnesis" ON anamnesis
   FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_anamnesis" ON anamnesis
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- ─── MEASUREMENTS (Antropometria) ─────────────────────────────────────────────
 
@@ -73,6 +98,9 @@ ALTER TABLE measurements ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all_measurements" ON measurements
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+CREATE POLICY "auth_all_measurements" ON measurements
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
 -- ─── MEAL PLANS ───────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS meal_plans (
@@ -91,6 +119,9 @@ ALTER TABLE meal_plans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all_meal_plans" ON meal_plans
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+CREATE POLICY "auth_all_meal_plans" ON meal_plans
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
 -- ─── MEALS ────────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS meals (
@@ -98,6 +129,7 @@ CREATE TABLE IF NOT EXISTS meals (
   plan_id          BIGINT NOT NULL REFERENCES meal_plans(id) ON DELETE CASCADE,
   meal_name        TEXT NOT NULL,
   time_suggestion  TEXT,
+  notes            TEXT,
   sort_order       SMALLINT DEFAULT 0
 );
 
@@ -105,6 +137,9 @@ ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon_all_meals" ON meals
   FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_meals" ON meals
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- ─── MEAL FOODS ───────────────────────────────────────────────────────────────
 
@@ -130,6 +165,9 @@ ALTER TABLE meal_foods ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon_all_meal_foods" ON meal_foods
   FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_meal_foods" ON meal_foods
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- ─── AVAILABILITY SLOTS ───────────────────────────────────────────────────────
 
