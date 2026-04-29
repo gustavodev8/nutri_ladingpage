@@ -828,10 +828,20 @@ function AntropometriaTab({ patientId }: { patientId: string }) {
     <div className="space-y-6">
       {/* New measurement form */}
       <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-        <h2 className="font-semibold text-base flex items-center gap-2">
-          <Scale size={16} className="text-primary" />
-          Nova avaliação
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-base flex items-center gap-2">
+            <Scale size={16} className="text-primary" />
+            Nova avaliação
+          </h2>
+          {measurements.length > 0 && (
+            <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
+              <Button variant="outline" size="sm" className="rounded-md gap-1.5 text-xs h-8 shrink-0">
+                <Eye size={13} />
+                Ver Relatório
+              </Button>
+            </Link>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
