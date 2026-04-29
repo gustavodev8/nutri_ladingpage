@@ -50,15 +50,15 @@ function MetricCard({ label, value, unit, icon }: {
   label: string; value: string; unit?: string; icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-card p-4 flex flex-col gap-3 shadow-sm">
+    <div className="rounded-lg border border-border/70 bg-card p-5 flex flex-col gap-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
         <span className="text-muted-foreground/40">{icon}</span>
       </div>
-      <p className="text-2xl font-bold tabular-nums text-foreground leading-none">
+      <p className="text-3xl font-bold tabular-nums text-foreground leading-none">
         {value}
         {unit && value !== "—" && (
-          <span className="text-sm font-normal text-muted-foreground ml-1.5">{unit}</span>
+          <span className="text-base font-normal text-muted-foreground ml-1.5">{unit}</span>
         )}
       </p>
     </div>
@@ -69,9 +69,9 @@ function MetricCard({ label, value, unit, icon }: {
 function MeasureRow({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-sm font-semibold text-foreground tabular-nums">{value}</p>
+    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
+      <p className="text-[15px] text-muted-foreground">{label}</p>
+      <p className="text-[15px] font-semibold text-foreground tabular-nums">{value}</p>
     </div>
   );
 }
@@ -82,18 +82,18 @@ function BilateralRow({ label, right, left }: { label: string; right?: number; l
   const diff = right != null && left != null ? Math.abs(right - left).toFixed(1) : null;
   const hasDiff = diff && parseFloat(diff) > 0;
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
-      <p className="text-sm text-muted-foreground flex-1">{label}</p>
+    <div className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0">
+      <p className="text-[15px] text-muted-foreground flex-1">{label}</p>
       <div className="flex items-center gap-3">
-        <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-right">
+        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-right">
           {right != null ? `${right} cm` : "—"}
         </span>
-        <span className="text-[10px] text-muted-foreground/40 font-medium">·</span>
-        <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-left">
+        <span className="text-xs text-muted-foreground/40 font-medium">·</span>
+        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-left">
           {left != null ? `${left} cm` : "—"}
         </span>
         {hasDiff && (
-          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full tabular-nums w-12 text-center">
+          <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full tabular-nums w-14 text-center">
             Δ {diff}
           </span>
         )}
@@ -108,8 +108,8 @@ function SectionCard({ title, children, className }: {
 }) {
   return (
     <div className={cn("rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden", className)}>
-      <div className="px-5 py-3.5 border-b border-border/60">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <div className="px-5 py-4 border-b border-border/60">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
       </div>
       <div className="px-5 py-1">{children}</div>
     </div>
@@ -187,8 +187,8 @@ export default function AdminRelatorioAntropometrico() {
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Relatório Antropométrico</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Relatório Antropométrico</h1>
+            <p className="text-[15px] text-muted-foreground mt-0.5">
               {patient.name} · avaliação de {m.assessment_date ? formatDate(m.assessment_date) : "—"}
             </p>
           </div>
@@ -205,17 +205,17 @@ export default function AdminRelatorioAntropometrico() {
           {patient.name ? initials(patient.name) : <User size={18} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-semibold text-foreground truncate">{patient.name || "—"}</p>
+          <p className="text-lg font-semibold text-foreground truncate">{patient.name || "—"}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-            {patient.email     && <span className="text-xs text-muted-foreground">{patient.email}</span>}
-            {patient.phone     && <span className="text-xs text-muted-foreground">{patient.phone}</span>}
-            {patient.city      && <span className="text-xs text-muted-foreground">{patient.city}</span>}
-            {patient.birth_date && <span className="text-xs text-muted-foreground">{calcAge(patient.birth_date)} anos</span>}
+            {patient.email     && <span className="text-sm text-muted-foreground">{patient.email}</span>}
+            {patient.phone     && <span className="text-sm text-muted-foreground">{patient.phone}</span>}
+            {patient.city      && <span className="text-sm text-muted-foreground">{patient.city}</span>}
+            {patient.birth_date && <span className="text-sm text-muted-foreground">{calcAge(patient.birth_date)} anos</span>}
           </div>
         </div>
         <div className="shrink-0 text-right hidden sm:block">
-          <p className="text-xs text-muted-foreground">Data da avaliação</p>
-          <p className="text-sm font-semibold text-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground">Data da avaliação</p>
+          <p className="text-[15px] font-semibold text-foreground mt-0.5">
             {m.assessment_date ? formatDate(m.assessment_date) : "—"}
           </p>
         </div>
@@ -225,23 +225,23 @@ export default function AdminRelatorioAntropometrico() {
       {bmi && bmiInfo && (
         <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-5">
           <div className="shrink-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Índice de Massa Corporal
             </p>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold tabular-nums text-foreground">{bmi}</span>
-              <span className="text-sm text-muted-foreground">kg/m²</span>
+              <span className="text-5xl font-bold tabular-nums text-foreground">{bmi}</span>
+              <span className="text-base text-muted-foreground">kg/m²</span>
             </div>
           </div>
           <div className="w-px h-10 bg-border shrink-0" />
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={cn("w-2 h-2 rounded-full shrink-0", bmiInfo.dot)} />
-              <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border", bmiInfo.badge)}>
+              <span className={cn("text-sm font-semibold px-3 py-1 rounded-full border", bmiInfo.badge)}>
                 {bmiInfo.label}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">Calculado com base no peso e altura registrados.</p>
+            <p className="text-sm text-muted-foreground">Calculado com base no peso e altura registrados.</p>
           </div>
         </div>
       )}
@@ -318,10 +318,10 @@ export default function AdminRelatorioAntropometrico() {
       {measurements.length > 1 && (
         <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border/60 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
               Histórico de Avaliações
             </p>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               {measurements.length} registro{measurements.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -330,7 +330,7 @@ export default function AdminRelatorioAntropometrico() {
               <thead>
                 <tr className="border-b border-border/60 bg-muted/20">
                   {["Data", "Peso", "Altura", "IMC", "Gordura", "Massa Magra"].map((col) => (
-                    <th key={col} className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th key={col} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {col}
                     </th>
                   ))}
@@ -354,8 +354,8 @@ export default function AdminRelatorioAntropometrico() {
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-3 tabular-nums">{row.weight   != null ? `${row.weight} kg`   : "—"}</td>
-                      <td className="px-5 py-3 tabular-nums">{row.height   != null ? `${row.height} cm`   : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">{row.weight  != null ? `${row.weight} kg`  : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">{row.height != null ? `${row.height} cm` : "—"}</td>
                       <td className="px-5 py-3 tabular-nums">
                         {mb ? (
                           <div className="flex items-center gap-2">
