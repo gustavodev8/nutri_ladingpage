@@ -797,28 +797,28 @@ type MeasurementForm = {
 };
 
 const InputField = ({ label, field, form, setField, placeholder }: any) => (
-  <div className="space-y-1">
-    <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</Label>
+  <div className="space-y-1.5">
+    <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</Label>
     <Input
       type="number"
       step="0.1"
       value={form[field] || ""}
       onChange={(e) => setField(field, e.target.value)}
       placeholder={placeholder}
-      className="h-8 rounded-md text-xs"
+      className="h-9 rounded-md text-sm"
     />
   </div>
 );
 
 const BilateralField = ({ label, fieldR, fieldL, form, setField }: any) => (
   <>
-    <div className="space-y-1">
-      <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label} D</Label>
-      <Input type="number" step="0.1" value={form[fieldR] || ""} onChange={(e) => setField(fieldR, e.target.value)} className="h-8 rounded-md text-xs" />
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">{label} D</Label>
+      <Input type="number" step="0.1" value={form[fieldR] || ""} onChange={(e) => setField(fieldR, e.target.value)} className="h-9 rounded-md text-sm" />
     </div>
-    <div className="space-y-1">
-      <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label} E</Label>
-      <Input type="number" step="0.1" value={form[fieldL] || ""} onChange={(e) => setField(fieldL, e.target.value)} className="h-8 rounded-md text-xs" />
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">{label} E</Label>
+      <Input type="number" step="0.1" value={form[fieldL] || ""} onChange={(e) => setField(fieldL, e.target.value)} className="h-9 rounded-md text-sm" />
     </div>
   </>
 );
@@ -872,9 +872,9 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
       {/* ── Latest metrics strip ── */}
       {latest && (
         <div className="flex items-stretch gap-0 border border-border rounded-md overflow-hidden">
-          <div className="px-4 py-2.5 bg-muted/50 border-r border-border flex flex-col justify-center shrink-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Última</p>
-            <p className="text-xs font-medium text-foreground mt-0.5">
+          <div className="px-4 py-3.5 bg-muted/50 border-r border-border flex flex-col justify-center shrink-0">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Última</p>
+            <p className="text-sm font-medium text-foreground mt-0.5">
               {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
             </p>
           </div>
@@ -885,10 +885,10 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
             { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%` : "—",  badge: null       },
             { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`  : "—",  badge: null       },
           ] as { label: string; value: string; badge: string | null }[]).map((s, i) => (
-            <div key={s.label} className={`flex-1 px-4 py-2.5 bg-card flex flex-col justify-center min-w-0${i > 0 ? " border-l border-border" : ""}`}>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">{s.label}</p>
+            <div key={s.label} className={`flex-1 px-4 py-3.5 bg-card flex flex-col justify-center min-w-0${i > 0 ? " border-l border-border" : ""}`}>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{s.label}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-sm font-bold tabular-nums text-foreground">{s.value}</p>
+                <p className="text-[15px] font-bold tabular-nums text-foreground">{s.value}</p>
                 {s.badge && <BMIBadge bmi={s.badge} />}
               </div>
             </div>
@@ -898,16 +898,16 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
 
       {/* ── New measurement form ── */}
       <div className="border border-border rounded-md overflow-hidden bg-card">
-        <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Scale className="h-3.5 w-3.5 text-muted-foreground" />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Nova avaliação</p>
+            <Scale className="h-4 w-4 text-muted-foreground" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nova avaliação</p>
           </div>
           <div className="flex items-center gap-2">
             {measurements.length > 0 && (
               <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
-                <Button variant="outline" size="sm" className="h-7 rounded-md text-xs gap-1.5 shrink-0">
-                  <Eye size={12} />
+                <Button variant="outline" size="sm" className="h-8 rounded-md text-sm gap-1.5 shrink-0">
+                  <Eye size={13} />
                   Ver Relatório
                 </Button>
               </Link>
@@ -916,10 +916,10 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
               type="date"
               value={form.assessment_date}
               onChange={e => setField("assessment_date", e.target.value)}
-              className="h-7 rounded-md text-xs w-36"
+              className="h-8 rounded-md text-sm w-38"
             />
-            <Button onClick={handleInsert} disabled={saving} size="sm" className="h-7 rounded-md text-xs gap-1.5">
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+            <Button onClick={handleInsert} disabled={saving} size="sm" className="h-8 rounded-md text-sm gap-1.5">
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
               {saving ? "Salvando..." : "Registrar"}
             </Button>
           </div>
@@ -937,7 +937,7 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
 
           {/* Tronco */}
           <div className="pt-3 border-t border-border/60">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Tronco</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Tronco</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <InputField label="Pescoço"  field="neck"     form={form} setField={setField} />
               <InputField label="Ombro"    field="shoulder" form={form} setField={setField} />
@@ -950,7 +950,7 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
 
           {/* Membros superiores */}
           <div className="pt-3 border-t border-border/60">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Superiores (D / E)</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Superiores (D / E)</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               <BilateralField label="Braço Rel."  fieldR="arm_relax_r"    fieldL="arm_relax_l"    form={form} setField={setField} />
               <BilateralField label="Braço Con."  fieldR="arm_contract_r" fieldL="arm_contract_l" form={form} setField={setField} />
@@ -961,7 +961,7 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
 
           {/* Membros inferiores */}
           <div className="pt-3 border-t border-border/60">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Inferiores (D / E)</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Inferiores (D / E)</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <BilateralField label="Coxa Prox." fieldR="thigh_prox_r" fieldL="thigh_prox_l" form={form} setField={setField} />
               <BilateralField label="Coxa Med."  fieldR="thigh_r"      fieldL="thigh_l"      form={form} setField={setField} />
@@ -971,12 +971,12 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
 
           {/* Notas */}
           <div className="pt-3 border-t border-border/60">
-            <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Notas técnicas</Label>
+            <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Notas técnicas</Label>
             <Input
               value={form.notes || ""}
               onChange={e => setField("notes", e.target.value)}
               placeholder="Observações sobre esta avaliação…"
-              className="mt-1.5 h-8 rounded-md text-xs"
+              className="mt-1.5 h-9 rounded-md text-sm"
             />
           </div>
         </div>
@@ -994,20 +994,20 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
         </div>
       ) : (
         <div className="border border-border rounded-md overflow-hidden bg-card">
-          <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
-            <Activity size={14} className="text-muted-foreground" />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-2">
+            <Activity size={15} className="text-muted-foreground" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Histórico — {measurements.length} avaliação{measurements.length !== 1 ? "ões" : ""}
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[500px] text-sm">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-border">
                   {["Data", "Peso", "Altura", "IMC", "% Gordura", "Cintura", ""].map((col, i) => (
                     <th
                       key={i}
-                      className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50${i === 0 ? " text-left" : " text-right"}${i === 6 ? " w-16" : ""}`}
+                      className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50${i === 0 ? " text-left" : " text-right"}${i === 6 ? " w-20" : ""}`}
                     >
                       {col}
                     </th>
@@ -1022,17 +1022,17 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
                       key={m.id}
                       className={`border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors${idx === 0 ? " bg-primary/[0.03]" : ""}`}
                     >
-                      <td className="px-4 py-2.5 text-xs font-medium text-foreground whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {idx === 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">Recente</span>
+                            <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">Recente</span>
                           )}
                           {m.assessment_date ? formatDate(m.assessment_date) : "—"}
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs tabular-nums">{m.weight ? `${m.weight} kg` : "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-xs tabular-nums">{m.height ? `${m.height} cm` : "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-xs">
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.weight ? `${m.weight} kg` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.height ? `${m.height} cm` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm">
                         {bmi ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <span className="font-semibold tabular-nums">{bmi}</span>
@@ -1040,21 +1040,21 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
                           </div>
                         ) : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-xs tabular-nums">{m.waist ? `${m.waist} cm` : "—"}</td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.waist ? `${m.waist} cm` : "—"}</td>
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           <Link
                             to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}
-                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                           >
-                            <Eye size={13} />
+                            <Eye size={14} />
                           </Link>
                           <button
                             onClick={() => handleDelete(m.id!)}
-                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
