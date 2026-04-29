@@ -265,7 +265,7 @@ export default function AdminPaciente() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-8 space-y-8">
+        <div className="px-6 space-y-8">
           {/* Header Dashboard: IMC & Key Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             <div className="lg:col-span-4 bg-primary rounded-[40px] p-8 text-primary-foreground shadow-2xl shadow-primary/20 flex flex-col justify-between overflow-hidden relative group">
@@ -372,7 +372,7 @@ export default function AdminPaciente() {
 
   // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ─────────────────────────────────
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="px-4 sm:px-6 py-8 space-y-6">
       {/* Breadcrumbs & Navigation */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
