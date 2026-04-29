@@ -246,10 +246,30 @@ export interface Measurement {
   assessment_date: string;
   weight?: number;
   height?: number;
-  waist?: number;
-  hip?: number;
-  arm?: number;
+  // Tronco
   neck?: number;
+  shoulder?: number;
+  chest?: number;
+  waist?: number;
+  abdomen?: number;
+  hip?: number;
+  // Membros Superiores
+  arm_relax_r?: number;
+  arm_relax_l?: number;
+  arm_contract_r?: number;
+  arm_contract_l?: number;
+  forearm_r?: number;
+  forearm_l?: number;
+  wrist_r?: number;
+  wrist_l?: number;
+  // Membros Inferiores
+  calf_r?: number;
+  calf_l?: number;
+  thigh_r?: number;
+  thigh_l?: number;
+  thigh_prox_r?: number;
+  thigh_prox_l?: number;
+  // Composição
   body_fat?: number;
   lean_mass?: number;
   visceral_fat?: number;
