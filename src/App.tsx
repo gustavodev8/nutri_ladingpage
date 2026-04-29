@@ -53,6 +53,7 @@ import AdminPaciente from "./pages/admin/AdminPaciente";
 import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
 import AdminAlimentos from "./pages/admin/AdminAlimentos";
 import AdminLoja from "./pages/admin/AdminLoja";
+import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ const App = () => (
                 <Route path="pacientes" element={<AdminPacientes />} />
                 <Route path="pacientes/:id" element={<AdminPaciente />} />
                 <Route path="pacientes/:id/plano/:planId" element={<AdminPlanoAlimentar />} />
+                <Route path="pacientes/:id/relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
                 <Route path="alimentos" element={<AdminAlimentos />} />
                 <Route path="loja" element={<AdminLoja />} />
                 {/* Fallback inside admin */}

@@ -904,6 +904,14 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Nova avaliação</p>
           </div>
           <div className="flex items-center gap-2">
+            {measurements.length > 0 && (
+              <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
+                <Button variant="outline" size="sm" className="h-7 rounded-md text-xs gap-1.5 shrink-0">
+                  <Eye size={12} />
+                  Ver Relatório
+                </Button>
+              </Link>
+            )}
             <Input
               type="date"
               value={form.assessment_date}
