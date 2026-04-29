@@ -19,10 +19,10 @@ const calcBMI = (weight?: number, height?: number): string | null => {
 };
 
 const bmiStatus = (bmi: number): { label: string; dot: string; badge: string } => {
-  if (bmi < 18.5) return { label: "Abaixo do peso", dot: "bg-blue-400",   badge: "text-blue-700 bg-blue-50 border-blue-200"   };
-  if (bmi < 25)   return { label: "Normal",          dot: "bg-green-400",  badge: "text-green-700 bg-green-50 border-green-200" };
-  if (bmi < 30)   return { label: "Sobrepeso",        dot: "bg-amber-400",  badge: "text-amber-700 bg-amber-50 border-amber-200" };
-  return              { label: "Obesidade",        dot: "bg-red-400",    badge: "text-red-700 bg-red-50 border-red-200"       };
+  if (bmi < 18.5) return { label: "Abaixo do peso", dot: "bg-blue-400",  badge: "text-blue-700 bg-blue-50 border-blue-200"   };
+  if (bmi < 25)   return { label: "Normal",          dot: "bg-green-400", badge: "text-green-700 bg-green-50 border-green-200" };
+  if (bmi < 30)   return { label: "Sobrepeso",        dot: "bg-amber-400", badge: "text-amber-700 bg-amber-50 border-amber-200" };
+  return              { label: "Obesidade",        dot: "bg-red-400",   badge: "text-red-700 bg-red-50 border-red-200"       };
 };
 
 const calcAge = (birthDate: string): number => {
@@ -42,25 +42,18 @@ const formatDate = (dateStr: string) =>
 const initials = (name: string) =>
   name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 
-// ─── Metric card ─────────────────────────────────────────────────────────────
+const fmt = (v?: number, unit = "cm") => v != null ? `${v} ${unit}` : null;
 
-function MetricCard({
-  label, value, unit, icon, highlight = false,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  icon: React.ReactNode;
-  highlight?: boolean;
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function MetricCard({ label, value, unit, icon }: {
+  label: string; value: string; unit?: string; icon: React.ReactNode;
 }) {
   return (
-    <div className={cn(
-      "rounded-lg border border-border/70 bg-card p-4 flex flex-col gap-3 shadow-sm",
-      highlight && "border-primary/20 bg-primary/[0.02]"
-    )}>
+    <div className="rounded-lg border border-border/70 bg-card p-4 flex flex-col gap-3 shadow-sm">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <span className="text-muted-foreground/50">{icon}</span>
+        <span className="text-muted-foreground/40">{icon}</span>
       </div>
       <p className="text-2xl font-bold tabular-nums text-foreground leading-none">
         {value}
@@ -68,6 +61,57 @@ function MetricCard({
           <span className="text-sm font-normal text-muted-foreground ml-1.5">{unit}</span>
         )}
       </p>
+    </div>
+  );
+}
+
+// linha simples: label + valor
+function MeasureRow({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold text-foreground tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+// linha bilateral: label | valor D · valor E
+function BilateralRow({ label, right, left }: { label: string; right?: number; left?: number }) {
+  if (right == null && left == null) return null;
+  const diff = right != null && left != null ? Math.abs(right - left).toFixed(1) : null;
+  const hasDiff = diff && parseFloat(diff) > 0;
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
+      <p className="text-sm text-muted-foreground flex-1">{label}</p>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-right">
+          {right != null ? `${right} cm` : "—"}
+        </span>
+        <span className="text-[10px] text-muted-foreground/40 font-medium">·</span>
+        <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-left">
+          {left != null ? `${left} cm` : "—"}
+        </span>
+        {hasDiff && (
+          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full tabular-nums w-12 text-center">
+            Δ {diff}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// card de seção com título
+function SectionCard({ title, children, className }: {
+  title: string; children: React.ReactNode; className?: string;
+}) {
+  return (
+    <div className={cn("rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden", className)}>
+      <div className="px-5 py-3.5 border-b border-border/60">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      </div>
+      <div className="px-5 py-1">{children}</div>
     </div>
   );
 }
@@ -119,16 +163,16 @@ export default function AdminRelatorioAntropometrico() {
     );
   }
 
-  const latest  = measurements[0];
-  const bmi     = calcBMI(latest.weight, latest.height);
+  const m       = measurements[0];
+  const bmi     = calcBMI(m.weight, m.height);
   const bmiInfo = bmi ? bmiStatus(parseFloat(bmi)) : null;
 
-  const bodyMeasures = [
-    { label: "Cintura",  value: latest.waist != null ? `${latest.waist} cm` : null },
-    { label: "Quadril",  value: latest.hip   != null ? `${latest.hip} cm`   : null },
-    { label: "Braço",    value: latest.arm   != null ? `${latest.arm} cm`   : null },
-    { label: "Pescoço",  value: latest.neck  != null ? `${latest.neck} cm`  : null },
-  ].filter((m) => m.value !== null) as { label: string; value: string }[];
+  // verifica se existem medidas em cada grupo
+  const hasTronco   = [m.neck, m.shoulder, m.chest, m.waist, m.abdomen, m.hip].some(v => v != null);
+  const hasSuperior = [m.arm_relax_r, m.arm_relax_l, m.arm_contract_r, m.arm_contract_l,
+                       m.forearm_r, m.forearm_l, m.wrist_r, m.wrist_l].some(v => v != null);
+  const hasInferior = [m.thigh_prox_r, m.thigh_prox_l, m.thigh_r, m.thigh_l,
+                       m.calf_r, m.calf_l].some(v => v != null);
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
@@ -145,22 +189,17 @@ export default function AdminRelatorioAntropometrico() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground">Relatório Antropométrico</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {patient.name} · avaliação de {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
+              {patient.name} · avaliação de {m.assessment_date ? formatDate(m.assessment_date) : "—"}
             </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-lg gap-2 shrink-0"
-          onClick={() => window.print()}
-        >
+        <Button size="sm" variant="outline" className="rounded-lg gap-2 shrink-0" onClick={() => window.print()}>
           <Printer size={14} />
           Imprimir / PDF
         </Button>
       </div>
 
-      {/* ── Patient card ────────────────────────────────────────────────────── */}
+      {/* ── Paciente ────────────────────────────────────────────────────────── */}
       <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-4">
         <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
           {patient.name ? initials(patient.name) : <User size={18} />}
@@ -168,16 +207,16 @@ export default function AdminRelatorioAntropometrico() {
         <div className="flex-1 min-w-0">
           <p className="text-base font-semibold text-foreground truncate">{patient.name || "—"}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-            {patient.email    && <span className="text-xs text-muted-foreground">{patient.email}</span>}
-            {patient.phone    && <span className="text-xs text-muted-foreground">{patient.phone}</span>}
-            {patient.city     && <span className="text-xs text-muted-foreground">{patient.city}</span>}
+            {patient.email     && <span className="text-xs text-muted-foreground">{patient.email}</span>}
+            {patient.phone     && <span className="text-xs text-muted-foreground">{patient.phone}</span>}
+            {patient.city      && <span className="text-xs text-muted-foreground">{patient.city}</span>}
             {patient.birth_date && <span className="text-xs text-muted-foreground">{calcAge(patient.birth_date)} anos</span>}
           </div>
         </div>
         <div className="shrink-0 text-right hidden sm:block">
           <p className="text-xs text-muted-foreground">Data da avaliação</p>
           <p className="text-sm font-semibold text-foreground mt-0.5">
-            {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
+            {m.assessment_date ? formatDate(m.assessment_date) : "—"}
           </p>
         </div>
       </div>
@@ -198,86 +237,81 @@ export default function AdminRelatorioAntropometrico() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={cn("w-2 h-2 rounded-full shrink-0", bmiInfo.dot)} />
-              <span className={cn(
-                "text-xs font-semibold px-2.5 py-1 rounded-full border",
-                bmiInfo.badge
-              )}>
+              <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border", bmiInfo.badge)}>
                 {bmiInfo.label}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Calculado com base no peso e altura registrados.
-            </p>
+            <p className="text-xs text-muted-foreground">Calculado com base no peso e altura registrados.</p>
           </div>
         </div>
       )}
 
-      {/* ── Metrics grid ────────────────────────────────────────────────────── */}
+      {/* ── Métricas de composição ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <MetricCard
-          label="Peso"
-          value={latest.weight != null ? String(latest.weight) : "—"}
-          unit="kg"
-          icon={<Scale size={15} />}
-        />
-        <MetricCard
-          label="Altura"
-          value={latest.height != null ? String(latest.height) : "—"}
-          unit="cm"
-          icon={<Ruler size={15} />}
-        />
-        <MetricCard
-          label="Gordura Corporal"
-          value={latest.body_fat != null ? String(latest.body_fat) : "—"}
-          unit="%"
-          icon={<Percent size={15} />}
-        />
-        <MetricCard
-          label="Massa Magra"
-          value={latest.lean_mass != null ? String(latest.lean_mass) : "—"}
-          unit="kg"
-          icon={<Activity size={15} />}
-        />
-        <MetricCard
-          label="Gordura Visceral"
-          value={latest.visceral_fat != null ? String(latest.visceral_fat) : "—"}
-          icon={<Heart size={15} />}
-        />
+        <MetricCard label="Peso"             value={m.weight       != null ? String(m.weight)       : "—"} unit="kg" icon={<Scale size={15} />}   />
+        <MetricCard label="Altura"           value={m.height       != null ? String(m.height)       : "—"} unit="cm" icon={<Ruler size={15} />}   />
+        <MetricCard label="Gordura Corporal" value={m.body_fat     != null ? String(m.body_fat)     : "—"} unit="%"  icon={<Percent size={15} />} />
+        <MetricCard label="Massa Magra"      value={m.lean_mass    != null ? String(m.lean_mass)    : "—"} unit="kg" icon={<Activity size={15} />}/>
+        <MetricCard label="Gordura Visceral" value={m.visceral_fat != null ? String(m.visceral_fat) : "—"} icon={<Heart size={15} />}             />
       </div>
 
-      {/* ── Medidas + Observações ─────────────────────────────────────────────── */}
-      {(bodyMeasures.length > 0 || latest.notes) && (
+      {/* ── Medidas corporais ────────────────────────────────────────────────── */}
+      {hasTronco && (
+        <SectionCard title="Tronco">
+          <MeasureRow label="Pescoço"  value={fmt(m.neck)}     />
+          <MeasureRow label="Ombro"    value={fmt(m.shoulder)} />
+          <MeasureRow label="Peitoral" value={fmt(m.chest)}    />
+          <MeasureRow label="Cintura"  value={fmt(m.waist)}    />
+          <MeasureRow label="Abdômen"  value={fmt(m.abdomen)}  />
+          <MeasureRow label="Quadril"  value={fmt(m.hip)}      />
+        </SectionCard>
+      )}
+
+      {/* ── Simetria: membros superiores e inferiores ────────────────────────── */}
+      {(hasSuperior || hasInferior) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          {bodyMeasures.length > 0 && (
-            <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Medidas Corporais
-                </p>
+          {hasSuperior && (
+            <SectionCard title="Membros Superiores">
+              {/* legenda D / E */}
+              <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5">
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                  <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
+                </span>
               </div>
-              <div className="divide-y divide-border/60">
-                {bodyMeasures.map((m) => (
-                  <div key={m.label} className="flex items-center justify-between px-5 py-3">
-                    <p className="text-sm text-muted-foreground">{m.label}</p>
-                    <p className="text-sm font-semibold text-foreground tabular-nums">{m.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+              <BilateralRow label="Braço Relaxado"   right={m.arm_relax_r}    left={m.arm_relax_l}    />
+              <BilateralRow label="Braço Contraído"  right={m.arm_contract_r} left={m.arm_contract_l} />
+              <BilateralRow label="Antebraço"        right={m.forearm_r}      left={m.forearm_l}      />
+              <BilateralRow label="Punho"            right={m.wrist_r}        left={m.wrist_l}        />
+            </SectionCard>
           )}
 
-          {latest.notes && (
-            <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Observações
-                </p>
+          {hasInferior && (
+            <SectionCard title="Membros Inferiores">
+              <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5">
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                  <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
+                </span>
               </div>
-              <p className="px-5 py-4 text-sm text-foreground/80 leading-relaxed">{latest.notes}</p>
-            </div>
+              <BilateralRow label="Coxa Proximal" right={m.thigh_prox_r} left={m.thigh_prox_l} />
+              <BilateralRow label="Coxa Medial"   right={m.thigh_r}      left={m.thigh_l}      />
+              <BilateralRow label="Panturrilha"   right={m.calf_r}       left={m.calf_l}       />
+            </SectionCard>
           )}
         </div>
+      )}
+
+      {/* ── Observações ──────────────────────────────────────────────────────── */}
+      {m.notes && (
+        <SectionCard title="Observações">
+          <p className="py-3 text-sm text-foreground/80 leading-relaxed">{m.notes}</p>
+        </SectionCard>
       )}
 
       {/* ── Histórico ───────────────────────────────────────────────────────── */}
@@ -303,17 +337,16 @@ export default function AdminRelatorioAntropometrico() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {measurements.map((m, idx) => {
-                  const mb       = calcBMI(m.weight, m.height);
+                {measurements.map((row, idx) => {
+                  const mb       = calcBMI(row.weight, row.height);
                   const isLatest = idx === 0;
                   return (
-                    <tr
-                      key={m.id ?? idx}
-                      className={cn(isLatest ? "bg-primary/[0.025]" : "hover:bg-muted/30 transition-colors")}
-                    >
+                    <tr key={row.id ?? idx} className={cn(
+                      isLatest ? "bg-primary/[0.025]" : "hover:bg-muted/30 transition-colors"
+                    )}>
                       <td className="px-5 py-3 font-medium text-foreground">
                         <div className="flex items-center gap-2">
-                          {m.assessment_date ? formatDate(m.assessment_date) : "—"}
+                          {row.assessment_date ? formatDate(row.assessment_date) : "—"}
                           {isLatest && (
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                               Atual
@@ -321,31 +354,20 @@ export default function AdminRelatorioAntropometrico() {
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-foreground tabular-nums">
-                        {m.weight != null ? `${m.weight} kg` : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-foreground tabular-nums">
-                        {m.height != null ? `${m.height} cm` : "—"}
-                      </td>
+                      <td className="px-5 py-3 tabular-nums">{row.weight   != null ? `${row.weight} kg`   : "—"}</td>
+                      <td className="px-5 py-3 tabular-nums">{row.height   != null ? `${row.height} cm`   : "—"}</td>
                       <td className="px-5 py-3 tabular-nums">
                         {mb ? (
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{mb}</span>
-                            <span className={cn(
-                              "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
-                              bmiStatus(parseFloat(mb)).badge
-                            )}>
+                            <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full border", bmiStatus(parseFloat(mb)).badge)}>
                               {bmiStatus(parseFloat(mb)).label}
                             </span>
                           </div>
                         ) : "—"}
                       </td>
-                      <td className="px-5 py-3 text-foreground tabular-nums">
-                        {m.body_fat != null ? `${m.body_fat}%` : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-foreground tabular-nums">
-                        {m.lean_mass != null ? `${m.lean_mass} kg` : "—"}
-                      </td>
+                      <td className="px-5 py-3 tabular-nums">{row.body_fat  != null ? `${row.body_fat}%`  : "—"}</td>
+                      <td className="px-5 py-3 tabular-nums">{row.lean_mass != null ? `${row.lean_mass} kg` : "—"}</td>
                     </tr>
                   );
                 })}
