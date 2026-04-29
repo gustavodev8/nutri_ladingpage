@@ -1044,12 +1044,12 @@ function AntropometriaTab({ patientId, onViewDetail }: { patientId: string; onVi
                       <td className="px-4 py-2.5 text-right text-xs tabular-nums">{m.waist ? `${m.waist} cm` : "—"}</td>
                       <td className="px-4 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            onClick={() => onViewDetail(m)}
+                          <Link
+                            to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}
                             className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                           >
                             <Eye size={13} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => handleDelete(m.id!)}
                             className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
