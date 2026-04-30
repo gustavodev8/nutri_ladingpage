@@ -1,6 +1,7 @@
 import {
   Users, Plus, Search, Trash2, ChevronRight, UserCircle2, Loader2, MapPin,
   TrendingUp, CalendarDays, BarChart2, Building2, AlertCircle, SlidersHorizontal, X,
+  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 type GenderFilter = "all" | "M" | "F" | "outro";
 type SortKey      = "recent" | "oldest" | "name" | "age_asc" | "age_desc";
+
+const ITEMS_PER_PAGE = 10;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,6 +101,7 @@ export default function AdminPacientes() {
   const [saving,        setSaving]        = useState(false);
   const [deletingId,    setDeletingId]    = useState<number | null>(null);
   const [showAdvanced,  setShowAdvanced]  = useState(false);
+  const [page,          setPage]          = useState(1);
 
   // Advanced filters
   const [cityFilter,  setCityFilter]  = useState("");
@@ -212,6 +216,12 @@ export default function AdminPacientes() {
 
     return list;
   }, [patients, search, gender, cityFilter, ageMin, ageMax, dateFrom, dateTo, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [search, gender, cityFilter, ageMin, ageMax, dateFrom, dateTo, sort]);
 
   const hasAdvancedFilter = cityFilter !== "" || ageMin !== "" || ageMax !== "" || dateFrom !== "" || dateTo !== "";
   const hasFilter         = gender !== "all" || search.trim() !== "" || hasAdvancedFilter;
@@ -507,11 +517,11 @@ export default function AdminPacientes() {
         <div className="border border-border border-t-0 rounded-b-2xl overflow-hidden bg-card shadow-sm">
 
           {/* Column headers */}
-          <div className="hidden sm:grid grid-cols-[1.2fr_1fr_120px_140px_64px] gap-4 border-b border-border bg-muted/30 px-6">
-            {["Paciente", "Contato", "Gênero / Idade", "Cadastrado", ""].map((col, i) => (
+          <div className="hidden sm:grid grid-cols-[1.8fr_1.2fr_130px_120px_56px] border-b border-border bg-muted/50 px-6">
+            {(["Paciente", "Contato", "Gênero / Idade", "Cadastrado em", ""] as const).map((col, i) => (
               <div key={i} className={cn(
-                "py-4 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 flex items-center",
-                i >= 2 && i <= 3 ? "justify-center text-center" : ""
+                "py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/70 flex items-center",
+                i === 2 || i === 3 ? "justify-center" : ""
               )}>
                 {col}
               </div>
@@ -519,77 +529,130 @@ export default function AdminPacientes() {
           </div>
 
           {/* Rows */}
-          {filtered.map((patient, idx) => (
+          {paginated.map((patient, idx) => (
             <div
               key={patient.id}
               onClick={() => navigate(`/admin/pacientes/${patient.id}`)}
               className={cn(
-                "group flex sm:grid sm:grid-cols-[1.2fr_1fr_120px_140px_64px] items-center gap-4 sm:gap-4 px-6 py-5 cursor-pointer hover:bg-muted/40 transition-all",
-                idx < filtered.length - 1 && "border-b border-border/40"
+                "group grid grid-cols-[1fr_56px] sm:grid-cols-[1.8fr_1.2fr_130px_120px_56px] items-center px-6 py-4 cursor-pointer hover:bg-muted/30 transition-colors",
+                idx < paginated.length - 1 && "border-b border-border/50"
               )}
             >
               {/* Paciente */}
-              <div className="flex items-center gap-4 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-black shrink-0 shadow-sm border border-primary/5 group-hover:scale-105 transition-transform">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-black shrink-0 ring-1 ring-primary/10">
                   {patient.name ? initials(patient.name) : "?"}
                 </div>
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{patient.name ?? "—"}</p>
-                  <p className="text-[11px] text-muted-foreground truncate font-medium flex items-center gap-1">
-                    <MapPin className="w-2.5 h-2.5 opacity-50" />
-                    {patient.city || "Cidade não inf."}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors leading-tight">
+                    {patient.name ?? "—"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70 truncate flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-2.5 h-2.5 shrink-0" />
+                    {patient.city || "Cidade não informada"}
                   </p>
                 </div>
               </div>
 
               {/* Contato */}
-              <div className="hidden sm:flex flex-col justify-center min-w-0 space-y-0.5">
-                <p className="text-sm text-foreground/80 font-medium truncate">{patient.email || "—"}</p>
-                <p className="text-[11px] text-muted-foreground font-medium truncate">{patient.phone || "Sem telefone"}</p>
+              <div className="hidden sm:flex flex-col justify-center min-w-0 gap-0.5">
+                <p className="text-[13px] text-foreground/80 font-medium truncate">{patient.email || "—"}</p>
+                <p className="text-[11px] text-muted-foreground/70 truncate">{patient.phone || "—"}</p>
               </div>
 
               {/* Gênero / Idade */}
-              <div className="hidden sm:flex flex-col items-center justify-center text-center space-y-0.5">
-                <p className="text-sm text-foreground/70 font-semibold">{patient.gender ? GENDER_LABEL[patient.gender] : "—"}</p>
-                <p className="text-[11px] text-muted-foreground font-bold bg-muted px-2 py-0.5 rounded-full">
-                  {patient.birth_date ? `${calcAge(patient.birth_date)} anos` : "—"}
+              <div className="hidden sm:flex flex-col items-center justify-center gap-1">
+                <p className="text-[13px] text-foreground/80 font-medium">
+                  {patient.gender ? GENDER_LABEL[patient.gender] : "—"}
                 </p>
+                {patient.birth_date && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-[11px] font-semibold text-muted-foreground">
+                    {calcAge(patient.birth_date)} anos
+                  </span>
+                )}
               </div>
 
               {/* Cadastrado */}
-              <div className="hidden sm:flex flex-col items-center justify-center text-center space-y-0.5">
-                <p className="text-xs text-muted-foreground/80 font-bold uppercase tracking-tighter">
-                  {patient.created_at ? formatDate(patient.created_at).split(" de ")[0] : "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground/50 font-medium italic">
-                  {patient.created_at ? formatDate(patient.created_at).split(" de ").slice(1).join(" ") : ""}
+              <div className="hidden sm:flex items-center justify-center">
+                <p className="text-[12px] text-muted-foreground font-medium tabular-nums">
+                  {patient.created_at
+                    ? new Date(patient.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+                    : "—"}
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-1 shrink-0">
+              <div className="flex items-center justify-end gap-0.5">
                 <button
                   onClick={(e) => patient.id !== undefined && handleDelete(e, patient.id)}
                   disabled={deletingId === patient.id}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40"
                   aria-label="Excluir"
                 >
                   {deletingId === patient.id
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />}
                 </button>
-                <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground/25 group-hover:text-primary/60 transition-colors" />
               </div>
             </div>
           ))}
 
-          {/* Footer count */}
-          <div className="px-6 py-4 border-t border-border/40 bg-muted/20">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
+          {/* Footer: count + pagination */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/20 gap-4">
+            <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-widest shrink-0">
               {filtered.length === patients.length
                 ? `${patients.length} paciente${patients.length !== 1 ? "s" : ""} no total`
-                : `${filtered.length} de ${patients.length} paciente${patients.length !== 1 ? "s" : ""} encontrados`}
+                : `${filtered.length} de ${patients.length} encontrado${filtered.length !== 1 ? "s" : ""}`}
             </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                  .reduce<(number | "…")[]>((acc, n, i, arr) => {
+                    if (i > 0 && typeof arr[i - 1] === "number" && (n as number) - (arr[i - 1] as number) > 1) acc.push("…");
+                    acc.push(n);
+                    return acc;
+                  }, [])
+                  .map((item, i) =>
+                    item === "…" ? (
+                      <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-muted-foreground">…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        onClick={() => setPage(item as number)}
+                        className={cn(
+                          "w-8 h-8 rounded-lg border text-xs font-semibold transition-colors",
+                          page === item
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {item}
+                      </button>
+                    )
+                  )}
+
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  aria-label="Próxima página"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
