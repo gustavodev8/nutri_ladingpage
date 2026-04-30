@@ -165,27 +165,17 @@ const AdminDisponibilidade = () => {
 
       {/* ── City selector (presencial only) ── */}
       {activeType === "presencial" && (
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            <p className="text-sm font-semibold text-foreground">Cidade de atendimento</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <select
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value as City)}
+            className="h-10 rounded-xl border border-input bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all w-56"
+          >
             {CITIES.map(city => (
-              <button
-                key={city}
-                onClick={() => setSelectedCity(city)}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
-                  selectedCity === city
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
-                )}
-              >
-                {city}
-              </button>
+              <option key={city} value={city}>{city}</option>
             ))}
-          </div>
+          </select>
         </div>
       )}
 
