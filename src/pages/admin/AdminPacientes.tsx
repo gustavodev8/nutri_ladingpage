@@ -66,20 +66,20 @@ function StatCard({ icon, label, value, sub, accent, warn }: StatCardProps) {
   return (
     <div className={cn(
       "flex flex-col gap-3 rounded-2xl border bg-card px-5 py-5 shadow-sm transition-all hover:shadow-md",
-      accent && "border-primary/30 bg-primary/5",
+      accent && "border-primary/40 bg-primary/[0.04]",
       warn   && "border-amber-400/40 bg-amber-50/60 dark:bg-amber-950/20"
     )}>
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
         <span className={cn(
           "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
-          accent ? "bg-primary/15 text-primary" : warn ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" : "bg-muted text-muted-foreground"
+          accent ? "bg-primary/20 text-primary" : warn ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" : "bg-primary/8 text-primary/60"
         )}>
           {icon}
         </span>
       </div>
       <div>
-        <p className="text-2xl font-black tabular-nums text-foreground leading-none">{value}</p>
+        <p className={cn("text-2xl font-black tabular-nums leading-none", accent ? "text-primary" : "text-foreground")}>{value}</p>
         {sub && <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{sub}</p>}
       </div>
     </div>
@@ -271,13 +271,16 @@ export default function AdminPacientes() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background p-8 space-y-0">
+    <div className="min-h-screen bg-muted/30 p-8 space-y-0">
 
       {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 pb-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pacientes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Registro de prontuários da clínica</p>
+      <div className="flex items-start justify-between gap-4 pb-10">
+        <div className="flex items-start gap-4">
+          <div className="w-1 self-stretch rounded-full bg-primary mt-0.5" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Pacientes</h1>
+            <p className="text-sm text-muted-foreground mt-1">Registro de prontuários da clínica</p>
+          </div>
         </div>
         <Button onClick={() => setShowModal(true)} className="flex items-center gap-2 h-11 px-5 rounded-xl shrink-0 font-bold shadow-sm">
           <Plus className="w-5 h-5" />
@@ -286,7 +289,7 @@ export default function AdminPacientes() {
       </div>
 
       {/* ── Smart stats grid ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
         <StatCard
           icon={<Users className="w-4 h-4" />}
           label="Total de pacientes"
@@ -328,7 +331,7 @@ export default function AdminPacientes() {
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 w-full pt-2 pb-0">
+      <div className="flex flex-col sm:flex-row gap-3 w-full">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
@@ -366,7 +369,7 @@ export default function AdminPacientes() {
 
       {/* ── Advanced filters panel ──────────────────────────────────────────── */}
       {showAdvanced && (
-        <div className="mt-3 p-5 rounded-2xl border border-border bg-muted/30 flex flex-col gap-4">
+        <div className="mt-4 p-5 rounded-2xl border border-border/70 bg-card shadow-sm flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {/* City */}
@@ -446,7 +449,7 @@ export default function AdminPacientes() {
       )}
 
       {/* ── Gender filter tabs ───────────────────────────────────────────────── */}
-      <div className="flex border-b border-border mt-5 mb-0 px-2">
+      <div className="flex border-b border-border mt-8 mb-0 px-1">
         {(["all", "M", "F", "outro"] as GenderFilter[]).map((g) => {
           const label  = g === "all" ? "Todos" : GENDER_LABEL[g];
           const count  = genderCounts[g];
@@ -490,7 +493,7 @@ export default function AdminPacientes() {
           <p className="text-sm font-medium">Carregando pacientes...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-28 gap-4 text-center border border-border border-t-0 bg-card rounded-b-2xl shadow-sm">
+        <div className="flex flex-col items-center justify-center py-28 gap-4 text-center border border-border border-t-0 bg-card rounded-b-2xl shadow-sm ring-1 ring-primary/5">
           <UserCircle2 className="w-14 h-14 text-muted-foreground/20" />
           <div className="space-y-1">
             <p className="text-base font-bold text-foreground">
@@ -514,10 +517,10 @@ export default function AdminPacientes() {
           )}
         </div>
       ) : (
-        <div className="border border-border border-t-0 rounded-b-2xl overflow-hidden bg-card shadow-sm">
+        <div className="border border-border border-t-0 rounded-b-2xl overflow-hidden bg-card shadow-sm ring-1 ring-primary/5">
 
           {/* Column headers */}
-          <div className="hidden sm:grid grid-cols-[1.8fr_1.2fr_130px_120px_56px] border-b border-border bg-muted/50 px-6">
+          <div className="hidden sm:grid grid-cols-[1.8fr_1.2fr_130px_120px_56px] border-b border-border bg-primary/[0.03] px-6">
             {(["Paciente", "Contato", "Gênero / Idade", "Cadastrado em", ""] as const).map((col, i) => (
               <div key={i} className={cn(
                 "py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/70 flex items-center",
