@@ -1,5 +1,5 @@
 import {
-  Users, Plus, Search, Trash2, ChevronRight, UserCircle2, Loader2,
+  Users, Plus, Search, Trash2, ChevronRight, UserCircle2, Loader2, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,22 +133,22 @@ export default function AdminPacientes() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background p-6 space-y-0">
+    <div className="min-h-screen bg-background p-8 space-y-0">
 
       {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 pb-6">
+      <div className="flex items-start justify-between gap-4 pb-8">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Pacientes</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Registro de prontuários da clínica</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pacientes</h1>
+          <p className="text-sm text-muted-foreground mt-1">Registro de prontuários da clínica</p>
         </div>
-        <Button onClick={() => setShowModal(true)} size="sm" className="flex items-center gap-1.5 rounded-md shrink-0">
-          <Plus className="w-4 h-4" />
+        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2 h-11 px-5 rounded-xl shrink-0 font-bold shadow-sm">
+          <Plus className="w-5 h-5" />
           Novo Paciente
         </Button>
       </div>
 
       {/* ── Stat strip ──────────────────────────────────────────────────────── */}
-      <div className="flex items-stretch gap-0 border border-border rounded-md overflow-hidden mb-6">
+      <div className="flex items-stretch gap-0 border border-border rounded-2xl overflow-hidden mb-8 shadow-sm">
         {[
           { label: "Total",     value: patients.length                                      },
           { label: "Masculino", value: patients.filter((p) => p.gender === "M").length      },
@@ -156,37 +156,37 @@ export default function AdminPacientes() {
           { label: "Outro",     value: patients.filter((p) => p.gender === "outro").length  },
         ].map((s, i) => (
           <div key={s.label} className={cn(
-            "flex-1 px-5 py-3.5 bg-card",
+            "flex-1 px-8 py-5 bg-card",
             i > 0 && "border-l border-border"
           )}>
-            <p className="text-xl font-bold tabular-nums text-foreground leading-none">{s.value}</p>
-            <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+            <p className="text-2xl font-black tabular-nums text-foreground leading-none">{s.value}</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-1.5 opacity-70">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-2.5 mb-0">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row gap-4 w-full py-6 mb-0">
+        <div className="relative flex-1 max-w-2xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
             placeholder="Buscar por nome ou e-mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-md text-sm"
+            className="pl-11 h-11 rounded-xl text-sm border-border/60 focus:ring-primary/20 w-full"
           />
         </div>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
-          className="h-9 rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="h-11 rounded-xl border border-input bg-card px-4 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all sm:w-48"
         >
           {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
       </div>
 
       {/* ── Gender filter tabs (underline style) ────────────────────────────── */}
-      <div className="flex border-b border-border mt-4 mb-0">
+      <div className="flex border-b border-border mt-6 mb-0 px-2">
         {(["all", "M", "F", "outro"] as GenderFilter[]).map((g) => {
           const label = g === "all" ? "Todos" : GENDER_LABEL[g];
           const count = genderCounts[g];
@@ -196,16 +196,16 @@ export default function AdminPacientes() {
               key={g}
               onClick={() => setGender(g)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+                "flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold border-b-2 -mb-px transition-all whitespace-nowrap",
                 active
                   ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
               )}
             >
               {label}
               <span className={cn(
-                "text-[11px] font-semibold px-1.5 py-0.5 rounded tabular-nums",
-                active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                "text-[10px] font-black px-2 py-0.5 rounded-full tabular-nums shadow-inner",
+                active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               )}>
                 {count}
               </span>
@@ -216,40 +216,43 @@ export default function AdminPacientes() {
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <p className="text-sm">Carregando pacientes...</p>
+        <div className="flex flex-col items-center justify-center py-32 gap-4 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary/60" />
+          <p className="text-sm font-medium">Carregando pacientes...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center border border-border border-t-0 bg-card">
-          <UserCircle2 className="w-10 h-10 text-muted-foreground/30" />
-          <div>
-            <p className="text-sm font-semibold text-foreground">
+        <div className="flex flex-col items-center justify-center py-28 gap-4 text-center border border-border border-t-0 bg-card rounded-b-2xl shadow-sm">
+          <UserCircle2 className="w-14 h-14 text-muted-foreground/20" />
+          <div className="space-y-1">
+            <p className="text-base font-bold text-foreground">
               {hasFilter ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado ainda"}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {hasFilter ? "Tente ajustar a busca ou os filtros." : "Adicione o primeiro paciente para começar."}
+            <p className="text-sm text-muted-foreground max-w-[300px] mx-auto">
+              {hasFilter ? "Tente ajustar a busca ou os filtros para encontrar o que procura." : "Adicione o primeiro paciente para começar a gerenciar sua clínica."}
             </p>
           </div>
           {hasFilter ? (
-            <Button variant="outline" size="sm" className="rounded-md mt-1"
+            <Button variant="outline" className="rounded-xl mt-2 px-6"
               onClick={() => { setSearch(""); setGender("all"); }}>
               Limpar filtros
             </Button>
           ) : (
-            <Button variant="outline" size="sm" className="rounded-md mt-1" onClick={() => setShowModal(true)}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
+            <Button variant="outline" className="rounded-xl mt-2 px-6 h-11 font-bold" onClick={() => setShowModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
               Adicionar paciente
             </Button>
           )}
         </div>
       ) : (
-        <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-card">
+        <div className="border border-border border-t-0 rounded-b-2xl overflow-hidden bg-card shadow-sm">
 
           {/* Column headers */}
-          <div className="hidden sm:grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_120px_56px] gap-0 border-b border-border bg-muted/50">
+          <div className="hidden sm:grid grid-cols-[1.2fr_1fr_120px_140px_64px] gap-4 border-b border-border bg-muted/30 px-6">
             {["Paciente", "Contato", "Gênero / Idade", "Cadastrado", ""].map((col, i) => (
-              <div key={i} className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div key={i} className={cn(
+                "py-4 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 flex items-center",
+                i >= 2 && i <= 3 ? "justify-center text-center" : ""
+              )}>
                 {col}
               </div>
             ))}
@@ -261,67 +264,71 @@ export default function AdminPacientes() {
               key={patient.id}
               onClick={() => navigate(`/admin/pacientes/${patient.id}`)}
               className={cn(
-                "group flex sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_120px_56px] items-center gap-3 sm:gap-0 px-4 py-3.5 cursor-pointer hover:bg-muted/40 transition-colors",
-                idx < filtered.length - 1 && "border-b border-border/60"
+                "group flex sm:grid sm:grid-cols-[1.2fr_1fr_120px_140px_64px] items-center gap-4 sm:gap-4 px-6 py-5 cursor-pointer hover:bg-muted/40 transition-all",
+                idx < filtered.length - 1 && "border-b border-border/40"
               )}
             >
               {/* Paciente */}
-              <div className="flex items-center gap-3 min-w-0 flex-1 sm:pr-4">
-                <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-black shrink-0 shadow-sm border border-primary/5 group-hover:scale-105 transition-transform">
                   {patient.name ? initials(patient.name) : "?"}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{patient.name ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {[patient.city, patient.occupation].filter(Boolean).join(" · ") || "—"}
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{patient.name ?? "—"}</p>
+                  <p className="text-[11px] text-muted-foreground truncate font-medium flex items-center gap-1">
+                    <MapPin className="w-2.5 h-2.5 opacity-50" />
+                    {patient.city || "Cidade não inf."}
                   </p>
                 </div>
               </div>
 
               {/* Contato */}
-              <div className="hidden sm:block min-w-0 pr-4">
-                <p className="text-sm text-foreground truncate">{patient.email || "—"}</p>
-                <p className="text-xs text-muted-foreground truncate">{patient.phone || ""}</p>
+              <div className="hidden sm:flex flex-col justify-center min-w-0 space-y-0.5">
+                <p className="text-sm text-foreground/80 font-medium truncate">{patient.email || "—"}</p>
+                <p className="text-[11px] text-muted-foreground font-medium truncate">{patient.phone || "Sem telefone"}</p>
               </div>
 
               {/* Gênero / Idade */}
-              <div className="hidden sm:block">
-                <p className="text-sm text-foreground">{patient.gender ? GENDER_LABEL[patient.gender] : "—"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {patient.birth_date ? `${age(patient.birth_date)} anos` : ""}
+              <div className="hidden sm:flex flex-col items-center justify-center text-center space-y-0.5">
+                <p className="text-sm text-foreground/70 font-semibold">{patient.gender ? GENDER_LABEL[patient.gender] : "—"}</p>
+                <p className="text-[11px] text-muted-foreground font-bold bg-muted px-2 py-0.5 rounded-full">
+                  {patient.birth_date ? `${age(patient.birth_date)} anos` : "—"}
                 </p>
               </div>
 
               {/* Cadastrado */}
-              <div className="hidden sm:block">
-                <p className="text-xs text-muted-foreground">
-                  {patient.created_at ? formatDate(patient.created_at) : "—"}
+              <div className="hidden sm:flex flex-col items-center justify-center text-center space-y-0.5">
+                <p className="text-xs text-muted-foreground/80 font-bold uppercase tracking-tighter">
+                  {patient.created_at ? formatDate(patient.created_at).split(" de ")[0] : "—"}
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 font-medium italic">
+                  {patient.created_at ? formatDate(patient.created_at).split(" de ").slice(1).join(" ") : ""}
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-0.5 shrink-0">
+              <div className="flex items-center justify-end gap-1 shrink-0">
                 <button
                   onClick={(e) => patient.id !== undefined && handleDelete(e, patient.id)}
                   disabled={deletingId === patient.id}
-                  className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40"
                   aria-label="Excluir"
                 >
                   {deletingId === patient.id
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <Trash2 className="w-3.5 h-3.5" />}
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Trash2 className="w-4 h-4" />}
                 </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
               </div>
             </div>
           ))}
 
           {/* Footer count */}
-          <div className="px-4 py-2.5 border-t border-border/60 bg-muted/30">
-            <p className="text-xs text-muted-foreground">
+          <div className="px-6 py-4 border-t border-border/40 bg-muted/20">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
               {filtered.length === patients.length
-                ? `${patients.length} paciente${patients.length !== 1 ? "s" : ""}`
-                : `${filtered.length} de ${patients.length} paciente${patients.length !== 1 ? "s" : ""}`}
+                ? `${patients.length} paciente${patients.length !== 1 ? "s" : ""} no total`
+                : `${filtered.length} de ${patients.length} paciente${patients.length !== 1 ? "s" : ""} encontrados`}
             </p>
           </div>
         </div>
@@ -330,68 +337,68 @@ export default function AdminPacientes() {
       {/* ── New Patient Modal ────────────────────────────────────────────────── */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
         >
-          <div className="bg-card border border-border rounded-lg w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
 
             {/* Modal header */}
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                <Users className="w-4 h-4 text-primary" />
+            <div className="flex items-center gap-4 px-8 py-6 border-b border-border bg-muted/30">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Novo Paciente</h2>
-                <p className="text-xs text-muted-foreground">Preencha os dados do prontuário</p>
+                <h2 className="text-base font-black tracking-tight text-foreground">Novo Paciente</h2>
+                <p className="text-xs text-muted-foreground font-medium">Preencha os dados do prontuário clínico</p>
               </div>
             </div>
 
             {/* Form */}
-            <div className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
                   Nome completo <span className="text-destructive">*</span>
                 </Label>
                 <Input id="name" name="name" placeholder="Nome completo" value={form.name}
-                  onChange={handleFormChange} autoFocus className="rounded-md" />
+                  onChange={handleFormChange} autoFocus className="rounded-xl h-11 border-border/60" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mail</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">E-mail</Label>
                   <Input id="email" name="email" type="email" placeholder="exemplo@email.com"
-                    value={form.email} onChange={handleFormChange} className="rounded-md" />
+                    value={form.email} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefone</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Telefone</Label>
                   <Input id="phone" name="phone" placeholder="(00) 00000-0000"
-                    value={form.phone} onChange={handleFormChange} className="rounded-md" />
+                    value={form.phone} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="city" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cidade</Label>
-                  <Input id="city" name="city" placeholder="Salvador"
-                    value={form.city} onChange={handleFormChange} className="rounded-md" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Cidade</Label>
+                  <Input id="city" name="city" placeholder="Cidade"
+                    value={form.city} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="occupation" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ocupação</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="occupation" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Ocupação</Label>
                   <Input id="occupation" name="occupation" placeholder="Profissão"
-                    value={form.occupation} onChange={handleFormChange} className="rounded-md" />
+                    value={form.occupation} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="birth_date" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nascimento</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="birth_date" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Nascimento</Label>
                   <Input id="birth_date" name="birth_date" type="date"
-                    value={form.birth_date} onChange={handleFormChange} className="rounded-md" />
+                    value={form.birth_date} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Gênero</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Gênero</Label>
                   <select id="gender" name="gender" value={form.gender} onChange={handleFormChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground">
+                    className="flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground border-border/60">
                     <option value="">Selecionar</option>
                     <option value="M">Masculino</option>
                     <option value="F">Feminino</option>
@@ -402,12 +409,12 @@ export default function AdminPacientes() {
             </div>
 
             {/* Modal footer */}
-            <div className="flex gap-2.5 px-6 py-4 border-t border-border bg-muted/20">
-              <Button variant="outline" className="flex-1 rounded-md"
+            <div className="flex gap-3 px-8 py-6 border-t border-border bg-muted/20">
+              <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold"
                 onClick={() => { setShowModal(false); setForm(emptyForm); }} disabled={saving}>
                 Cancelar
               </Button>
-              <Button className="flex-1 rounded-md flex items-center justify-center gap-2"
+              <Button className="flex-1 h-12 rounded-xl flex items-center justify-center gap-2 font-black shadow-lg shadow-primary/20"
                 onClick={handleSave} disabled={saving}>
                 {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</> : "Cadastrar paciente"}
               </Button>
