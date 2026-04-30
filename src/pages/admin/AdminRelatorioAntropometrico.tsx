@@ -50,15 +50,16 @@ function MetricCard({ label, value, unit, icon }: {
   label: string; value: string; unit?: string; icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-card p-5 flex flex-col gap-3 shadow-sm">
-      <div className="flex items-center justify-between">
+    <div className="rounded-lg border border-border/70 bg-card p-5 flex flex-col gap-3 shadow-sm print:p-2 print:gap-1">
+      <div className="flex items-center justify-between print:hidden">
         <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
         <span className="text-muted-foreground/40">{icon}</span>
       </div>
-      <p className="text-3xl font-bold tabular-nums text-foreground leading-none">
+      <p className="hidden print:block text-[8px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+      <p className="text-3xl font-bold tabular-nums text-foreground leading-none print:text-lg print:leading-tight">
         {value}
         {unit && value !== "—" && (
-          <span className="text-base font-normal text-muted-foreground ml-1.5">{unit}</span>
+          <span className="text-base font-normal text-muted-foreground ml-1.5 print:text-[9px] print:ml-0.5">{unit}</span>
         )}
       </p>
     </div>
@@ -69,9 +70,9 @@ function MetricCard({ label, value, unit, icon }: {
 function MeasureRow({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
-      <p className="text-[15px] text-muted-foreground">{label}</p>
-      <p className="text-[15px] font-semibold text-foreground tabular-nums">{value}</p>
+    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0 print:py-[3px]">
+      <p className="text-[15px] text-muted-foreground print:text-[10px]">{label}</p>
+      <p className="text-[15px] font-semibold text-foreground tabular-nums print:text-[10px]">{value}</p>
     </div>
   );
 }
@@ -82,18 +83,18 @@ function BilateralRow({ label, right, left }: { label: string; right?: number; l
   const diff = right != null && left != null ? Math.abs(right - left).toFixed(1) : null;
   const hasDiff = diff && parseFloat(diff) > 0;
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0">
-      <p className="text-[15px] text-muted-foreground flex-1">{label}</p>
-      <div className="flex items-center gap-3">
-        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-right">
+    <div className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0 print:py-[3px] print:gap-1.5">
+      <p className="text-[15px] text-muted-foreground flex-1 print:text-[10px]">{label}</p>
+      <div className="flex items-center gap-3 print:gap-1">
+        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-right print:text-[10px] print:w-9">
           {right != null ? `${right} cm` : "—"}
         </span>
         <span className="text-xs text-muted-foreground/40 font-medium">·</span>
-        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-left">
+        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-left print:text-[10px] print:w-9">
           {left != null ? `${left} cm` : "—"}
         </span>
         {hasDiff && (
-          <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full tabular-nums w-14 text-center">
+          <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full tabular-nums w-14 text-center print:text-[8px] print:px-1 print:w-10">
             Δ {diff}
           </span>
         )}
@@ -108,10 +109,10 @@ function SectionCard({ title, children, className }: {
 }) {
   return (
     <div className={cn("rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden", className)}>
-      <div className="px-5 py-4 border-b border-border/60">
-        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <div className="px-5 py-4 border-b border-border/60 print:px-3 print:py-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground print:text-[8px]">{title}</p>
       </div>
-      <div className="px-5 py-1">{children}</div>
+      <div className="px-5 py-1 print:px-2">{children}</div>
     </div>
   );
 }
@@ -176,22 +177,22 @@ export default function AdminRelatorioAntropometrico() {
                        m.calf_r, m.calf_l].some(v => v != null);
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-6 space-y-6 print:min-h-0 print:p-0 print:space-y-2">
 
       {/* ── Cabeçalho apenas para impressão ────────────────────────────────── */}
-      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-800">
-        <div className="flex items-start justify-between">
+      <div className="hidden print:block pb-2 mb-1 border-b-2 border-gray-800">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">Relatório Clínico</p>
-            <h1 className="text-2xl font-bold text-gray-900">Avaliação Antropométrica</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-gray-500 mb-0.5">Relatório Clínico</p>
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">Avaliação Antropométrica</h1>
+            <p className="text-[10px] text-gray-600 mt-0.5">
               {patient.name} · {m.assessment_date ? formatDate(m.assessment_date) : "—"}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-bold text-gray-800">Dr. Fillipe David</p>
-            <p className="text-xs text-gray-500 mt-0.5">Nutricionista Clínico e Esportivo</p>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-[11px] font-bold text-gray-800">Dr. Fillipe David</p>
+            <p className="text-[9px] text-gray-500 mt-0.5">Nutricionista Clínico e Esportivo</p>
+            <p className="text-[9px] text-gray-400 mt-1">
               Emitido em {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
             </p>
           </div>
@@ -224,22 +225,22 @@ export default function AdminRelatorioAntropometrico() {
       </div>
 
       {/* ── Paciente ────────────────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-4">
-        <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
+      <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-4 print:p-2 print:gap-2">
+        <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0 print:w-7 print:h-7 print:text-[10px]">
           {patient.name ? initials(patient.name) : <User size={18} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-lg font-semibold text-foreground truncate">{patient.name || "—"}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-            {patient.email     && <span className="text-sm text-muted-foreground">{patient.email}</span>}
-            {patient.phone     && <span className="text-sm text-muted-foreground">{patient.phone}</span>}
-            {patient.city      && <span className="text-sm text-muted-foreground">{patient.city}</span>}
-            {patient.birth_date && <span className="text-sm text-muted-foreground">{calcAge(patient.birth_date)} anos</span>}
+          <p className="text-lg font-semibold text-foreground truncate print:text-sm">{patient.name || "—"}</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 print:gap-x-3">
+            {patient.email     && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.email}</span>}
+            {patient.phone     && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.phone}</span>}
+            {patient.city      && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.city}</span>}
+            {patient.birth_date && <span className="text-sm text-muted-foreground print:text-[9px]">{calcAge(patient.birth_date)} anos</span>}
           </div>
         </div>
-        <div className="shrink-0 text-right hidden sm:block">
-          <p className="text-sm text-muted-foreground">Data da avaliação</p>
-          <p className="text-[15px] font-semibold text-foreground mt-0.5">
+        <div className="shrink-0 text-right hidden sm:block print:block">
+          <p className="text-sm text-muted-foreground print:text-[9px]">Data da avaliação</p>
+          <p className="text-[15px] font-semibold text-foreground mt-0.5 print:text-[11px]">
             {m.assessment_date ? formatDate(m.assessment_date) : "—"}
           </p>
         </div>
@@ -247,31 +248,31 @@ export default function AdminRelatorioAntropometrico() {
 
       {/* ── IMC destaque ────────────────────────────────────────────────────── */}
       {bmi && bmiInfo && (
-        <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-5">
+        <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-5 print:p-2 print:gap-3">
           <div className="shrink-0">
-            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 print:text-[8px] print:mb-0.5">
               Índice de Massa Corporal
             </p>
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold tabular-nums text-foreground">{bmi}</span>
-              <span className="text-base text-muted-foreground">kg/m²</span>
+              <span className="text-5xl font-bold tabular-nums text-foreground print:text-2xl">{bmi}</span>
+              <span className="text-base text-muted-foreground print:text-[9px]">kg/m²</span>
             </div>
           </div>
           <div className="w-px h-10 bg-border shrink-0" />
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 print:mb-0">
               <span className={cn("w-2 h-2 rounded-full shrink-0", bmiInfo.dot)} />
-              <span className={cn("text-sm font-semibold px-3 py-1 rounded-full border", bmiInfo.badge)}>
+              <span className={cn("text-sm font-semibold px-3 py-1 rounded-full border print:text-[9px] print:px-2 print:py-0.5", bmiInfo.badge)}>
                 {bmiInfo.label}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">Calculado com base no peso e altura registrados.</p>
+            <p className="text-sm text-muted-foreground print:hidden">Calculado com base no peso e altura registrados.</p>
           </div>
         </div>
       )}
 
       {/* ── Métricas de composição ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 print:grid-cols-5 print:gap-1.5">
         <MetricCard label="Peso"             value={m.weight       != null ? String(m.weight)       : "—"} unit="kg" icon={<Scale size={15} />}   />
         <MetricCard label="Altura"           value={m.height       != null ? String(m.height)       : "—"} unit="cm" icon={<Ruler size={15} />}   />
         <MetricCard label="Gordura Corporal" value={m.body_fat     != null ? String(m.body_fat)     : "—"} unit="%"  icon={<Percent size={15} />} />
@@ -279,68 +280,81 @@ export default function AdminRelatorioAntropometrico() {
         <MetricCard label="Gordura Visceral" value={m.visceral_fat != null ? String(m.visceral_fat) : "—"} icon={<Heart size={15} />}             />
       </div>
 
-      {/* ── Medidas corporais ────────────────────────────────────────────────── */}
-      {hasTronco && (
-        <SectionCard title="Tronco">
-          <MeasureRow label="Pescoço"  value={fmt(m.neck)}     />
-          <MeasureRow label="Ombro"    value={fmt(m.shoulder)} />
-          <MeasureRow label="Peitoral" value={fmt(m.chest)}    />
-          <MeasureRow label="Cintura"  value={fmt(m.waist)}    />
-          <MeasureRow label="Abdômen"  value={fmt(m.abdomen)}  />
-          <MeasureRow label="Quadril"  value={fmt(m.hip)}      />
-        </SectionCard>
-      )}
+      {/* ── Medidas corporais: em print ficam lado a lado em 3 colunas ───────── */}
+      <div className="space-y-4 print:space-y-0 print:flex print:flex-row print:gap-2">
 
-      {/* ── Simetria: membros superiores e inferiores ────────────────────────── */}
-      {(hasSuperior || hasInferior) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {hasTronco && (
+          <SectionCard title="Tronco" className="print:flex-1">
+            <MeasureRow label="Pescoço"  value={fmt(m.neck)}     />
+            <MeasureRow label="Ombro"    value={fmt(m.shoulder)} />
+            <MeasureRow label="Peitoral" value={fmt(m.chest)}    />
+            <MeasureRow label="Cintura"  value={fmt(m.waist)}    />
+            <MeasureRow label="Abdômen"  value={fmt(m.abdomen)}  />
+            <MeasureRow label="Quadril"  value={fmt(m.hip)}      />
+          </SectionCard>
+        )}
 
-          {hasSuperior && (
-            <SectionCard title="Membros Superiores">
-              {/* legenda D / E */}
-              <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5">
-                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                  <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
-                </span>
-                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
-                </span>
-              </div>
-              <BilateralRow label="Braço Relaxado"   right={m.arm_relax_r}    left={m.arm_relax_l}    />
-              <BilateralRow label="Braço Contraído"  right={m.arm_contract_r} left={m.arm_contract_l} />
-              <BilateralRow label="Antebraço"        right={m.forearm_r}      left={m.forearm_l}      />
-              <BilateralRow label="Punho"            right={m.wrist_r}        left={m.wrist_l}        />
-            </SectionCard>
-          )}
+        {(hasSuperior || hasInferior) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:contents">
 
-          {hasInferior && (
-            <SectionCard title="Membros Inferiores">
-              <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5">
-                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                  <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
-                </span>
-                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
-                </span>
-              </div>
-              <BilateralRow label="Coxa Proximal" right={m.thigh_prox_r} left={m.thigh_prox_l} />
-              <BilateralRow label="Coxa Medial"   right={m.thigh_r}      left={m.thigh_l}      />
-              <BilateralRow label="Panturrilha"   right={m.calf_r}       left={m.calf_l}       />
-            </SectionCard>
-          )}
-        </div>
-      )}
+            {hasSuperior && (
+              <SectionCard title="Membros Superiores" className="print:flex-1">
+                {/* legenda D / E */}
+                <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5 print:hidden">
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                    <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
+                  </span>
+                </div>
+                {/* legenda compacta apenas no print */}
+                <div className="hidden print:flex items-center justify-end gap-2 pb-1 pt-0.5 border-b border-border/50 mb-0.5">
+                  <span className="text-[8px] text-gray-500 font-semibold">D</span>
+                  <span className="text-[8px] text-gray-400">·</span>
+                  <span className="text-[8px] text-gray-500 font-semibold">E</span>
+                </div>
+                <BilateralRow label="Braço Relaxado"   right={m.arm_relax_r}    left={m.arm_relax_l}    />
+                <BilateralRow label="Braço Contraído"  right={m.arm_contract_r} left={m.arm_contract_l} />
+                <BilateralRow label="Antebraço"        right={m.forearm_r}      left={m.forearm_l}      />
+                <BilateralRow label="Punho"            right={m.wrist_r}        left={m.wrist_l}        />
+              </SectionCard>
+            )}
+
+            {hasInferior && (
+              <SectionCard title="Membros Inferiores" className="print:flex-1">
+                <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5 print:hidden">
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                    <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
+                  </span>
+                </div>
+                <div className="hidden print:flex items-center justify-end gap-2 pb-1 pt-0.5 border-b border-border/50 mb-0.5">
+                  <span className="text-[8px] text-gray-500 font-semibold">D</span>
+                  <span className="text-[8px] text-gray-400">·</span>
+                  <span className="text-[8px] text-gray-500 font-semibold">E</span>
+                </div>
+                <BilateralRow label="Coxa Proximal" right={m.thigh_prox_r} left={m.thigh_prox_l} />
+                <BilateralRow label="Coxa Medial"   right={m.thigh_r}      left={m.thigh_l}      />
+                <BilateralRow label="Panturrilha"   right={m.calf_r}       left={m.calf_l}       />
+              </SectionCard>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Observações ──────────────────────────────────────────────────────── */}
       {m.notes && (
         <SectionCard title="Observações">
-          <p className="py-3 text-sm text-foreground/80 leading-relaxed">{m.notes}</p>
+          <p className="py-3 text-sm text-foreground/80 leading-relaxed print:py-1 print:text-[10px]">{m.notes}</p>
         </SectionCard>
       )}
 
-      {/* ── Histórico ───────────────────────────────────────────────────────── */}
+      {/* ── Histórico (apenas em tela) ───────────────────────────────────────── */}
       {measurements.length > 1 && (
-        <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden">
+        <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden print:hidden">
           <div className="px-5 py-3.5 border-b border-border/60 flex items-center justify-between">
             <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
               Histórico de Avaliações

@@ -126,7 +126,7 @@
   /* Page setup */
   @page {
     size: A4 portrait;
-    margin: 16mm 18mm;
+    margin: 10mm 12mm;
   }
 
   body {
