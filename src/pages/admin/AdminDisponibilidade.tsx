@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
 import { Calendar, Loader2, Globe, MapPin, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { fetchSlotsByMonth, fetchSlotsByDate, addAvailabilitySlot, deleteAvailabilitySlot, type AvailabilitySlot } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const DAYS_PT = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-const HOURS = ["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+const DAYS_PT   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const HOURS     = ["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+
+const CITIES = [
+  "Alagoinhas",
+  "Feira de Santana",
+  "Salvador",
+  "Crisópolis",
+  "Olindina",
+  "Aporá",
+  "Acajutiba",
+  "Esplanada",
+] as const;
+
+type City = typeof CITIES[number];
 
 function toLocalISO(date: Date) {
   const y = date.getFullYear();
@@ -17,23 +30,21 @@ function toLocalISO(date: Date) {
 
 const AdminDisponibilidade = () => {
   const today = new Date();
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [activeType, setActiveType] = useState<"online" | "presencial">("online");
+  const [calYear,       setCalYear]       = useState(today.getFullYear());
+  const [calMonth,      setCalMonth]      = useState(today.getMonth());
+  const [selectedDate,  setSelectedDate]  = useState<string | null>(null);
+  const [activeType,    setActiveType]    = useState<"online" | "presencial">("online");
+  const [selectedCity,  setSelectedCity]  = useState<City>("Alagoinhas");
 
-  // Slots for entire month (to mark calendar dots)
-  const [monthSlots, setMonthSlots] = useState<AvailabilitySlot[]>([]);
-  const [loadingMonth, setLoadingMonth] = useState(false);
-
-  // Slots for selected date + type
-  const [dateSlots, setDateSlots] = useState<AvailabilitySlot[]>([]);
-  const [loadingDate, setLoadingDate] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [monthSlots,    setMonthSlots]    = useState<AvailabilitySlot[]>([]);
+  const [loadingMonth,  setLoadingMonth]  = useState(false);
+  const [dateSlots,     setDateSlots]     = useState<AvailabilitySlot[]>([]);
+  const [loadingDate,   setLoadingDate]   = useState(false);
+  const [adding,        setAdding]        = useState(false);
+  const [deleting,      setDeleting]      = useState<number | null>(null);
 
   useEffect(() => { loadMonth(); }, [calYear, calMonth]);
-  useEffect(() => { if (selectedDate) loadDateSlots(); }, [selectedDate, activeType]);
+  useEffect(() => { if (selectedDate) loadDateSlots(); }, [selectedDate, activeType, selectedCity]);
 
   const loadMonth = async () => {
     setLoadingMonth(true);
@@ -45,17 +56,26 @@ const AdminDisponibilidade = () => {
   const loadDateSlots = async () => {
     if (!selectedDate) return;
     setLoadingDate(true);
-    const data = await fetchSlotsByDate(selectedDate, activeType);
+    const data = await fetchSlotsByDate(
+      selectedDate,
+      activeType,
+      activeType === "presencial" ? selectedCity : undefined,
+    );
     setDateSlots(data);
     setLoadingDate(false);
   };
 
   const handleAddSlot = async (time: string) => {
     if (!selectedDate) return;
-    // Check if already exists
     if (dateSlots.some(s => s.start_time === time)) return;
     setAdding(true);
-    const ok = await addAvailabilitySlot({ date: selectedDate, start_time: time, type: activeType, active: true });
+    const ok = await addAvailabilitySlot({
+      date:       selectedDate,
+      start_time: time,
+      type:       activeType,
+      city:       activeType === "presencial" ? selectedCity : undefined,
+      active:     true,
+    });
     if (ok) {
       toast({ title: "Horário adicionado!" });
       await loadDateSlots();
@@ -79,9 +99,10 @@ const AdminDisponibilidade = () => {
     setDeleting(null);
   };
 
-  // Calendar grid
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  // Calendar helpers
+  const firstDay     = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth  = new Date(calYear, calMonth + 1, 0).getDate();
+  const todayISO     = toLocalISO(today);
 
   const prevMonth = () => {
     if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
@@ -92,24 +113,24 @@ const AdminDisponibilidade = () => {
     else setCalMonth(m => m + 1);
   };
 
-  // Which dates in the month have slots (any type)
-  const datesWithSlots = new Set(monthSlots.map(s => s.date));
-  // Which dates have slots for the active type
-  const datesWithTypeSlots = new Set(monthSlots.filter(s => s.type === activeType).map(s => s.date));
+  const datesWithSlots     = new Set(monthSlots.map(s => s.date));
+  const datesWithTypeSlots = new Set(
+    monthSlots
+      .filter(s => s.type === activeType && (activeType === "online" || s.city === selectedCity))
+      .map(s => s.date)
+  );
 
-  const todayISO = toLocalISO(today);
-
-  // Already-added times for the selected date/type
   const addedTimes = new Set(dateSlots.map(s => s.start_time));
 
   const selectedDateObj = selectedDate ? new Date(selectedDate + "T12:00:00") : null;
-  const selectedLabel = selectedDateObj
+  const selectedLabel   = selectedDateObj
     ? selectedDateObj.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
     : null;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
           <Calendar className="h-5 w-5 text-primary" />
@@ -120,20 +141,21 @@ const AdminDisponibilidade = () => {
         </div>
       </div>
 
-      {/* Type tabs */}
+      {/* ── Type tabs ── */}
       <div className="flex gap-2">
         {([
-          { id: "online" as const, label: "Online", icon: Globe },
-          { id: "presencial" as const, label: "Presencial", icon: MapPin },
+          { id: "online"     as const, label: "Online",     icon: Globe   },
+          { id: "presencial" as const, label: "Presencial", icon: MapPin  },
         ]).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveType(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border",
               activeType === id
                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
                 : "bg-card border-border text-muted-foreground hover:text-foreground"
-            }`}
+            )}
           >
             <Icon className="h-4 w-4" />
             {label}
@@ -141,7 +163,34 @@ const AdminDisponibilidade = () => {
         ))}
       </div>
 
+      {/* ── City selector (presencial only) ── */}
+      {activeType === "presencial" && (
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <p className="text-sm font-semibold text-foreground">Cidade de atendimento</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CITIES.map(city => (
+              <button
+                key={city}
+                onClick={() => setSelectedCity(city)}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
+                  selectedCity === city
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                )}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6 items-start">
+
         {/* ── Calendar ── */}
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-5">
@@ -157,31 +206,30 @@ const AdminDisponibilidade = () => {
             </button>
           </div>
 
-          {/* Day headers */}
           <div className="grid grid-cols-7 mb-2">
             {DAYS_PT.map(d => (
               <div key={d} className="text-center text-xs text-muted-foreground font-medium py-1">{d}</div>
             ))}
           </div>
 
-          {/* Day cells */}
           <div className="grid grid-cols-7 gap-1">
             {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
             {Array(daysInMonth).fill(null).map((_, i) => {
-              const day = i + 1;
+              const day     = i + 1;
               const dateISO = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const isPast = dateISO < todayISO;
-              const isSelected = selectedDate === dateISO;
-              const hasAny = datesWithSlots.has(dateISO);
-              const hasType = datesWithTypeSlots.has(dateISO);
-              const isToday = dateISO === todayISO;
+              const isPast      = dateISO < todayISO;
+              const isSelected  = selectedDate === dateISO;
+              const hasAny      = datesWithSlots.has(dateISO);
+              const hasType     = datesWithTypeSlots.has(dateISO);
+              const isToday     = dateISO === todayISO;
 
               return (
                 <button
                   key={day}
                   disabled={isPast}
                   onClick={() => setSelectedDate(dateISO)}
-                  className={`relative flex flex-col items-center justify-center h-10 w-full rounded-xl text-xs font-medium transition-all ${
+                  className={cn(
+                    "relative flex flex-col items-center justify-center h-10 w-full rounded-xl text-xs font-medium transition-all",
                     isPast
                       ? "text-muted-foreground/30 cursor-not-allowed"
                       : isSelected
@@ -189,13 +237,14 @@ const AdminDisponibilidade = () => {
                       : isToday
                       ? "bg-primary/10 text-primary font-bold"
                       : "hover:bg-muted text-foreground"
-                  }`}
+                  )}
                 >
                   {day}
                   {!isPast && hasAny && (
-                    <span className={`absolute bottom-1 w-1 h-1 rounded-full ${
+                    <span className={cn(
+                      "absolute bottom-1 w-1 h-1 rounded-full",
                       isSelected ? "bg-primary-foreground" : hasType ? "bg-primary" : "bg-muted-foreground/40"
-                    }`} />
+                    )} />
                   )}
                 </button>
               );
@@ -203,7 +252,11 @@ const AdminDisponibilidade = () => {
           </div>
 
           <p className="text-xs text-muted-foreground mt-4">
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" /> horários disponíveis</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+              horários disponíveis
+              {activeType === "presencial" && <span className="font-medium text-foreground/70"> · {selectedCity}</span>}
+            </span>
           </p>
         </div>
 
@@ -218,7 +271,12 @@ const AdminDisponibilidade = () => {
             <div className="space-y-4">
               <div>
                 <p className="font-semibold text-sm text-foreground capitalize">{selectedLabel}</p>
-                <p className="text-xs text-muted-foreground">{activeType === "online" ? "Atendimento online" : "Atendimento presencial"}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  {activeType === "online"
+                    ? <><Globe className="h-3 w-3" /> Atendimento online</>
+                    : <><MapPin className="h-3 w-3" /> Presencial · <span className="font-medium text-primary">{selectedCity}</span></>
+                  }
+                </p>
               </div>
 
               {/* Existing slots */}
@@ -252,7 +310,8 @@ const AdminDisponibilidade = () => {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3">
-                  Nenhum horário configurado para este dia.
+                  Nenhum horário configurado para este dia
+                  {activeType === "presencial" && <> em <span className="font-medium text-foreground">{selectedCity}</span></>}.
                 </p>
               )}
 

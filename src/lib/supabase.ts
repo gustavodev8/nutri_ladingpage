@@ -510,6 +510,7 @@ export interface AvailabilitySlot {
   date: string;        // ISO "2025-04-10"
   start_time: string;  // "09:00"
   type: 'online' | 'presencial';
+  city?: string;       // only for presencial slots
   active: boolean;
 }
 
@@ -560,15 +561,16 @@ export async function fetchSlotsByMonth(year: number, month: number): Promise<Av
   return data || [];
 }
 
-/** Fetch slots for a specific date and type */
-export async function fetchSlotsByDate(date: string, type: string): Promise<AvailabilitySlot[]> {
-  const { data, error } = await supabase
+/** Fetch slots for a specific date, type and (for presencial) city */
+export async function fetchSlotsByDate(date: string, type: string, city?: string): Promise<AvailabilitySlot[]> {
+  let query = supabase
     .from('availability_slots')
     .select('*')
     .eq('date', date)
     .eq('type', type)
-    .eq('active', true)
-    .order('start_time');
+    .eq('active', true);
+  if (type === 'presencial' && city) query = query.eq('city', city);
+  const { data, error } = await query.order('start_time');
   if (error) { console.error(error); return []; }
   return data || [];
 }
