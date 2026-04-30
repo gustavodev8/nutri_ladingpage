@@ -178,8 +178,28 @@ export default function AdminRelatorioAntropometrico() {
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
+      {/* ── Cabeçalho apenas para impressão ────────────────────────────────── */}
+      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-800">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">Relatório Clínico</p>
+            <h1 className="text-2xl font-bold text-gray-900">Avaliação Antropométrica</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {patient.name} · {m.assessment_date ? formatDate(m.assessment_date) : "—"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-gray-800">Dr. Fillipe David</p>
+            <p className="text-xs text-gray-500 mt-0.5">Nutricionista Clínico e Esportivo</p>
+            <p className="text-xs text-gray-400 mt-2">
+              Emitido em {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Header (tela) ───────────────────────────────────────────────────── */}
+      <div className="print-hide flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             to={`/admin/pacientes/${id}?tab=antropometria`}
@@ -196,7 +216,7 @@ export default function AdminRelatorioAntropometrico() {
         </div>
         <button
           onClick={() => window.print()}
-          className="group relative inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-semibold shadow-sm hover:bg-foreground/90 active:scale-[0.98] transition-all duration-150 shrink-0 print:hidden"
+          className="group relative inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-semibold shadow-sm hover:bg-foreground/90 active:scale-[0.98] transition-all duration-150 shrink-0"
         >
           <FileDown size={16} className="transition-transform group-hover:-translate-y-0.5 duration-150" />
           Exportar PDF
