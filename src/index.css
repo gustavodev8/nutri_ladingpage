@@ -102,3 +102,53 @@
     font-family: 'Playfair Display', serif;
   }
 }
+
+/* ─── Print styles ──────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide all admin chrome */
+  aside,
+  header,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Full width content — remove sidebar margin */
+  .lg\:ml-64 {
+    margin-left: 0 !important;
+  }
+
+  /* Remove main content padding */
+  main {
+    padding: 0 !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 16mm 18mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Cards become flat bordered boxes */
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  /* Avoid page breaks inside cards */
+  .rounded-lg {
+    border-radius: 4px !important;
+  }
+
+  /* Keep borders visible */
+  * {
+    border-color: #e2e2e2 !important;
+  }
+}

@@ -169,7 +169,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-40 flex flex-col transition-transform duration-300",
+          "print-hide fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-40 flex flex-col transition-transform duration-300",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
@@ -247,7 +247,7 @@ const AdminLayout = () => {
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end gap-3">
+        <header className="print-hide sticky top-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted transition-colors"
@@ -275,7 +275,7 @@ const AdminLayout = () => {
       </div>
 
       {/* ── Mobile Bottom Navigation Bar ──────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border"
+      <nav className="print-hide lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex items-stretch h-[58px]">
           {/* Dashboard */}
