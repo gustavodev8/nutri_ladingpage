@@ -331,7 +331,7 @@ export default function AdminPacientes() {
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 w-full">
+      <div className="flex flex-col sm:flex-row gap-3 w-full mt-8 mb-2">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
