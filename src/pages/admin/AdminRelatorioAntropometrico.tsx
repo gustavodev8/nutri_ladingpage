@@ -123,6 +123,7 @@ export default function AdminRelatorioAntropometrico() {
   const [loading, setLoading]           = useState(true);
   const [patient, setPatient]           = useState<Patient | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [selectedIdx, setSelectedIdx]   = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -163,7 +164,7 @@ export default function AdminRelatorioAntropometrico() {
     );
   }
 
-  const m       = measurements[0];
+  const m       = measurements[selectedIdx] ?? measurements[0];
   const bmi     = calcBMI(m.weight, m.height);
   const bmiInfo = bmi ? bmiStatus(parseFloat(bmi)) : null;
 
@@ -338,25 +339,37 @@ export default function AdminRelatorioAntropometrico() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 {measurements.map((row, idx) => {
-                  const mb       = calcBMI(row.weight, row.height);
-                  const isLatest = idx === 0;
+                  const mb         = calcBMI(row.weight, row.height);
+                  const isSelected = idx === selectedIdx;
                   return (
-                    <tr key={row.id ?? idx} className={cn(
-                      isLatest ? "bg-primary/[0.025]" : "hover:bg-muted/30 transition-colors"
-                    )}>
-                      <td className="px-5 py-3 font-medium text-foreground">
+                    <tr
+                      key={row.id ?? idx}
+                      onClick={() => setSelectedIdx(idx)}
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        isSelected
+                          ? "bg-primary/[0.06] hover:bg-primary/[0.08]"
+                          : "hover:bg-muted/40"
+                      )}
+                    >
+                      <td className="px-5 py-3.5 font-medium text-foreground">
                         <div className="flex items-center gap-2">
                           {row.assessment_date ? formatDate(row.assessment_date) : "—"}
-                          {isLatest && (
+                          {isSelected && (
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                              Atual
+                              Exibindo
+                            </span>
+                          )}
+                          {idx === 0 && !isSelected && (
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              Recente
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.weight  != null ? `${row.weight} kg`  : "—"}</td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.height != null ? `${row.height} cm` : "—"}</td>
-                      <td className="px-5 py-3 tabular-nums">
+                      <td className="px-5 py-3.5 tabular-nums">{row.weight   != null ? `${row.weight} kg`   : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">{row.height   != null ? `${row.height} cm`   : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">
                         {mb ? (
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{mb}</span>
@@ -366,8 +379,8 @@ export default function AdminRelatorioAntropometrico() {
                           </div>
                         ) : "—"}
                       </td>
-                      <td className="px-5 py-3 tabular-nums">{row.body_fat  != null ? `${row.body_fat}%`  : "—"}</td>
-                      <td className="px-5 py-3 tabular-nums">{row.lean_mass != null ? `${row.lean_mass} kg` : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">{row.body_fat  != null ? `${row.body_fat}%`  : "—"}</td>
+                      <td className="px-5 py-3.5 tabular-nums">{row.lean_mass != null ? `${row.lean_mass} kg` : "—"}</td>
                     </tr>
                   );
                 })}
