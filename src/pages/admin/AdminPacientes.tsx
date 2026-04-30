@@ -1,5 +1,6 @@
 import {
   Users, Plus, Search, Trash2, ChevronRight, UserCircle2, Loader2, MapPin,
+  TrendingUp, CalendarDays, BarChart2, Building2, AlertCircle, SlidersHorizontal, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,22 +14,24 @@ import { cn } from "@/lib/utils";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type GenderFilter = "all" | "M" | "F" | "outro";
-type SortKey      = "recent" | "oldest" | "name";
+type SortKey      = "recent" | "oldest" | "name" | "age_asc" | "age_desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const GENDER_LABEL: Record<string, string> = { M: "Masculino", F: "Feminino", outro: "Outro" };
 
 const SORT_OPTIONS: { id: SortKey; label: string }[] = [
-  { id: "recent", label: "Mais recente" },
-  { id: "oldest", label: "Mais antigo"  },
-  { id: "name",   label: "Nome A–Z"     },
+  { id: "recent",   label: "Mais recente"   },
+  { id: "oldest",   label: "Mais antigo"    },
+  { id: "name",     label: "Nome A–Z"       },
+  { id: "age_asc",  label: "Mais jovem"     },
+  { id: "age_desc", label: "Mais velho"     },
 ];
 
 const initials = (name: string) =>
   name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 
-const age = (d: string) =>
+const calcAge = (d: string) =>
   Math.floor((Date.now() - new Date(d).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
 
 const formatDate = (d: string) =>
@@ -45,20 +48,63 @@ const emptyForm: NewPatientForm = {
   name: "", email: "", phone: "", city: "", birth_date: "", gender: "", occupation: "",
 };
 
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent?: boolean;
+  warn?: boolean;
+}
+
+function StatCard({ icon, label, value, sub, accent, warn }: StatCardProps) {
+  return (
+    <div className={cn(
+      "flex flex-col gap-3 rounded-2xl border bg-card px-5 py-5 shadow-sm transition-all hover:shadow-md",
+      accent && "border-primary/30 bg-primary/5",
+      warn   && "border-amber-400/40 bg-amber-50/60 dark:bg-amber-950/20"
+    )}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
+        <span className={cn(
+          "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
+          accent ? "bg-primary/15 text-primary" : warn ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" : "bg-muted text-muted-foreground"
+        )}>
+          {icon}
+        </span>
+      </div>
+      <div>
+        <p className="text-2xl font-black tabular-nums text-foreground leading-none">{value}</p>
+        {sub && <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminPacientes() {
   const navigate = useNavigate();
 
-  const [patients,   setPatients]   = useState<Patient[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState("");
-  const [gender,     setGender]     = useState<GenderFilter>("all");
-  const [sort,       setSort]       = useState<SortKey>("recent");
-  const [showModal,  setShowModal]  = useState(false);
-  const [form,       setForm]       = useState<NewPatientForm>(emptyForm);
-  const [saving,     setSaving]     = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [patients,      setPatients]      = useState<Patient[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [search,        setSearch]        = useState("");
+  const [gender,        setGender]        = useState<GenderFilter>("all");
+  const [sort,          setSort]          = useState<SortKey>("recent");
+  const [showModal,     setShowModal]     = useState(false);
+  const [form,          setForm]          = useState<NewPatientForm>(emptyForm);
+  const [saving,        setSaving]        = useState(false);
+  const [deletingId,    setDeletingId]    = useState<number | null>(null);
+  const [showAdvanced,  setShowAdvanced]  = useState(false);
+
+  // Advanced filters
+  const [cityFilter,  setCityFilter]  = useState("");
+  const [ageMin,      setAgeMin]      = useState("");
+  const [ageMax,      setAgeMax]      = useState("");
+  const [dateFrom,    setDateFrom]    = useState("");
+  const [dateTo,      setDateTo]      = useState("");
 
   const loadPatients = async () => {
     setLoading(true);
@@ -69,6 +115,53 @@ export default function AdminPacientes() {
 
   useEffect(() => { loadPatients(); }, []);
 
+  // ── Derived stats ────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const now = new Date();
+    const ym  = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+    const thisMonth = ym(now);
+    const lastMonth = ym(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+
+    const newThisMonth = patients.filter((p) => p.created_at?.slice(0, 7) === thisMonth).length;
+    const newLastMonth = patients.filter((p) => p.created_at?.slice(0, 7) === lastMonth).length;
+
+    const ages = patients
+      .filter((p) => p.birth_date)
+      .map((p) => calcAge(p.birth_date!));
+    const avgAge = ages.length
+      ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length)
+      : null;
+
+    const uniqueCities = new Set(
+      patients.filter((p) => p.city?.trim()).map((p) => p.city!.trim().toLowerCase())
+    ).size;
+
+    const incomplete = patients.filter((p) => !p.email || !p.birth_date).length;
+
+    const female = patients.filter((p) => p.gender === "F").length;
+    const male   = patients.filter((p) => p.gender === "M").length;
+    const femaleRatio = patients.length ? Math.round((female / patients.length) * 100) : 0;
+
+    let monthDelta = "";
+    if (newLastMonth > 0) {
+      const diff = newThisMonth - newLastMonth;
+      monthDelta = diff >= 0 ? `+${diff} vs mês anterior` : `${diff} vs mês anterior`;
+    } else if (newThisMonth > 0) {
+      monthDelta = "novo(s) cadastro(s)";
+    }
+
+    return { newThisMonth, monthDelta, avgAge, uniqueCities, incomplete, femaleRatio, female, male };
+  }, [patients]);
+
+  // ── Unique cities list for dropdown ─────────────────────────────────────────
+  const cityOptions = useMemo(() => {
+    const set = new Set<string>();
+    patients.forEach((p) => { if (p.city?.trim()) set.add(p.city.trim()); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [patients]);
+
+  // ── Gender counts (respects text search only) ────────────────────────────────
   const genderCounts = useMemo(() => {
     const q = search.toLowerCase();
     const base = q
@@ -82,18 +175,55 @@ export default function AdminPacientes() {
     };
   }, [patients, search]);
 
+  // ── Full filtered list ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    let list = patients.filter((p) =>
-      (!q || p.name?.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q)) &&
-      (gender === "all" || p.gender === gender)
-    );
-    if (sort === "name")   list = [...list].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
-    if (sort === "recent") list = [...list].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-    if (sort === "oldest") list = [...list].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
-    return list;
-  }, [patients, search, gender, sort]);
+    const q        = search.toLowerCase();
+    const ageMinN  = ageMin  ? parseInt(ageMin)  : null;
+    const ageMaxN  = ageMax  ? parseInt(ageMax)  : null;
 
+    let list = patients.filter((p) => {
+      if (q && !p.name?.toLowerCase().includes(q) && !p.email?.toLowerCase().includes(q)) return false;
+      if (gender !== "all" && p.gender !== gender) return false;
+      if (cityFilter && p.city?.trim().toLowerCase() !== cityFilter.trim().toLowerCase()) return false;
+      if (ageMinN !== null || ageMaxN !== null) {
+        if (!p.birth_date) return false;
+        const a = calcAge(p.birth_date);
+        if (ageMinN !== null && a < ageMinN) return false;
+        if (ageMaxN !== null && a > ageMaxN) return false;
+      }
+      if (dateFrom && p.created_at && p.created_at.slice(0, 10) < dateFrom) return false;
+      if (dateTo   && p.created_at && p.created_at.slice(0, 10) > dateTo)   return false;
+      return true;
+    });
+
+    if (sort === "name")     list = [...list].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+    if (sort === "recent")   list = [...list].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    if (sort === "oldest")   list = [...list].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+    if (sort === "age_asc")  list = [...list].sort((a, b) => {
+      const aa = a.birth_date ? calcAge(a.birth_date) : 0;
+      const ba = b.birth_date ? calcAge(b.birth_date) : 0;
+      return aa - ba;
+    });
+    if (sort === "age_desc") list = [...list].sort((a, b) => {
+      const aa = a.birth_date ? calcAge(a.birth_date) : 0;
+      const ba = b.birth_date ? calcAge(b.birth_date) : 0;
+      return ba - aa;
+    });
+
+    return list;
+  }, [patients, search, gender, cityFilter, ageMin, ageMax, dateFrom, dateTo, sort]);
+
+  const hasAdvancedFilter = cityFilter !== "" || ageMin !== "" || ageMax !== "" || dateFrom !== "" || dateTo !== "";
+  const hasFilter         = gender !== "all" || search.trim() !== "" || hasAdvancedFilter;
+
+  const clearAdvanced = () => {
+    setCityFilter(""); setAgeMin(""); setAgeMax(""); setDateFrom(""); setDateTo("");
+  };
+  const clearAll = () => {
+    setSearch(""); setGender("all"); clearAdvanced();
+  };
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (!window.confirm("Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.")) return;
@@ -129,9 +259,7 @@ export default function AdminPacientes() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const hasFilter = gender !== "all" || search.trim() !== "";
-
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background p-8 space-y-0">
 
@@ -147,27 +275,51 @@ export default function AdminPacientes() {
         </Button>
       </div>
 
-      {/* ── Stat strip ──────────────────────────────────────────────────────── */}
-      <div className="flex items-stretch gap-0 border border-border rounded-2xl overflow-hidden mb-8 shadow-sm">
-        {[
-          { label: "Total",     value: patients.length                                      },
-          { label: "Masculino", value: patients.filter((p) => p.gender === "M").length      },
-          { label: "Feminino",  value: patients.filter((p) => p.gender === "F").length      },
-          { label: "Outro",     value: patients.filter((p) => p.gender === "outro").length  },
-        ].map((s, i) => (
-          <div key={s.label} className={cn(
-            "flex-1 px-8 py-5 bg-card",
-            i > 0 && "border-l border-border"
-          )}>
-            <p className="text-2xl font-black tabular-nums text-foreground leading-none">{s.value}</p>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-1.5 opacity-70">{s.label}</p>
-          </div>
-        ))}
+      {/* ── Smart stats grid ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <StatCard
+          icon={<Users className="w-4 h-4" />}
+          label="Total de pacientes"
+          value={patients.length}
+          sub={patients.length === 1 ? "paciente cadastrado" : "pacientes cadastrados"}
+          accent
+        />
+        <StatCard
+          icon={<TrendingUp className="w-4 h-4" />}
+          label="Novos este mês"
+          value={stats.newThisMonth}
+          sub={stats.monthDelta || "nenhum novo cadastro"}
+        />
+        <StatCard
+          icon={<CalendarDays className="w-4 h-4" />}
+          label="Média de idade"
+          value={stats.avgAge !== null ? `${stats.avgAge} anos` : "—"}
+          sub={stats.avgAge !== null ? "dos pacientes com data de nascimento" : "sem dados suficientes"}
+        />
+        <StatCard
+          icon={<Building2 className="w-4 h-4" />}
+          label="Cidades atendidas"
+          value={stats.uniqueCities}
+          sub={stats.uniqueCities === 1 ? "cidade registrada" : "cidades diferentes"}
+        />
+        <StatCard
+          icon={<BarChart2 className="w-4 h-4" />}
+          label="Distribuição feminino"
+          value={patients.length ? `${stats.femaleRatio}% F` : "—"}
+          sub={patients.length ? `${stats.female} fem. · ${stats.male} masc.` : "sem dados"}
+        />
+        <StatCard
+          icon={<AlertCircle className="w-4 h-4" />}
+          label="Perfis incompletos"
+          value={stats.incomplete}
+          sub={stats.incomplete > 0 ? "sem e-mail ou data de nascimento" : "todos completos"}
+          warn={stats.incomplete > 0}
+        />
       </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-4 w-full py-6 mb-0">
-        <div className="relative flex-1 max-w-2xl">
+      <div className="flex flex-col sm:flex-row gap-3 w-full pt-2 pb-0">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
             placeholder="Buscar por nome ou e-mail..."
@@ -183,13 +335,111 @@ export default function AdminPacientes() {
         >
           {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
+        <button
+          onClick={() => setShowAdvanced((v) => !v)}
+          className={cn(
+            "h-11 px-4 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-all shrink-0",
+            showAdvanced || hasAdvancedFilter
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-input bg-card text-muted-foreground hover:text-foreground hover:bg-muted/40"
+          )}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          Filtros
+          {hasAdvancedFilter && (
+            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center">
+              {[cityFilter, ageMin || ageMax, dateFrom || dateTo].filter(Boolean).length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* ── Gender filter tabs (underline style) ────────────────────────────── */}
-      <div className="flex border-b border-border mt-6 mb-0 px-2">
+      {/* ── Advanced filters panel ──────────────────────────────────────────── */}
+      {showAdvanced && (
+        <div className="mt-3 p-5 rounded-2xl border border-border bg-muted/30 flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            {/* City */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Cidade</label>
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="flex h-10 w-full rounded-xl border border-input bg-card px-3 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Todas as cidades</option>
+                {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Age range */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Faixa etária</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="Mín"
+                  min={0}
+                  max={120}
+                  value={ageMin}
+                  onChange={(e) => setAgeMin(e.target.value)}
+                  className="h-10 rounded-xl border-border/60 text-sm"
+                />
+                <span className="text-muted-foreground text-xs font-bold shrink-0">até</span>
+                <Input
+                  type="number"
+                  placeholder="Máx"
+                  min={0}
+                  max={120}
+                  value={ageMax}
+                  onChange={(e) => setAgeMax(e.target.value)}
+                  className="h-10 rounded-xl border-border/60 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Date from */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Cadastrado de</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 rounded-xl border-border/60 text-sm"
+              />
+            </div>
+
+            {/* Date to */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Até</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 rounded-xl border-border/60 text-sm"
+              />
+            </div>
+          </div>
+
+          {hasAdvancedFilter && (
+            <div className="flex justify-end">
+              <button
+                onClick={clearAdvanced}
+                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Limpar filtros avançados
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Gender filter tabs ───────────────────────────────────────────────── */}
+      <div className="flex border-b border-border mt-5 mb-0 px-2">
         {(["all", "M", "F", "outro"] as GenderFilter[]).map((g) => {
-          const label = g === "all" ? "Todos" : GENDER_LABEL[g];
-          const count = genderCounts[g];
+          const label  = g === "all" ? "Todos" : GENDER_LABEL[g];
+          const count  = genderCounts[g];
           const active = gender === g;
           return (
             <button
@@ -212,6 +462,15 @@ export default function AdminPacientes() {
             </button>
           );
         })}
+        {hasFilter && (
+          <button
+            onClick={clearAll}
+            className="ml-auto flex items-center gap-1.5 px-4 py-3.5 text-xs font-bold text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Limpar tudo
+          </button>
+        )}
       </div>
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
@@ -228,12 +487,13 @@ export default function AdminPacientes() {
               {hasFilter ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado ainda"}
             </p>
             <p className="text-sm text-muted-foreground max-w-[300px] mx-auto">
-              {hasFilter ? "Tente ajustar a busca ou os filtros para encontrar o que procura." : "Adicione o primeiro paciente para começar a gerenciar sua clínica."}
+              {hasFilter
+                ? "Tente ajustar a busca ou os filtros para encontrar o que procura."
+                : "Adicione o primeiro paciente para começar a gerenciar sua clínica."}
             </p>
           </div>
           {hasFilter ? (
-            <Button variant="outline" className="rounded-xl mt-2 px-6"
-              onClick={() => { setSearch(""); setGender("all"); }}>
+            <Button variant="outline" className="rounded-xl mt-2 px-6" onClick={clearAll}>
               Limpar filtros
             </Button>
           ) : (
@@ -292,7 +552,7 @@ export default function AdminPacientes() {
               <div className="hidden sm:flex flex-col items-center justify-center text-center space-y-0.5">
                 <p className="text-sm text-foreground/70 font-semibold">{patient.gender ? GENDER_LABEL[patient.gender] : "—"}</p>
                 <p className="text-[11px] text-muted-foreground font-bold bg-muted px-2 py-0.5 rounded-full">
-                  {patient.birth_date ? `${age(patient.birth_date)} anos` : "—"}
+                  {patient.birth_date ? `${calcAge(patient.birth_date)} anos` : "—"}
                 </p>
               </div>
 
