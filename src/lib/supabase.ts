@@ -210,6 +210,7 @@ export interface Patient {
   gender?: "M" | "F" | "outro";
   occupation?: string;
   city?: string;
+  cpf?: string;
   notes?: string;
   created_at?: string;
 }
@@ -355,6 +356,26 @@ export async function upsertPatient(patient: Patient): Promise<Patient | null> {
 export async function deletePatient(id: number): Promise<boolean> {
   const { error } = await supabaseAdmin.from("patients").delete().eq("id", id);
   if (error) { console.error("[Supabase] deletePatient:", error.message); return false; }
+  return true;
+}
+
+/** Find a patient by CPF (digits-only or formatted). Returns null if not found. */
+export async function findPatientByCPF(cpf: string): Promise<Patient | null> {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return null;
+  const { data, error } = await supabase.from("patients").select("*").eq("cpf", digits).maybeSingle();
+  if (error) { console.error("[Supabase] findPatientByCPF:", error.message); return null; }
+  return data ?? null;
+}
+
+/** Link all bookings in a group to an existing patient and store CPF on them. */
+export async function linkBookingGroupToPatient(bookingGroupId: string, patientId: number, cpf: string): Promise<boolean> {
+  const digits = cpf.replace(/\D/g, "");
+  const { error } = await supabaseAdmin
+    .from("bookings")
+    .update({ patient_id: patientId, client_cpf: digits })
+    .eq("booking_group_id", bookingGroupId);
+  if (error) { console.error("[Supabase] linkBookingGroupToPatient:", error.message); return false; }
   return true;
 }
 
@@ -523,6 +544,8 @@ export interface Booking {
   client_name: string;
   client_email: string;
   client_phone: string;
+  client_cpf?: string;
+  patient_id?: number;
   plan_name: string;
   plan_index: number;
   appointment_date: string;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link, Navigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User,
+  ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User, CreditCard,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
   Copy, Check, X, QrCode, CreditCard, MessageCircle, Camera, Trash2
 } from "lucide-react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
-import { fetchAvailabilitySlots, fetchBookingsForDate, insertBooking, confirmBookingsByGroupId, type Booking } from "@/lib/supabase";
+import { fetchAvailabilitySlots, fetchBookingsForDate, insertBooking, confirmBookingsByGroupId, findPatientByCPF, type Booking } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -87,11 +87,15 @@ const BookingPage = () => {
   const [loadingBooked, setLoadingBooked] = useState(false);
 
   // Personal info
+  const [clientCpf, setClientCpf]   = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [sex, setSex] = useState("");
+  const [linkedPatientId, setLinkedPatientId] = useState<number | undefined>();
+  const [cpfLookingUp, setCpfLookingUp] = useState(false);
+  const [returningPatient, setReturningPatient] = useState<string | null>(null);
 
   // Clinical info
   const [anamnesisPhotos, setAnamnesisPhotos] = useState<File[]>([]);
@@ -113,6 +117,35 @@ const BookingPage = () => {
   const brickRendered = useRef(false);
 
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
+
+  const formatCPF = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  };
+
+  const handleCpfBlur = async () => {
+    const digits = clientCpf.replace(/\D/g, "");
+    if (digits.length !== 11) return;
+    setCpfLookingUp(true);
+    const patient = await findPatientByCPF(digits);
+    setCpfLookingUp(false);
+    if (patient) {
+      setLinkedPatientId(patient.id);
+      setReturningPatient(patient.name);
+      if (patient.name)  setClientName(patient.name);
+      if (patient.email) setClientEmail(patient.email);
+      if (patient.phone) setClientPhone(patient.phone);
+      if (patient.birth_date) setBirthDate(patient.birth_date);
+      if (patient.gender) setSex(patient.gender === "M" ? "masculino" : patient.gender === "F" ? "feminino" : "");
+      toast({ title: `Bem-vindo de volta, ${patient.name}!`, description: "Seus dados foram preenchidos automaticamente." });
+    } else {
+      setLinkedPatientId(undefined);
+      setReturningPatient(null);
+    }
+  };
 
   // Load available slots only when consultationType changes (step 0 → 1)
   useEffect(() => {
@@ -280,6 +313,7 @@ const BookingPage = () => {
         birthDate, sex, goal, allergies, restrictions,
         healthConditions, medications, hadNutritionist, howFound,
       });
+      const cpfDigits = clientCpf.replace(/\D/g, "");
       const booking: Booking = {
         booking_group_id: bookingGroupId,
         session_number: i + 1,
@@ -287,6 +321,8 @@ const BookingPage = () => {
         client_name: clientName,
         client_email: clientEmail,
         client_phone: clientPhone,
+        client_cpf: cpfDigits || undefined,
+        patient_id: linkedPatientId,
         plan_name: plan.name,
         plan_index: idx,
         appointment_date: toLocalISO(s.date),
@@ -660,6 +696,36 @@ const BookingPage = () => {
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-3">
+
+                {/* CPF field with lookup */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cpf" className="text-sm font-medium">CPF</Label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="cpf"
+                      type="text"
+                      inputMode="numeric"
+                      value={clientCpf}
+                      onChange={e => {
+                        setReturningPatient(null);
+                        setLinkedPatientId(undefined);
+                        setClientCpf(formatCPF(e.target.value));
+                      }}
+                      onBlur={handleCpfBlur}
+                      placeholder="000.000.000-00"
+                      className="pl-9 rounded-xl"
+                    />
+                    {cpfLookingUp && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
+                  {returningPatient && (
+                    <p className="text-xs text-primary font-medium flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Paciente encontrado — dados preenchidos automaticamente
+                    </p>
+                  )}
+                </div>
+
                 {[
                   { id: "name", label: "Nome completo", icon: User, value: clientName, set: setClientName, type: "text", placeholder: "Seu nome completo" },
                   { id: "email", label: "Email", icon: Mail, value: clientEmail, set: setClientEmail, type: "email", placeholder: "seu@email.com" },

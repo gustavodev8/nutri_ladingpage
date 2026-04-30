@@ -5,7 +5,7 @@ import {
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
   UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
   Send, Paperclip, Trash2, Pencil, Search, SlidersHorizontal, Clock,
-  Plus, CalendarPlus,
+  Plus, CalendarPlus, LinkIcon, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,10 @@ import {
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
   fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
+  linkBookingGroupToPatient, findPatientByCPF,
   type Booking, type ConsultationRecord, type RecordFile
 } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
 
@@ -107,10 +109,12 @@ const BORDER_COLOR: Record<string, string> = {
 
 const AdminAgendamentos = () => {
   const { content } = useContent();
+  const navigate = useNavigate();
   const planOptions    = content.loja.plans.map(p => p.name);
   const planSessionMap = Object.fromEntries(content.loja.plans.map(p => [p.name, p.sessionCount ?? 1]));
 
   const [bookings, setBookings]   = useState<Booking[]>([]);
+  const [linkingGroup, setLinkingGroup] = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState<number | null>(null);
   const [filter, setFilter]       = useState<FilterTab>("all");
@@ -620,6 +624,24 @@ const AdminAgendamentos = () => {
     setDetailTab("sessions");
     setEditingDetail(false);
     loadRecords(groupId);
+  };
+
+  const handleLinkPatient = async (groupId: string, cpf: string) => {
+    setLinkingGroup(groupId);
+    const patient = await findPatientByCPF(cpf);
+    if (patient && patient.id) {
+      const ok = await linkBookingGroupToPatient(groupId, patient.id, cpf);
+      if (ok) {
+        toast({ title: "Paciente vinculado!", description: `${patient.name} foi vinculado a este agendamento.` });
+        const updated = await fetchBookings();
+        setBookings(updated);
+      } else {
+        toast({ title: "Erro ao vincular", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "CPF não encontrado nos pacientes", description: "Cadastre o paciente primeiro em Pacientes.", variant: "destructive" });
+    }
+    setLinkingGroup(null);
   };
 
   const openSendMaterial = (booking: Booking) => {
@@ -1254,6 +1276,35 @@ const AdminAgendamentos = () => {
                               </span>
                             </div>
                           )}
+                          {/* CPF + patient link */}
+                          {detailFirst.client_cpf && (
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                              <span className="text-xs text-foreground font-mono">
+                                {detailFirst.client_cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                              </span>
+                            </div>
+                          )}
+                          {detailFirst.patient_id ? (
+                            <button
+                              onClick={() => navigate(`/admin/pacientes/${detailFirst.patient_id}`)}
+                              className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline mt-1"
+                            >
+                              <LinkIcon className="h-3 w-3" />
+                              Ver prontuário do paciente
+                            </button>
+                          ) : detailFirst.client_cpf ? (
+                            <button
+                              disabled={linkingGroup === detailFirst.booking_group_id}
+                              onClick={() => handleLinkPatient(detailFirst.booking_group_id, detailFirst.client_cpf!)}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary font-semibold transition-colors mt-1 disabled:opacity-50"
+                            >
+                              {linkingGroup === detailFirst.booking_group_id
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <LinkIcon className="h-3 w-3" />}
+                              Vincular ao prontuário
+                            </button>
+                          ) : null}
                         </div>
                       </div>
 
