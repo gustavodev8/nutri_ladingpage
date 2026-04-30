@@ -3,7 +3,7 @@ import { useParams, Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User, CreditCard,
   CheckCircle2, Loader2, ChevronLeft, ChevronRight,
-  Copy, Check, X, QrCode, CreditCard, MessageCircle, Camera, Trash2
+  Copy, Check, X, QrCode, MessageCircle, Camera, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
