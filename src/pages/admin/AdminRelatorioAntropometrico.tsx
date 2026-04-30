@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Printer, Activity, User, Scale, Percent, Ruler, Heart } from "lucide-react";
+import { ArrowLeft, Loader2, Printer, Activity, User, Scale, Percent, Ruler, Heart, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -194,10 +194,13 @@ export default function AdminRelatorioAntropometrico() {
             </p>
           </div>
         </div>
-        <Button size="sm" variant="outline" className="rounded-lg gap-2 shrink-0" onClick={() => window.print()}>
-          <Printer size={14} />
-          Imprimir / PDF
-        </Button>
+        <button
+          onClick={() => window.print()}
+          className="group relative inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-semibold shadow-sm hover:bg-foreground/90 active:scale-[0.98] transition-all duration-150 shrink-0 print:hidden"
+        >
+          <FileDown size={16} className="transition-transform group-hover:-translate-y-0.5 duration-150" />
+          Exportar PDF
+        </button>
       </div>
 
       {/* ── Paciente ────────────────────────────────────────────────────────── */}
