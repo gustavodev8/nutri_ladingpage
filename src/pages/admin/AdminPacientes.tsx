@@ -271,7 +271,7 @@ export default function AdminPacientes() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-muted/30 p-8 space-y-0">
+    <div className="min-h-screen bg-muted/30 p-8">
 
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 pb-10">
