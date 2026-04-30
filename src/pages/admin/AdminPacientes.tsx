@@ -660,86 +660,145 @@ export default function AdminPacientes() {
       {/* ── New Patient Modal ────────────────────────────────────────────────── */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setForm(emptyForm); } }}
         >
-          <div className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="bg-card border border-border/80 rounded-2xl w-full max-w-xl shadow-2xl shadow-black/20 overflow-hidden animate-in zoom-in-95 duration-200">
+
+            {/* Accent bar */}
+            <div className="h-1 w-full bg-primary" />
 
             {/* Modal header */}
-            <div className="flex items-center gap-4 px-8 py-6 border-b border-border bg-muted/30">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-primary" />
+            <div className="flex items-center justify-between px-7 py-5 border-b border-border/60">
+              <div className="flex items-center gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="w-4.5 h-4.5 text-primary" style={{ width: 18, height: 18 }} />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-bold tracking-tight text-foreground">Cadastro de Paciente</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Prontuário clínico — campos obrigatórios marcados com <span className="text-destructive font-bold">*</span></p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-black tracking-tight text-foreground">Novo Paciente</h2>
-                <p className="text-xs text-muted-foreground font-medium">Preencha os dados do prontuário clínico</p>
-              </div>
+              <button
+                onClick={() => { setShowModal(false); setForm(emptyForm); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Form */}
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                  Nome completo <span className="text-destructive">*</span>
-                </Label>
-                <Input id="name" name="name" placeholder="Nome completo" value={form.name}
-                  onChange={handleFormChange} autoFocus className="rounded-xl h-11 border-border/60" />
+            {/* Form body */}
+            <div className="px-7 py-6 space-y-6">
+
+              {/* Section: Identificação */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/50 flex items-center gap-2">
+                  <span className="inline-block w-3 h-px bg-muted-foreground/30" />
+                  Identificação
+                  <span className="flex-1 h-px bg-border/60" />
+                </p>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-[11px] font-semibold text-muted-foreground">
+                    Nome completo <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="name" name="name" placeholder="Ex.: Maria Oliveira Santos"
+                    value={form.name} onChange={handleFormChange} autoFocus
+                    className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-[11px] font-semibold text-muted-foreground">E-mail</Label>
+                    <Input
+                      id="email" name="email" type="email" placeholder="email@exemplo.com"
+                      value={form.email} onChange={handleFormChange}
+                      className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone" className="text-[11px] font-semibold text-muted-foreground">Telefone</Label>
+                    <Input
+                      id="phone" name="phone" placeholder="(00) 00000-0000"
+                      value={form.phone} onChange={handleFormChange}
+                      className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">E-mail</Label>
-                  <Input id="email" name="email" type="email" placeholder="exemplo@email.com"
-                    value={form.email} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Telefone</Label>
-                  <Input id="phone" name="phone" placeholder="(00) 00000-0000"
-                    value={form.phone} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
-                </div>
-              </div>
+              {/* Section: Dados pessoais */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/50 flex items-center gap-2">
+                  <span className="inline-block w-3 h-px bg-muted-foreground/30" />
+                  Dados pessoais
+                  <span className="flex-1 h-px bg-border/60" />
+                </p>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Cidade</Label>
-                  <Input id="city" name="city" placeholder="Cidade"
-                    value={form.city} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="birth_date" className="text-[11px] font-semibold text-muted-foreground">Nascimento</Label>
+                    <Input
+                      id="birth_date" name="birth_date" type="date"
+                      value={form.birth_date} onChange={handleFormChange}
+                      className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="gender" className="text-[11px] font-semibold text-muted-foreground">Gênero</Label>
+                    <select
+                      id="gender" name="gender" value={form.gender} onChange={handleFormChange}
+                      className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 text-foreground border-border/70"
+                    >
+                      <option value="">Selecionar</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Feminino</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="city" className="text-[11px] font-semibold text-muted-foreground">Cidade</Label>
+                    <Input
+                      id="city" name="city" placeholder="Cidade"
+                      value={form.city} onChange={handleFormChange}
+                      className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="occupation" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Ocupação</Label>
-                  <Input id="occupation" name="occupation" placeholder="Profissão"
-                    value={form.occupation} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="birth_date" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Nascimento</Label>
-                  <Input id="birth_date" name="birth_date" type="date"
-                    value={form.birth_date} onChange={handleFormChange} className="rounded-xl h-11 border-border/60" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Gênero</Label>
-                  <select id="gender" name="gender" value={form.gender} onChange={handleFormChange}
-                    className="flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground border-border/60">
-                    <option value="">Selecionar</option>
-                    <option value="M">Masculino</option>
-                    <option value="F">Feminino</option>
-                    <option value="outro">Outro</option>
-                  </select>
+                <div className="space-y-1.5">
+                  <Label htmlFor="occupation" className="text-[11px] font-semibold text-muted-foreground">Ocupação / Profissão</Label>
+                  <Input
+                    id="occupation" name="occupation" placeholder="Ex.: Professora, Atleta, Estudante..."
+                    value={form.occupation} onChange={handleFormChange}
+                    className="h-10 rounded-lg border-border/70 text-sm focus-visible:ring-primary/30"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Modal footer */}
-            <div className="flex gap-3 px-8 py-6 border-t border-border bg-muted/20">
-              <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold"
-                onClick={() => { setShowModal(false); setForm(emptyForm); }} disabled={saving}>
+            <div className="flex items-center gap-3 px-7 py-5 border-t border-border/60 bg-muted/20">
+              <Button
+                variant="ghost"
+                className="h-10 px-5 rounded-lg font-semibold text-muted-foreground hover:text-foreground"
+                onClick={() => { setShowModal(false); setForm(emptyForm); }}
+                disabled={saving}
+              >
                 Cancelar
               </Button>
-              <Button className="flex-1 h-12 rounded-xl flex items-center justify-center gap-2 font-black shadow-lg shadow-primary/20"
-                onClick={handleSave} disabled={saving}>
-                {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</> : "Cadastrar paciente"}
+              <div className="flex-1" />
+              <Button
+                className="h-10 px-6 rounded-lg flex items-center gap-2 font-semibold shadow-sm shadow-primary/20"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+                  : <><Plus className="w-4 h-4" />Cadastrar paciente</>}
               </Button>
             </div>
           </div>
