@@ -5,7 +5,7 @@ import {
   Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
   UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
   Send, Paperclip, Trash2, Pencil, Search, SlidersHorizontal, Clock,
-  Plus, CalendarPlus, LinkIcon, CreditCard,
+  Plus, CalendarPlus, LinkIcon, CreditCard, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
   fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
-  linkBookingGroupToPatient, findPatientByCPF,
+  linkBookingGroupToPatient, findPatientByCPF, upsertPatient,
   type Booking, type ConsultationRecord, type RecordFile
 } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
@@ -115,6 +115,7 @@ const AdminAgendamentos = () => {
 
   const [bookings, setBookings]   = useState<Booking[]>([]);
   const [linkingGroup, setLinkingGroup] = useState<string | null>(null);
+  const [creatingPatient, setCreatingPatient] = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState<number | null>(null);
   const [filter, setFilter]       = useState<FilterTab>("all");
@@ -642,6 +643,45 @@ const AdminAgendamentos = () => {
       toast({ title: "CPF não encontrado nos pacientes", description: "Cadastre o paciente primeiro em Pacientes.", variant: "destructive" });
     }
     setLinkingGroup(null);
+  };
+
+  const handleCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
+    setCreatingPatient(booking.booking_group_id);
+    // If CPF provided and patient already exists, just link
+    if (booking.client_cpf) {
+      const existing = await findPatientByCPF(booking.client_cpf);
+      if (existing?.id) {
+        await linkBookingGroupToPatient(booking.booking_group_id, existing.id, booking.client_cpf);
+        const updated = await fetchBookings();
+        setBookings(updated);
+        setCreatingPatient(null);
+        navigate(`/admin/pacientes/${existing.id}`);
+        return;
+      }
+    }
+    // Create new patient from booking data
+    const genderMap: Record<string, "M" | "F" | "outro"> = { masculino: "M", feminino: "F" };
+    const created = await upsertPatient({
+      name:       booking.client_name,
+      email:      booking.client_email  || undefined,
+      phone:      booking.client_phone  || undefined,
+      cpf:        booking.client_cpf    || undefined,
+      birth_date: notes.birthDate       || undefined,
+      gender:     genderMap[notes.sex ?? ""] ?? undefined,
+    });
+    if (!created?.id) {
+      toast({ title: "Erro ao cadastrar paciente", variant: "destructive" });
+      setCreatingPatient(null);
+      return;
+    }
+    if (booking.client_cpf) {
+      await linkBookingGroupToPatient(booking.booking_group_id, created.id, booking.client_cpf);
+    }
+    const updated = await fetchBookings();
+    setBookings(updated);
+    setCreatingPatient(null);
+    toast({ title: "Paciente cadastrado!", description: `${created.name} foi adicionado ao sistema.` });
+    navigate(`/admin/pacientes/${created.id}`);
   };
 
   const openSendMaterial = (booking: Booking) => {
@@ -1288,23 +1328,23 @@ const AdminAgendamentos = () => {
                           {detailFirst.patient_id ? (
                             <button
                               onClick={() => navigate(`/admin/pacientes/${detailFirst.patient_id}`)}
-                              className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline mt-1"
+                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-semibold hover:bg-primary/20 transition-colors"
                             >
-                              <LinkIcon className="h-3 w-3" />
+                              <LinkIcon className="h-3.5 w-3.5" />
                               Ver prontuário do paciente
                             </button>
-                          ) : detailFirst.client_cpf ? (
+                          ) : (
                             <button
-                              disabled={linkingGroup === detailFirst.booking_group_id}
-                              onClick={() => handleLinkPatient(detailFirst.booking_group_id, detailFirst.client_cpf!)}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary font-semibold transition-colors mt-1 disabled:opacity-50"
+                              disabled={creatingPatient === detailFirst.booking_group_id}
+                              onClick={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
+                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
                             >
-                              {linkingGroup === detailFirst.booking_group_id
-                                ? <Loader2 className="h-3 w-3 animate-spin" />
-                                : <LinkIcon className="h-3 w-3" />}
-                              Vincular ao prontuário
+                              {creatingPatient === detailFirst.booking_group_id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <UserPlus className="h-3.5 w-3.5" />}
+                              Cadastrar paciente no sistema
                             </button>
-                          ) : null}
+                          )}
                         </div>
                       </div>
 
