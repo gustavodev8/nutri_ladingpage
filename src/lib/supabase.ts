@@ -359,6 +359,18 @@ export async function deletePatient(id: number): Promise<boolean> {
   return true;
 }
 
+/** Find patients with similar name or matching email (duplicate detection). */
+export async function findSimilarPatients(name: string, email?: string): Promise<Patient[]> {
+  const firstName = name.trim().split(" ")[0].toLowerCase();
+  const { data, error } = await supabase.from("patients").select("*").order("name");
+  if (error || !data) return [];
+  return data.filter((p: Patient) => {
+    const nameMatch = p.name?.toLowerCase().includes(firstName) || firstName.includes(p.name?.toLowerCase().split(" ")[0] ?? "____");
+    const emailMatch = email && p.email && p.email.toLowerCase() === email.toLowerCase();
+    return nameMatch || emailMatch;
+  });
+}
+
 /** Find a patient by CPF (digits-only or formatted). Returns null if not found. */
 export async function findPatientByCPF(cpf: string): Promise<Patient | null> {
   const digits = cpf.replace(/\D/g, "");

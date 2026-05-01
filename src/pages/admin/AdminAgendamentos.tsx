@@ -15,8 +15,8 @@ import {
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
   fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
-  linkBookingGroupToPatient, findPatientByCPF, upsertPatient,
-  type Booking, type ConsultationRecord, type RecordFile
+  linkBookingGroupToPatient, findPatientByCPF, findSimilarPatients, upsertPatient,
+  type Booking, type ConsultationRecord, type RecordFile, type Patient
 } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
@@ -116,6 +116,11 @@ const AdminAgendamentos = () => {
   const [bookings, setBookings]   = useState<Booking[]>([]);
   const [linkingGroup, setLinkingGroup] = useState<string | null>(null);
   const [creatingPatient, setCreatingPatient] = useState<string | null>(null);
+  const [duplicateModal, setDuplicateModal] = useState<{
+    booking: Booking;
+    notes: Record<string, string>;
+    matches: Patient[];
+  } | null>(null);
   const [loading, setLoading]     = useState(true);
   const [updating, setUpdating]   = useState<number | null>(null);
   const [filter, setFilter]       = useState<FilterTab>("all");
@@ -645,21 +650,8 @@ const AdminAgendamentos = () => {
     setLinkingGroup(null);
   };
 
-  const handleCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
+  const doCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
     setCreatingPatient(booking.booking_group_id);
-    // If CPF provided and patient already exists, just link
-    if (booking.client_cpf) {
-      const existing = await findPatientByCPF(booking.client_cpf);
-      if (existing?.id) {
-        await linkBookingGroupToPatient(booking.booking_group_id, existing.id, booking.client_cpf);
-        const updated = await fetchBookings();
-        setBookings(updated);
-        setCreatingPatient(null);
-        navigate(`/admin/pacientes/${existing.id}`);
-        return;
-      }
-    }
-    // Create new patient from booking data
     const genderMap: Record<string, "M" | "F" | "outro"> = { masculino: "M", feminino: "F" };
     const created = await upsertPatient({
       name:       booking.client_name,
@@ -680,8 +672,45 @@ const AdminAgendamentos = () => {
     const updated = await fetchBookings();
     setBookings(updated);
     setCreatingPatient(null);
+    setDuplicateModal(null);
     toast({ title: "Paciente cadastrado!", description: `${created.name} foi adicionado ao sistema.` });
     navigate(`/admin/pacientes/${created.id}`);
+  };
+
+  const doLinkExisting = async (booking: Booking, patient: Patient) => {
+    setCreatingPatient(booking.booking_group_id);
+    await linkBookingGroupToPatient(booking.booking_group_id, patient.id!, booking.client_cpf ?? "");
+    const updated = await fetchBookings();
+    setBookings(updated);
+    setCreatingPatient(null);
+    setDuplicateModal(null);
+    toast({ title: "Vinculado ao paciente existente!", description: patient.name });
+    navigate(`/admin/pacientes/${patient.id}`);
+  };
+
+  const handleCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
+    setCreatingPatient(booking.booking_group_id);
+    // 1. CPF match → link directly, no ambiguity
+    if (booking.client_cpf) {
+      const byCpf = await findPatientByCPF(booking.client_cpf);
+      if (byCpf?.id) {
+        await linkBookingGroupToPatient(booking.booking_group_id, byCpf.id, booking.client_cpf);
+        const updated = await fetchBookings();
+        setBookings(updated);
+        setCreatingPatient(null);
+        navigate(`/admin/pacientes/${byCpf.id}`);
+        return;
+      }
+    }
+    // 2. Check name/email similarity for duplicates
+    const similar = await findSimilarPatients(booking.client_name, booking.client_email);
+    setCreatingPatient(null);
+    if (similar.length > 0) {
+      setDuplicateModal({ booking, notes, matches: similar });
+      return;
+    }
+    // 3. No duplicates — create directly
+    await doCreatePatient(booking, notes);
   };
 
   const openSendMaterial = (booking: Booking) => {
@@ -2626,6 +2655,73 @@ const AdminAgendamentos = () => {
                 {savingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {savingNew ? "Criando…" : "Criar consulta"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Duplicate patient modal ──────────────────────────────────────────── */}
+      {duplicateModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[60] flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDuplicateModal(null); }}
+        >
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start gap-3 px-6 py-5 border-b border-border bg-amber-50/60 dark:bg-amber-950/20">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                <UserPlus className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Paciente(s) similar(es) encontrado(s)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Já existe{duplicateModal.matches.length > 1 ? "m" : ""} {duplicateModal.matches.length} registro{duplicateModal.matches.length > 1 ? "s" : ""} com nome ou e-mail parecido. Verifique antes de criar um novo.
+                </p>
+              </div>
+              <button onClick={() => setDuplicateModal(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Matches list */}
+            <div className="px-6 py-4 space-y-2 max-h-64 overflow-y-auto">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mb-3">Pacientes existentes</p>
+              {duplicateModal.matches.map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary text-xs font-black flex items-center justify-center shrink-0">
+                    {p.name.split(" ").slice(0,2).map(n => n[0]).join("").toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{p.email || p.phone || "Sem contato"}</p>
+                  </div>
+                  <button
+                    disabled={creatingPatient === duplicateModal.booking.booking_group_id}
+                    onClick={() => doLinkExisting(duplicateModal.booking, p)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  >
+                    {creatingPatient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Usar este"}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border bg-muted/20 flex gap-3">
+              <button
+                onClick={() => setDuplicateModal(null)}
+                className="flex-1 h-9 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={creatingPatient === duplicateModal.booking.booking_group_id}
+                onClick={() => doCreatePatient(duplicateModal.booking, duplicateModal.notes)}
+                className="flex-1 h-9 rounded-xl bg-foreground text-background text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {creatingPatient ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+                Criar novo cadastro
+              </button>
             </div>
           </div>
         </div>
