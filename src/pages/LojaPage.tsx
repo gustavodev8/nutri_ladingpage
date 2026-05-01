@@ -132,7 +132,7 @@ const LojaPage = () => {
     <PageLayout>
       {/* ── Hero carousel ───────────────────────────────────────────────────── */}
       {heroImages.length > 0 && (
-        <section className="relative bg-green-dark h-[280px] sm:h-[420px] overflow-hidden">
+        <section className="relative bg-green-dark h-[240px] sm:h-[360px] overflow-hidden">
           {heroImages.map((slide, i) => (
             <div
               key={i}
