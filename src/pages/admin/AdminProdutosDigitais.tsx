@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, Loader2, ExternalLink, MessageSquareQuote, ImageIcon } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2, ExternalLink, MessageSquareQuote, ImageIcon, PackageOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,14 @@ import { uploadPdf, uploadImage } from "@/lib/supabase";
 
 type Item = SiteContent["produtosDigitais"]["items"][number];
 type Screenshot = NonNullable<Item["screenshots"]>[number];
+type PdfFile = NonNullable<Item["pdfFiles"]>[number];
 type ProdutosContent = SiteContent["produtosDigitais"];
 
 const AdminProdutosDigitais = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<ProdutosContent>(content.produtosDigitais);
-  const [pdfUploading, setPdfUploading] = useState<Record<number, boolean>>({});
-  const [pdfStatus, setPdfStatus]       = useState<Record<number, string>>({});
+  const [pdfUploading, setPdfUploading] = useState<Record<string, boolean>>({});
+  const [pdfStatus, setPdfStatus]       = useState<Record<string, string>>({});
   const [screenshotUploading, setScreenshotUploading] = useState<Record<string, boolean>>({});
 
   const setHeader = (key: "sectionTitle" | "sectionSubtitle", value: string) => {
@@ -33,38 +34,56 @@ const AdminProdutosDigitais = () => {
     });
   };
 
-  const handlePdfUpload = async (index: number, file: File) => {
-    setPdfUploading((prev) => ({ ...prev, [index]: true }));
+  const uploadPdfFile = async (key: string, file: File): Promise<string | null> => {
+    setPdfUploading((prev) => ({ ...prev, [key]: true }));
     try {
       let uploadFile: File = file;
-
       if (file.size > 50 * 1024 * 1024) {
-        setPdfStatus((prev) => ({ ...prev, [index]: "Comprimindo PDF..." }));
+        setPdfStatus((prev) => ({ ...prev, [key]: "Comprimindo PDF..." }));
         toast({ title: "PDF grande detectado", description: "Comprimindo automaticamente antes do upload…" });
         const { compressPdf } = await import("@/lib/pdfCompress");
         const blob = await compressPdf(file, "media", (done, total) => {
           const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-          setPdfStatus((prev) => ({ ...prev, [index]: `Comprimindo… ${pct}%` }));
+          setPdfStatus((prev) => ({ ...prev, [key]: `Comprimindo… ${pct}%` }));
         });
         uploadFile = new File([blob], file.name, { type: "application/pdf" });
       }
-
-      setPdfStatus((prev) => ({ ...prev, [index]: "Enviando…" }));
+      setPdfStatus((prev) => ({ ...prev, [key]: "Enviando…" }));
       const url = await uploadPdf(uploadFile);
       if (url) {
-        setItem(index, "pdfUrl", url);
         toast({ title: "PDF enviado!", description: uploadFile !== file ? `Comprimido de ${(file.size / 1e6).toFixed(1)} MB → ${(uploadFile.size / 1e6).toFixed(1)} MB` : undefined });
       }
+      return url;
     } catch (e) {
-      toast({
-        title: "Falha no upload do PDF",
-        description: e instanceof Error ? e.message : "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Falha no upload do PDF", description: e instanceof Error ? e.message : "Erro desconhecido", variant: "destructive" });
+      return null;
     } finally {
-      setPdfUploading((prev) => ({ ...prev, [index]: false }));
-      setPdfStatus((prev) => ({ ...prev, [index]: "" }));
+      setPdfUploading((prev) => ({ ...prev, [key]: false }));
+      setPdfStatus((prev) => ({ ...prev, [key]: "" }));
     }
+  };
+
+  // ── pdfFiles helpers ──────────────────────────────────────────────────────────
+  const addPdfFile = (itemIdx: number) => {
+    const pdfFiles = [...(form.items[itemIdx].pdfFiles ?? []), { url: "", label: "" }];
+    setItem(itemIdx, "pdfFiles", pdfFiles);
+  };
+
+  const updatePdfFile = (itemIdx: number, pdfIdx: number, field: keyof PdfFile, value: string) => {
+    const pdfFiles = [...(form.items[itemIdx].pdfFiles ?? [])];
+    pdfFiles[pdfIdx] = { ...pdfFiles[pdfIdx], [field]: value };
+    setItem(itemIdx, "pdfFiles", pdfFiles);
+  };
+
+  const removePdfFile = (itemIdx: number, pdfIdx: number) => {
+    const pdfFiles = (form.items[itemIdx].pdfFiles ?? []).filter((_, i) => i !== pdfIdx);
+    setItem(itemIdx, "pdfFiles", pdfFiles);
+  };
+
+  const handlePdfFileUpload = async (itemIdx: number, pdfIdx: number, file: File) => {
+    const key = `pdf-${itemIdx}-${pdfIdx}`;
+    const url = await uploadPdfFile(key, file);
+    if (url) updatePdfFile(itemIdx, pdfIdx, "url", url);
   };
 
   // ── Screenshots helpers ───────────────────────────────────────────────────────
@@ -110,6 +129,7 @@ const AdminProdutosDigitais = () => {
           badge: "",
           imageUrl: "",
           pdfUrl: "",
+          pdfFiles: [],
           whatsappMessage: "Olá! Gostaria de comprar este produto.",
           screenshots: [],
         },
@@ -184,49 +204,112 @@ const AdminProdutosDigitais = () => {
                   />
                 </div>
 
-                {/* PDF Upload */}
-                <div className="sm:col-span-2 space-y-2">
-                  <Label>PDF do produto (enviado ao comprador por email)</Label>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept=".pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handlePdfUpload(i, file);
-                        }}
-                      />
-                      <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-background hover:bg-muted/50 transition-colors text-sm font-medium text-foreground">
-                        {pdfUploading[i] ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            {pdfStatus[i] || "Processando…"}
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4 text-primary" />
-                            {item.pdfUrl ? "Trocar PDF" : "Fazer upload do PDF"}
-                          </>
-                        )}
-                      </div>
-                    </label>
-                    {item.pdfUrl && (
-                      <a
-                        href={item.pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Ver PDF atual
-                      </a>
-                    )}
+                {/* PDFs do produto */}
+                <div className="sm:col-span-2 border-t border-border/50 pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <PackageOpen className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold text-foreground">PDFs do produto</p>
+                      {(item.pdfFiles?.length ?? 0) > 0 && (
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          {item.pdfFiles!.length}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addPdfFile(i)}
+                      className="gap-1.5 text-xs h-8"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Adicionar PDF
+                    </Button>
                   </div>
-                  {item.pdfUrl && (
-                    <p className="text-xs text-muted-foreground truncate max-w-full">{item.pdfUrl}</p>
+
+                  {(!item.pdfFiles || item.pdfFiles.length === 0) && (
+                    <p className="text-xs text-muted-foreground/60 italic py-1">
+                      Nenhum PDF adicionado. Para combos, adicione múltiplos PDFs — todos serão enviados ao comprador.
+                    </p>
                   )}
+
+                  <div className="space-y-3">
+                    {(item.pdfFiles ?? []).map((pf, pi) => {
+                      const uploadKey = `pdf-${i}-${pi}`;
+                      return (
+                        <div key={pi} className="rounded-xl border border-border bg-background p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {item.pdfFiles!.length > 1 ? `E-book ${pi + 1}` : "E-book"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removePdfFile(i, pi)}
+                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Nome / label (ex: "Guia de Reeducação")</Label>
+                            <Input
+                              value={pf.label}
+                              onChange={(e) => updatePdfFile(i, pi, "label", e.target.value)}
+                              placeholder="Ex: E-book Principal"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs">Arquivo PDF</Label>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept=".pdf"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handlePdfFileUpload(i, pi, file);
+                                    e.target.value = "";
+                                  }}
+                                />
+                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors text-xs font-medium text-foreground">
+                                  {pdfUploading[uploadKey] ? (
+                                    <>
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                                      {pdfStatus[uploadKey] || "Processando…"}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText className="h-3.5 w-3.5 text-primary" />
+                                      {pf.url ? "Trocar PDF" : "Fazer upload"}
+                                    </>
+                                  )}
+                                </div>
+                              </label>
+                              {pf.url && (
+                                <a
+                                  href={pf.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Ver PDF
+                                </a>
+                              )}
+                            </div>
+                            {pf.url && (
+                              <p className="text-xs text-muted-foreground truncate max-w-full">{pf.url}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2 space-y-2">

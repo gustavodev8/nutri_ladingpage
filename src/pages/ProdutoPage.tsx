@@ -243,6 +243,7 @@ const ProdutoPage = () => {
           priceAmount: produto.priceAmount,
           customerEmail: email,
           pdfUrl: produto.pdfUrl || "",
+          pdfFiles: produto.pdfFiles ?? [],
           customerName: name,
           customerCpf: cpf,
         }),

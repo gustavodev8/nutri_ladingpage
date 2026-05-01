@@ -120,6 +120,7 @@ export interface SiteContent {
       badge: string;
       imageUrl: string;
       pdfUrl: string;
+      pdfFiles?: { url: string; label: string }[];
       whatsappMessage: string;
       screenshots?: {
         imageUrl: string;
