@@ -5,7 +5,7 @@ import {
   Clock, MessageSquareQuote, HelpCircle, MapPin, Megaphone, LogOut,
   Menu, ExternalLink, KeyRound, Globe, Loader2, ReceiptText,
   CalendarDays, CalendarCheck, ChevronDown, FileText, Star, Settings,
-  Stethoscope, Users, LayoutDashboard, Store,
+  Stethoscope, Users, LayoutDashboard, Store, Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +70,13 @@ const NAV_GROUPS = [
       { to: "/admin/perfil",  icon: User,     label: "Perfil & Contato"  },
       { to: "/admin/contato", icon: MapPin,   label: "Endereço & Redes"  },
       { to: "/admin/senha",   icon: KeyRound, label: "Alterar Senha"     },
+    ],
+  },
+  {
+    label: "Ferramentas",
+    icon: Wrench,
+    items: [
+      { to: "/admin/ferramentas", icon: FileText, label: "Compressor de PDF" },
     ],
   },
 ];
