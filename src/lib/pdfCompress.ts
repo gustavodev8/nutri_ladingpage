@@ -1,7 +1,4 @@
-import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument } from "pdf-lib";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export type PdfQuality = "baixa" | "media" | "alta";
 
@@ -16,6 +13,10 @@ export async function compressPdf(
   quality: PdfQuality,
   onProgress?: (done: number, total: number) => void,
 ): Promise<Blob> {
+  // Dynamic import keeps pdfjs out of the main bundle and avoids worker init at module load time
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
   const { dpi, q } = PRESETS[quality];
   const scale = dpi / 72;
 

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,7 +54,7 @@ import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
 import AdminAlimentos from "./pages/admin/AdminAlimentos";
 import AdminLoja from "./pages/admin/AdminLoja";
 import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
-import AdminFerramentas from "./pages/admin/AdminFerramentas";
+const AdminFerramentas = lazy(() => import("./pages/admin/AdminFerramentas"));
 
 const queryClient = new QueryClient();
 
@@ -133,7 +133,7 @@ const App = () => (
                 <Route path="pacientes/:id/relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
                 <Route path="alimentos" element={<AdminAlimentos />} />
                 <Route path="loja" element={<AdminLoja />} />
-                <Route path="ferramentas" element={<AdminFerramentas />} />
+                <Route path="ferramentas" element={<Suspense fallback={null}><AdminFerramentas /></Suspense>} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>
