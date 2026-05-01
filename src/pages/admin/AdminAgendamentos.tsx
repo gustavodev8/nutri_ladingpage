@@ -27,6 +27,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+const CITIES = ["Alagoinhas","Feira de Santana","Salvador","Crisópolis","Olindina","Aporá","Acajutiba","Esplanada"];
+
 function toLocalISO(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -363,6 +365,8 @@ const AdminAgendamentos = () => {
   const [returnCalMonth, setReturnCalMonth]       = useState(new Date().getMonth());
   const [returnBookedTimes, setReturnBookedTimes] = useState<string[]>([]);
   const [loadingReturnSlots, setLoadingReturnSlots] = useState(false);
+  const [returnType, setReturnType]               = useState<"online" | "presencial">("online");
+  const [returnCity, setReturnCity]               = useState("Alagoinhas");
 
   useEffect(() => { load(); }, []);
 
@@ -403,6 +407,8 @@ const AdminAgendamentos = () => {
     setCompNotes(""); setCompWeight(""); setCompHeight("");
     setCompNextReturn(""); setCompNextReturnTime(""); setCompNextSteps(""); setCompFiles([]);
     setReturnBookedTimes([]);
+    setReturnType((session.type as "online" | "presencial") || "online");
+    setReturnCity("Alagoinhas");
     // Inicializa calendário no mês atual
     const now = new Date();
     setReturnCalYear(now.getFullYear());
@@ -509,6 +515,9 @@ const AdminAgendamentos = () => {
       const isLastSession = (completing.session_number ?? 1) >= (completing.total_sessions ?? 1);
       let returnCreated = false;
       if (!isLastSession && compNextReturn) {
+        const baseNotes = (() => { try { return JSON.parse(completing.notes || "{}"); } catch { return {}; } })();
+        if (returnType === "presencial") baseNotes._city = returnCity;
+        else delete baseNotes._city;
         const returnSession: Booking = {
           booking_group_id: completing.booking_group_id,
           session_number: completing.session_number + 1,
@@ -520,9 +529,9 @@ const AdminAgendamentos = () => {
           plan_index: completing.plan_index,
           appointment_date: compNextReturn,
           appointment_time: compNextReturnTime || completing.appointment_time,
-          type: completing.type,
+          type: returnType,
           status: "confirmed",
-          notes: completing.notes,
+          notes: JSON.stringify(baseNotes),
         };
         returnCreated = await insertBooking(returnSession);
       }
@@ -2065,10 +2074,38 @@ const AdminAgendamentos = () => {
                   )}
                 </div>
 
+                {/* Tipo de retorno */}
+                <div className="flex gap-1.5">
+                  {(["online", "presencial"] as const).map(t => (
+                    <button key={t} onClick={() => { setReturnType(t); setCompNextReturn(""); setCompNextReturnTime(""); }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                        returnType === t
+                          ? t === "online"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      }`}>
+                      {t === "online" ? <Globe className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                      {t === "online" ? "Online" : "Presencial"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Seletor de cidade (presencial) */}
+                {returnType === "presencial" && (
+                  <select
+                    value={returnCity}
+                    onChange={e => { setReturnCity(e.target.value); setCompNextReturn(""); setCompNextReturnTime(""); }}
+                    className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                )}
+
                 {loadingReturnSlots ? (
                   <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
                 ) : (() => {
-                  const sessionType = completing?.type || "online";
+                  const sessionType = returnType;
                   const firstDay = new Date(returnCalYear, returnCalMonth, 1).getDay();
                   const daysInMonth = new Date(returnCalYear, returnCalMonth + 1, 0).getDate();
                   const todayISO = toLocalISO(new Date());
@@ -2167,7 +2204,9 @@ const AdminAgendamentos = () => {
                           <span className="text-xs font-medium text-primary">
                             {new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR")} às {compNextReturnTime}
                           </span>
-                          <span className="text-[10px] text-muted-foreground capitalize">{sessionType}</span>
+                          <span className="text-[10px] text-muted-foreground capitalize">
+                            {returnType === "presencial" ? `Presencial · ${returnCity}` : "Online"}
+                          </span>
                         </div>
                       )}
                     </div>
