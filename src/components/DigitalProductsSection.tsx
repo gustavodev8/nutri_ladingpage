@@ -45,12 +45,12 @@ const DigitalProductsSection = () => {
                 </Badge>
               )}
               <CardContent className="p-6 flex flex-col gap-4 h-full">
-                <div className="w-full h-40 rounded-lg overflow-hidden bg-gradient-to-br from-secondary/40 to-green-light flex items-center justify-center">
+                <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gradient-to-br from-secondary/40 to-green-light flex items-center justify-center">
                   {item.imageUrl ? (
                     <img
                       src={item.imageUrl}
                       alt={item.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                   ) : (
                     <BookOpen className="h-10 w-10 text-primary/30" />

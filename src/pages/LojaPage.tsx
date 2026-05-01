@@ -183,12 +183,12 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
     )}
 
     <CardContent className="p-0 flex flex-col h-full">
-      <div className="w-full h-44 overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 flex items-center justify-center shrink-0">
+      <div className="w-full aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 flex items-center justify-center shrink-0">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <BookOpen className="h-12 w-12 text-primary/25" />
