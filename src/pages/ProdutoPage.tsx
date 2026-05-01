@@ -11,6 +11,20 @@ import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
 
+function useDiscount() {
+  const { content } = useContent();
+  const { active, percentage, expiresAt } = content.discount;
+  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
+  const isActive = active && !expired;
+  const applyAmount = (amount: number) => isActive ? Math.round(amount * (1 - percentage / 100) * 100) / 100 : amount;
+  const formatPrice = (original: string, amount: number) => {
+    if (!isActive) return original;
+    const val = applyAmount(amount);
+    return `R$ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(".", ",")}`;
+  };
+  return { isActive, percentage, applyAmount, formatPrice };
+}
+
 // ── CPF helpers ───────────────────────────────────────────────────────────────
 
 function validateCpf(cpf: string): boolean {
@@ -161,6 +175,7 @@ const ProdutoPage = () => {
   const { id } = useParams<{ id: string }>();
   const { content } = useContent();
   const { produtosDigitais, identity } = content;
+  const { isActive, percentage, applyAmount, formatPrice } = useDiscount();
 
   const index = Number(id);
   const produto = produtosDigitais.items[index];
@@ -216,6 +231,7 @@ const ProdutoPage = () => {
       setErrorMsg("Preço não configurado. Entre em contato.");
       return;
     }
+    const finalAmount = applyAmount(produto.priceAmount);
 
     setStage("loading");
     setErrorMsg("");
@@ -240,7 +256,7 @@ const ProdutoPage = () => {
         body: JSON.stringify({
           productIndex: index,
           productName: produto.name,
-          priceAmount: produto.priceAmount,
+          priceAmount: finalAmount,
           customerEmail: email,
           pdfUrl: produto.pdfUrl || "",
           pdfFiles: produto.pdfFiles ?? [],
@@ -304,7 +320,9 @@ const ProdutoPage = () => {
                 <div className="bg-primary/5 border-b border-border px-6 py-5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-primary mb-0.5">Pague via Pix</p>
-                    <p className="font-display text-xl font-bold text-foreground">{produto.price}</p>
+                    <p className="font-display text-xl font-bold text-foreground">
+                      {formatPrice(produto.price, produto.priceAmount)}
+                    </p>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl">Pix</span>
@@ -466,9 +484,17 @@ const ProdutoPage = () => {
                     <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground leading-tight">{produto.name}</h1>
                   </div>
                   <p className="text-muted-foreground leading-relaxed text-base">{produto.desc}</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-extrabold text-primary">{produto.price}</span>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-4xl font-extrabold text-primary">
+                      {formatPrice(produto.price, produto.priceAmount)}
+                    </span>
+                    {isActive && (
+                      <span className="text-lg text-muted-foreground line-through">{produto.price}</span>
+                    )}
                     <span className="text-sm text-muted-foreground">pagamento único</span>
+                    {isActive && (
+                      <Badge variant="destructive" className="text-xs px-2">-{percentage}%</Badge>
+                    )}
                   </div>
 
                   {/* Free consultation badge */}
@@ -542,7 +568,7 @@ const ProdutoPage = () => {
                       {stage === "loading" ? (
                         <><Loader2 className="h-4 w-4 animate-spin" />Gerando Pix...</>
                       ) : (
-                        <>Gerar Pix — {produto.price}</>
+                        <>Gerar Pix — {formatPrice(produto.price, produto.priceAmount)}</>
                       )}
                     </Button>
 

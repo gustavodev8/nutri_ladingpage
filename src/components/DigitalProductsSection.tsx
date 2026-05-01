@@ -6,8 +6,23 @@ import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
 
+function useDiscount() {
+  const { content } = useContent();
+  const { active, percentage, expiresAt } = content.discount;
+  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
+  const isActive = active && !expired;
+  const apply = (amount: number) => isActive ? amount * (1 - percentage / 100) : amount;
+  const formatDiscounted = (price: string, amount: number) => {
+    if (!isActive) return price;
+    const val = apply(amount);
+    return `R$ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(".", ",")}`;
+  };
+  return { isActive, percentage, apply, formatDiscounted };
+}
+
 const DigitalProductsSection = () => {
   const { content } = useContent();
+  const { isActive, percentage, formatDiscounted } = useDiscount();
   const { produtosDigitais } = content;
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
 
@@ -58,7 +73,17 @@ const DigitalProductsSection = () => {
                 </div>
                 <h3 className="font-bold text-base text-foreground">{item.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.desc}</p>
-                <p className="text-2xl font-extrabold text-primary">{item.price}</p>
+                {isActive ? (
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p className="text-2xl font-extrabold text-primary">
+                      {formatDiscounted(item.price, item.priceAmount)}
+                    </p>
+                    <p className="text-sm text-muted-foreground line-through">{item.price}</p>
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">-{percentage}%</Badge>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-extrabold text-primary">{item.price}</p>
+                )}
                 <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
                   <Gift className="h-4 w-4 text-primary shrink-0" />
                   <div>

@@ -54,6 +54,8 @@ import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
 import AdminAlimentos from "./pages/admin/AdminAlimentos";
 import AdminLoja from "./pages/admin/AdminLoja";
 import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
+import AdminDesconto from "./pages/admin/AdminDesconto";
+import DiscountBanner from "./components/DiscountBanner";
 const AdminFerramentas = lazy(() => import("./pages/admin/AdminFerramentas"));
 
 const queryClient = new QueryClient();
@@ -73,6 +75,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <DiscountBanner />
             <Routes>
               {/* Landing page */}
               <Route path="/" element={<Index />} />
@@ -133,6 +136,7 @@ const App = () => (
                 <Route path="pacientes/:id/relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
                 <Route path="alimentos" element={<AdminAlimentos />} />
                 <Route path="loja" element={<AdminLoja />} />
+                <Route path="desconto" element={<AdminDesconto />} />
                 <Route path="ferramentas" element={<Suspense fallback={null}><AdminFerramentas /></Suspense>} />
                 {/* Fallback inside admin */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />

@@ -11,6 +11,19 @@ import PageLayout from "@/components/PageLayout";
 import { useContent } from "@/contexts/ContentContext";
 import { cn } from "@/lib/utils";
 
+function useDiscount() {
+  const { content } = useContent();
+  const { active, percentage, expiresAt } = content.discount;
+  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
+  const isActive = active && !expired;
+  const formatDiscounted = (amount: number) => {
+    if (!isActive) return null;
+    const val = amount * (1 - percentage / 100);
+    return `R$ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(".", ",")}`;
+  };
+  return { isActive, percentage, formatDiscounted };
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CategoryTab = "todos" | "consultas" | "produtos";
@@ -163,13 +176,17 @@ interface ProdutoCardProps {
     name: string;
     desc: string;
     price: string;
+    priceAmount: number;
     badge: string;
     imageUrl: string;
   };
   index: number;
 }
 
-const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
+const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
+  const { isActive, percentage, formatDiscounted } = useDiscount();
+  const discountedPrice = formatDiscounted(item.priceAmount);
+  return (
   <Card
     className={cn(
       "relative group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden",
@@ -203,7 +220,15 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
 
         <div>
           <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Preço</p>
-          <p className="text-2xl font-extrabold text-primary leading-none">{item.price}</p>
+          {isActive && discountedPrice ? (
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className="text-2xl font-extrabold text-primary leading-none">{discountedPrice}</p>
+              <p className="text-sm text-muted-foreground line-through">{item.price}</p>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">-{percentage}%</Badge>
+            </div>
+          ) : (
+            <p className="text-2xl font-extrabold text-primary leading-none">{item.price}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2.5">
@@ -223,7 +248,8 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => (
       </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 

@@ -148,6 +148,13 @@ export interface SiteContent {
     heroBadge: string;
     heroImages: { desktop: string; mobile: string }[];
   };
+  discount: {
+    active: boolean;
+    percentage: number;
+    durationHours: number;
+    expiresAt: string | null;
+    message: string;
+  };
 }
 
 // ─── Default content ──────────────────────────────────────────────────────────
@@ -478,6 +485,13 @@ export const DEFAULT_CONTENT: SiteContent = {
     heroSubtitle: "Invista na sua saúde com planos de acompanhamento personalizados e materiais educativos criados pelo Dr. Fillipe David.",
     heroBadge: "Loja",
     heroImages: [],
+  },
+  discount: {
+    active: false,
+    percentage: 15,
+    durationHours: 8,
+    expiresAt: null,
+    message: "Aproveite! Desconto especial por tempo limitado.",
   },
 };
 
