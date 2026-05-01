@@ -131,6 +131,13 @@ const AdminAgendamentos = () => {
   const [records, setRecords]     = useState<ConsultationRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
 
+  // Advanced filters
+  const [showFilters, setShowFilters]         = useState(false);
+  const [filterType, setFilterType]           = useState<"all" | "online" | "presencial">("all");
+  const [filterDateFrom, setFilterDateFrom]   = useState("");
+  const [filterDateTo, setFilterDateTo]       = useState("");
+  const [filterPlan, setFilterPlan]           = useState("");
+
   // Prontuário — visualização / edição / exclusão
   const [viewRecord, setViewRecord]             = useState<ConsultationRecord | null>(null);
   const [editingRecordId, setEditingRecordId]   = useState<number | null>(null);
@@ -886,14 +893,33 @@ const AdminAgendamentos = () => {
   const groups: Record<string, Booking[]> = {};
   filteredGroupIds.forEach(id => { groups[id] = allGrouped[id]; });
 
+  const activeFilterCount = [
+    filterType !== "all",
+    !!filterDateFrom,
+    !!filterDateTo,
+    !!filterPlan,
+  ].filter(Boolean).length;
+
   const groupEntries = Object.entries(groups)
     .filter(([, sessions]) => {
-      if (!search.trim()) return true;
-      const q = search.toLowerCase();
       const first = sessions[0];
-      return first.client_name?.toLowerCase().includes(q) ||
-             first.plan_name?.toLowerCase().includes(q) ||
-             first.client_email?.toLowerCase().includes(q);
+      const latest = [...sessions].sort((a, b) => (b.session_number ?? 0) - (a.session_number ?? 0))[0];
+      // Text search
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!first.client_name?.toLowerCase().includes(q) &&
+            !first.plan_name?.toLowerCase().includes(q) &&
+            !first.client_email?.toLowerCase().includes(q)) return false;
+      }
+      // Modalidade
+      if (filterType !== "all" && !sessions.some(s => s.type === filterType)) return false;
+      // Date from
+      if (filterDateFrom && latest.appointment_date < filterDateFrom) return false;
+      // Date to
+      if (filterDateTo && latest.appointment_date > filterDateTo) return false;
+      // Plan
+      if (filterPlan && first.plan_name !== filterPlan) return false;
+      return true;
     })
     .sort(([, a], [, b]) => {
       const latestA = [...a].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
@@ -924,20 +950,95 @@ const AdminAgendamentos = () => {
       </div>
 
       {/* Search + Filter */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar paciente..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-          />
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar paciente, plano, email..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+              showFilters || activeFilterCount > 0
+                ? "border-primary/50 bg-primary/5 text-primary"
+                : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/30"
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtros
+            {activeFilterCount > 0 && (
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
-          <SlidersHorizontal className="h-4 w-4" />
-          Filtros
-        </button>
+
+        {/* Advanced filter panel */}
+        {showFilters && (
+          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Modalidade */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Modalidade</label>
+                <div className="flex gap-1.5">
+                  {(["all", "online", "presencial"] as const).map(t => (
+                    <button key={t} onClick={() => setFilterType(t)}
+                      className={`flex-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                        filterType === t
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      }`}>
+                      {t === "all" ? "Todos" : t === "online" ? "Online" : "Presencial"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Data de */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Data de</label>
+                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                  className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+
+              {/* Data até */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Data até</label>
+                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                  className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+            </div>
+
+            {/* Plano */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Plano</label>
+              <select value={filterPlan} onChange={e => setFilterPlan(e.target.value)}
+                className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Todos os planos</option>
+                {[...new Set(bookings.map(b => b.plan_name).filter(Boolean))].sort().map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => { setFilterType("all"); setFilterDateFrom(""); setFilterDateTo(""); setFilterPlan(""); }}
+                  className="text-xs text-muted-foreground hover:text-red-500 transition-colors flex items-center gap-1"
+                >
+                  <X className="h-3 w-3" /> Limpar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Underline Tabs */}
