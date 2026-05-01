@@ -77,7 +77,8 @@ const BookingPage = () => {
 
   const [step, setStep] = useState(planType ? 1 : 0);
   const [consultationType, setConsultationType] = useState<"online" | "presencial" | null>(planType);
-  const [availSlots, setAvailSlots] = useState<Array<{ id: number; date: string; start_time: string; type: string }>>([]);
+  const [selectedCity, setSelectedCity] = useState("Alagoinhas");
+  const [availSlots, setAvailSlots] = useState<Array<{ id: number; date: string; start_time: string; type: string; city?: string }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [sessions, setSessions] = useState<SessionSlot[]>([]);
   const [currentSessionIdx, setCurrentSessionIdx] = useState(0);
@@ -147,18 +148,20 @@ const BookingPage = () => {
     }
   };
 
-  // Load available slots only when consultationType changes (step 0 → 1)
+  // Reload slots when type or city changes
   useEffect(() => {
     if (!consultationType) return;
     setLoadingSlots(true);
     fetchAvailabilitySlots().then(data => {
-      setAvailSlots(data);
+      const filtered = consultationType === "presencial"
+        ? data.filter(s => s.type === "presencial" && s.city === selectedCity)
+        : data.filter(s => s.type === "online");
+      setAvailSlots(filtered);
       setLoadingSlots(false);
     });
-    // Paciente só escolhe a data da 1ª consulta; retornos são agendados pelo nutricionista
     setSessions([{ date: null, time: null, type: consultationType }]);
     setCurrentSessionIdx(0);
-  }, [consultationType]);
+  }, [consultationType, selectedCity]);
 
   // Load MP SDK when reaching payment step
   useEffect(() => {
@@ -312,6 +315,7 @@ const BookingPage = () => {
       const notes = JSON.stringify({
         birthDate, sex, goal, allergies, restrictions,
         healthConditions, medications, hadNutritionist, howFound,
+        city: consultationType === "presencial" ? selectedCity : undefined,
       });
       const cpfDigits = clientCpf.replace(/\D/g, "");
       const booking: Booking = {
@@ -595,6 +599,25 @@ const BookingPage = () => {
                       <Icon className="h-3.5 w-3.5" />{label}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* City selector — presencial only */}
+              {(sessions[currentSessionIdx]?.type === "presencial" || consultationType === "presencial") && (
+                <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+                  <MapPin className="h-4 w-4 text-primary shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Cidade de atendimento</p>
+                    <select
+                      value={selectedCity}
+                      onChange={e => { setSelectedCity(e.target.value); setSessions(s => s.map(sess => ({ ...sess, date: null, time: null }))); }}
+                      className="w-full text-sm font-medium text-foreground bg-transparent focus:outline-none"
+                    >
+                      {["Alagoinhas","Feira de Santana","Salvador","Crisópolis","Olindina","Aporá","Acajutiba","Esplanada"].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
