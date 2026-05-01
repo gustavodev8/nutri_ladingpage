@@ -1,11 +1,15 @@
 import {
   Users, Plus, Search, Trash2, ChevronRight, UserCircle2, Loader2, MapPin,
   TrendingUp, CalendarDays, BarChart2, Building2, AlertCircle, SlidersHorizontal, X,
-  ChevronLeft,
+  ChevronLeft, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
@@ -100,6 +104,7 @@ export default function AdminPacientes() {
   const [form,          setForm]          = useState<NewPatientForm>(emptyForm);
   const [saving,        setSaving]        = useState(false);
   const [deletingId,    setDeletingId]    = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [showAdvanced,  setShowAdvanced]  = useState(false);
   const [page,          setPage]          = useState(1);
 
@@ -234,9 +239,15 @@ export default function AdminPacientes() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handleDelete = async (e: React.MouseEvent, id: number) => {
+  const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (!window.confirm("Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.")) return;
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (confirmDeleteId === null) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     setDeletingId(id);
     const ok = await deletePatient(id);
     if (ok) { setPatients((prev) => prev.filter((p) => p.id !== id)); toast.success("Paciente excluído."); }
@@ -807,6 +818,32 @@ export default function AdminPacientes() {
           </div>
         </div>
       )}
+
+      {/* ── Confirm delete dialog ── */}
+      <AlertDialog open={confirmDeleteId !== null} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-lg">Excluir paciente?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              Esta ação é permanente e não pode ser desfeita. Todos os dados do paciente serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-xl flex-1">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="rounded-xl flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Sim, excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
