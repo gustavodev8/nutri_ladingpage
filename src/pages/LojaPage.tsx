@@ -132,7 +132,7 @@ const LojaPage = () => {
     <PageLayout>
       {/* ── Hero carousel ───────────────────────────────────────────────────── */}
       {heroImages.length > 0 && (
-        <section className="relative bg-green-dark h-[220px] sm:h-[320px] overflow-hidden">
+        <section className="relative bg-green-dark h-[280px] sm:h-[420px] overflow-hidden">
           {heroImages.map((slide, i) => (
             <div
               key={i}
@@ -142,8 +142,8 @@ const LojaPage = () => {
                 i === bgIndex ? "opacity-100" : "opacity-0"
               )}
             >
-              <img src={slide.mobile || slide.desktop} alt="" className="sm:hidden w-full h-full object-cover object-center" />
-              <img src={slide.desktop} alt="" className="hidden sm:block w-full h-full object-cover object-center" />
+              <img src={slide.mobile || slide.desktop} alt="" className="sm:hidden w-full h-full object-cover object-top" />
+              <img src={slide.desktop} alt="" className="hidden sm:block w-full h-full object-cover object-top" />
             </div>
           ))}
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
