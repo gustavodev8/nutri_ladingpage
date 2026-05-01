@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft, BookOpen, Loader2, Mail, CheckCircle2,
-  Copy, Check, X, User, CreditCard, ChevronLeft, ChevronRight, MessageCircle
+  Copy, Check, X, User, CreditCard, ChevronLeft, ChevronRight, MessageCircle, Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -445,10 +445,14 @@ const ProdutoPage = () => {
                       </Button>
                     </div>
                   ) : freeEligible === false ? (
-                    <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        Este CPF já utilizou a consulta gratuita em uma compra anterior. O e-book foi enviado normalmente para seu email.
-                      </p>
+                    <div className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 flex items-start gap-3">
+                      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-foreground mb-0.5">Consulta gratuita não disponível</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Este benefício já foi utilizado em uma compra anterior vinculada a este CPF.
+                        </p>
+                      </div>
                     </div>
                   ) : null}
 
