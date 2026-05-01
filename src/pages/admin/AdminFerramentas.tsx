@@ -1,13 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { FileDown, Upload, X, Loader2, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
-import { compressPdf, type PdfQuality } from "@/lib/pdfCompress";
+import { compressPdf } from "@/lib/pdfCompress";
 import { Button } from "@/components/ui/button";
-
-const QUALITY_OPTIONS: { id: PdfQuality; label: string; desc: string; reduction: string }[] = [
-  { id: "baixa", label: "Baixa",  desc: "72 DPI · JPEG 60%",  reduction: "↓ 85–95%" },
-  { id: "media", label: "Média",  desc: "96 DPI · JPEG 75%",  reduction: "↓ 70–85%" },
-  { id: "alta",  label: "Alta",   desc: "150 DPI · JPEG 85%", reduction: "↓ 50–70%" },
-];
 
 function formatBytes(b: number) {
   if (b >= 1_000_000) return `${(b / 1_000_000).toFixed(1)} MB`;
@@ -17,7 +11,6 @@ function formatBytes(b: number) {
 
 export default function AdminFerramentas() {
   const [file, setFile]           = useState<File | null>(null);
-  const [quality, setQuality]     = useState<PdfQuality>("media");
   const [progress, setProgress]   = useState(0);      // 0-100
   const [total, setTotal]         = useState(0);
   const [done, setDone]           = useState(0);
@@ -42,11 +35,11 @@ export default function AdminFerramentas() {
     if (!file) return;
     setCompressing(true); setError(null); setResult(null); setProgress(0);
     try {
-      const blob = await compressPdf(file, quality, (d, t) => {
+      const blob = await compressPdf(file, "media", (d, t) => {
         setDone(d); setTotal(t);
         setProgress(t > 0 ? Math.round((d / t) * 100) : 0);
       });
-      const outName = file.name.replace(/\.pdf$/i, `_comprimido_${quality}.pdf`);
+      const outName = file.name.replace(/\.pdf$/i, "_comprimido.pdf");
       setResult({ blob, name: outName });
       setProgress(100);
     } catch (e) {
@@ -133,31 +126,6 @@ export default function AdminFerramentas() {
             )}
           </div>
 
-          {/* Quality selector */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Qualidade de saída</label>
-            <div className="grid grid-cols-3 gap-2">
-              {QUALITY_OPTIONS.map(opt => (
-                <button key={opt.id} onClick={() => setQuality(opt.id)}
-                  className={`flex flex-col items-start px-3 py-2.5 rounded-lg border text-left transition-all ${
-                    quality === opt.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30 hover:bg-muted/30"
-                  }`}>
-                  <span className={`text-sm font-semibold ${quality === opt.id ? "text-primary" : "text-foreground"}`}>
-                    {opt.label}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</span>
-                  <span className={`text-[10px] font-medium mt-1 ${quality === opt.id ? "text-primary/70" : "text-muted-foreground/60"}`}>
-                    {opt.reduction}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground/60">
-              Baixa e Média são ideais para ebooks e documentos de texto. Alta preserva melhor imagens e diagramas.
-            </p>
-          </div>
 
           {/* Progress bar */}
           {compressing && (
