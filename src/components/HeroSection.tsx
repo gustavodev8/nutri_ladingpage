@@ -3,6 +3,7 @@ import { Video, Calendar, ArrowRight, ChevronLeft, ChevronRight } from "lucide-r
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useContent } from "@/contexts/ContentContext";
+import { useHeaderHeight } from "@/hooks/useHeaderHeight";
 
 // ─── Highlight helper ──────────────────────────────────────────────────────────
 
@@ -121,6 +122,7 @@ const HeroSection = () => {
   const { content } = useContent();
   const { hero, identity, resultados } = content;
   const navigate = useNavigate();
+  const headerHeight = useHeaderHeight();
 
   const items = resultados.items.filter(Boolean);
   const [current, setCurrent] = useState(0);
@@ -137,7 +139,7 @@ const HeroSection = () => {
   }, [paused, next, items.length]);
 
   return (
-    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ paddingTop: headerHeight }}>
       <div className="absolute inset-0 bg-gradient-to-br from-green-light via-background to-gold-light opacity-60" />
       <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
