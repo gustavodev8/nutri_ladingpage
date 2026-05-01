@@ -67,7 +67,7 @@ const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/ogg"];
 const ALLOWED_VIDEO_EXTS = ["mp4", "webm", "ogg"];
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
-const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_PDF_SIZE = 200 * 1024 * 1024; // 200MB
 
 export async function uploadImage(file: File): Promise<string | null> {
   const ext = (file.name.split(".").pop() ?? "").toLowerCase();
@@ -175,7 +175,10 @@ export async function uploadPdf(file: File): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) { console.error("[Supabase] uploadPdf error:", error.message); return null; }
+  if (error) {
+    console.error("[Supabase] uploadPdf error:", error.message);
+    throw new Error(error.message);
+  }
   const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
   return urlData.publicUrl;
 }

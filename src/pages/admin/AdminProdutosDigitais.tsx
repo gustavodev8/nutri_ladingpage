@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Trash2, FileText, Loader2, ExternalLink, MessageSquareQuote, ImageIcon } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,11 +34,22 @@ const AdminProdutosDigitais = () => {
 
   const handlePdfUpload = async (index: number, file: File) => {
     setPdfUploading((prev) => ({ ...prev, [index]: true }));
-    const url = await uploadPdf(file);
-    if (url) {
-      setItem(index, "pdfUrl", url);
+    try {
+      const url = await uploadPdf(file);
+      if (url) setItem(index, "pdfUrl", url);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro desconhecido";
+      const isTooBig = msg.toLowerCase().includes("too large") || msg.toLowerCase().includes("size");
+      toast({
+        title: "Falha no upload do PDF",
+        description: isTooBig
+          ? `Arquivo muito grande para o Supabase. Comprima o PDF em Ferramentas → Compressor de PDF antes de fazer upload.`
+          : msg,
+        variant: "destructive",
+      });
+    } finally {
+      setPdfUploading((prev) => ({ ...prev, [index]: false }));
     }
-    setPdfUploading((prev) => ({ ...prev, [index]: false }));
   };
 
   // ── Screenshots helpers ───────────────────────────────────────────────────────
