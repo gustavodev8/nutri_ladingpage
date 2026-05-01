@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, BookOpen, Calendar, Gift, Globe, MapPin,
-  MessageCircle, ShoppingBag, Star, Wifi,
+  ArrowRight, BookOpen, Gift, MessageCircle, ShoppingBag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,148 +25,6 @@ function useDiscount() {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CategoryTab = "todos" | "consultas" | "produtos";
-type ModalityFilter = "all" | "online" | "presencial" | "both";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MODALITY: Record<string, { label: string; Icon: React.ElementType }> = {
-  online:     { label: "Online",              Icon: Wifi   },
-  presencial: { label: "Presencial",          Icon: MapPin },
-  both:       { label: "Online & Presencial", Icon: Globe  },
-};
-
-const CATEGORY_TABS: { id: CategoryTab; label: string }[] = [
-  { id: "todos",     label: "Todos"             },
-  { id: "consultas", label: "Consultas"          },
-  { id: "produtos",  label: "Produtos Digitais" },
-];
-
-const MODALITY_OPTIONS: { id: ModalityFilter; label: string }[] = [
-  { id: "all",        label: "Todas"               },
-  { id: "online",     label: "Online"              },
-  { id: "presencial", label: "Presencial"          },
-  { id: "both",       label: "Online & Presencial" },
-];
-
-// ─── ConsultaCard ─────────────────────────────────────────────────────────────
-
-interface ConsultaCardProps {
-  plan: {
-    name: string;
-    desc: string;
-    price: string;
-    badge: string;
-    popular: boolean;
-    whatsappMessage: string;
-    sessionCount: number;
-    returnCount: number;
-    consultationType: string;
-  };
-  index: number;
-  whatsappUrl: (msg: string) => string;
-}
-
-const ConsultaCard = ({ plan, index, whatsappUrl }: ConsultaCardProps) => {
-  const modality = MODALITY[plan.consultationType] ?? MODALITY.both;
-  const ModalityIcon = modality.Icon;
-
-  return (
-    <Card
-      className={cn(
-        "relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
-        plan.popular
-          ? "border-primary ring-2 ring-primary/20 shadow-md shadow-primary/10"
-          : "border-border/60 hover:border-primary/30"
-      )}
-    >
-      {plan.popular && (
-        <div className="h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
-      )}
-
-      {plan.popular && (
-        <div className="absolute top-3.5 left-4 z-10">
-          <span className="flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-            <Star className="h-2.5 w-2.5 fill-current" />
-            Mais popular
-          </span>
-        </div>
-      )}
-
-      {!plan.popular && plan.badge && (
-        <Badge className="absolute top-4 right-4 z-10 bg-gold text-foreground border-gold/30 text-xs">
-          {plan.badge}
-        </Badge>
-      )}
-
-      <CardContent className={cn("p-6 flex flex-col gap-4 flex-1", plan.popular && "pt-12")}>
-        {/* Modality + session tags */}
-        <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 text-xs font-medium bg-muted/70 text-muted-foreground rounded-full px-2.5 py-1">
-            <ModalityIcon className="h-3 w-3" />
-            {modality.label}
-          </span>
-          {plan.sessionCount > 1 && (
-            <span className="inline-flex items-center text-xs font-medium bg-primary/10 text-primary rounded-full px-2.5 py-1">
-              {plan.sessionCount} sessões
-            </span>
-          )}
-          {plan.returnCount > 0 && (
-            <span className="inline-flex items-center text-xs font-medium bg-muted/70 text-muted-foreground rounded-full px-2.5 py-1">
-              {plan.returnCount} retornos
-            </span>
-          )}
-        </div>
-
-        {/* Name + description */}
-        <div className="space-y-1.5">
-          <h3 className="font-display font-bold text-lg text-foreground leading-snug">{plan.name}</h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">{plan.desc}</p>
-        </div>
-
-        {/* Price */}
-        <div>
-          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Investimento</p>
-          <p className={cn("text-3xl font-extrabold leading-none", plan.popular ? "text-primary" : "text-foreground")}>
-            {plan.price}
-          </p>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* CTAs */}
-        <div className="space-y-2 pt-3 border-t border-border/50">
-          <Button
-            asChild
-            className={cn(
-              "w-full rounded-full gap-2",
-              plan.popular
-                ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
-                : ""
-            )}
-            variant={plan.popular ? "default" : "outline"}
-          >
-            <a href={whatsappUrl(plan.whatsappMessage)} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4 shrink-0" />
-              Falar pelo WhatsApp
-            </a>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="w-full text-muted-foreground gap-1.5 hover:text-primary text-xs h-8"
-          >
-            <Link to={`/agendar/${index}`}>
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
-              Agendar pelo sistema
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 // ─── ProdutoCard ──────────────────────────────────────────────────────────────
 
@@ -255,10 +112,8 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
 
 const LojaPage = () => {
   const { content, whatsappUrl } = useContent();
-  const { loja, produtosDigitais, marketplace } = content;
-  const [category, setCategory] = useState<CategoryTab>("todos");
-  const [modality, setModality] = useState<ModalityFilter>("all");
-  const [bgIndex,  setBgIndex]  = useState(0);
+  const { produtosDigitais, marketplace } = content;
+  const [bgIndex, setBgIndex] = useState(0);
 
   type HeroSlide = { desktop: string; mobile: string };
   const heroImages: HeroSlide[] = (marketplace.heroImages ?? []).map((item: unknown) =>
@@ -271,29 +126,7 @@ const LojaPage = () => {
     return () => clearInterval(id);
   }, [heroImages.length]);
 
-  const filteredPlans = useMemo(
-    () => modality === "all" ? loja.plans : loja.plans.filter((p) => p.consultationType === modality),
-    [loja.plans, modality]
-  );
-
-  const showConsultas = category === "todos" || category === "consultas";
-  const showProdutos  = category === "todos" || category === "produtos";
-
-  const consultaCount = loja.plans.length;
-  const produtoCount  = produtosDigitais.items.length;
-  const totalCount    = consultaCount + produtoCount;
-
-  const showModalityFilter = showConsultas && consultaCount > 0;
-
-  const visibleCount =
-    (showConsultas ? filteredPlans.length : 0) +
-    (showProdutos  ? produtosDigitais.items.length : 0);
-
-  const getTabCount = (id: CategoryTab) => {
-    if (id === "todos")     return totalCount;
-    if (id === "consultas") return consultaCount;
-    return produtoCount;
-  };
+  const produtoCount = produtosDigitais.items.length;
 
   return (
     <PageLayout>
@@ -336,79 +169,29 @@ const LojaPage = () => {
       {/* ── Main content ────────────────────────────────────────────────────── */}
       <div className="container mx-auto px-4 py-10">
 
-        {/* Results count */}
-        {totalCount > 0 && (
-          <p className="text-sm text-muted-foreground mb-10">
-            {visibleCount} {visibleCount === 1 ? "item encontrado" : "itens encontrados"}
-            {modality !== "all" && showConsultas && (
-              <>
-                {" · "}
-                <button onClick={() => setModality("all")} className="text-primary hover:underline">
-                  limpar filtro de modalidade
-                </button>
-              </>
-            )}
-          </p>
+        {produtosDigitais.items.length > 0 ? (
+          <section className="space-y-7">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Produtos Digitais</p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{produtosDigitais.sectionTitle}</h2>
+              {produtosDigitais.sectionSubtitle && (
+                <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">{produtosDigitais.sectionSubtitle}</p>
+              )}
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {produtosDigitais.items.map((item, i) => (
+                <ProdutoCard key={i} item={item} index={i} />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="text-center py-20 text-muted-foreground">
+            <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium">Nenhum produto disponível no momento.</p>
+            <p className="text-sm mt-1">Volte em breve!</p>
+          </div>
         )}
 
-        <div className="space-y-20">
-
-          {/* Consultas */}
-          {showConsultas && filteredPlans.length > 0 && (
-            <section className="space-y-7">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Consultas</p>
-                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{loja.sectionTitle}</h2>
-                {loja.sectionSubtitle && (
-                  <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">{loja.sectionSubtitle}</p>
-                )}
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredPlans.map((plan, i) => (
-                  <ConsultaCard key={i} plan={plan} index={i} whatsappUrl={whatsappUrl} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Empty: modality filter gave 0 results but plans exist */}
-          {showConsultas && filteredPlans.length === 0 && loja.plans.length > 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="font-medium">Nenhuma consulta disponível para esta modalidade.</p>
-              <button onClick={() => setModality("all")} className="mt-2 text-sm text-primary hover:underline">
-                Ver todas as modalidades
-              </button>
-            </div>
-          )}
-
-          {/* Produtos Digitais */}
-          {showProdutos && produtosDigitais.items.length > 0 && (
-            <section className="space-y-7">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Produtos Digitais</p>
-                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{produtosDigitais.sectionTitle}</h2>
-                {produtosDigitais.sectionSubtitle && (
-                  <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">{produtosDigitais.sectionSubtitle}</p>
-                )}
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {produtosDigitais.items.map((item, i) => (
-                  <ProdutoCard key={i} item={item} index={i} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Global empty state */}
-          {consultaCount === 0 && produtoCount === 0 && (
-            <div className="text-center py-20 text-muted-foreground">
-              <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium">Nenhum produto disponível no momento.</p>
-              <p className="text-sm mt-1">Volte em breve!</p>
-            </div>
-          )}
-
-        </div>
       </div>
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────────── */}
