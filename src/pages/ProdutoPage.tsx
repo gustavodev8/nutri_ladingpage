@@ -241,7 +241,7 @@ const ProdutoPage = () => {
       const eligRes = await fetch(`${SUPABASE_URL}/functions/v1/check-cpf-eligible`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf }),
+        body: JSON.stringify({ cpf, email }),
       });
       const eligData = await eligRes.json();
       setFreeEligible(eligData.eligible === true);
