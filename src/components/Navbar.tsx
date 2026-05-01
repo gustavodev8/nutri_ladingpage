@@ -140,7 +140,7 @@ const Navbar = () => {
             <span className="font-medium text-xs sm:text-sm">{message}</span>
             <span className="font-bold text-green-100 text-xs sm:text-sm">{percentage}% OFF</span>
             {expiresAt && remaining !== null && remaining > 0 && (
-              <span className="bg-white/20 rounded-full px-2.5 py-0.5 font-mono font-semibold text-xs tracking-wider">
+              <span className="bg-white/25 border border-white/30 rounded-full px-3 py-0.5 font-mono font-bold text-sm tracking-widest tabular-nums shadow-inner">
                 ⏱ {formatTime(remaining)}
               </span>
             )}
