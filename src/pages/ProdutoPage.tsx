@@ -448,8 +448,8 @@ const ProdutoPage = () => {
                     <div className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 flex items-start gap-3">
                       <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-foreground mb-0.5">Consulta gratuita não disponível</p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-sm font-semibold text-foreground mb-0.5">Consulta gratuita não disponível</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           Este benefício já foi utilizado em uma compra anterior vinculada a este CPF.
                         </p>
                       </div>
