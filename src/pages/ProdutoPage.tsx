@@ -244,7 +244,7 @@ const ProdutoPage = () => {
         body: JSON.stringify({ cpf }),
       });
       const eligData = await eligRes.json();
-      setFreeEligible(eligData.eligible !== false);
+      setFreeEligible(eligData.eligible === true);
     } catch {
       setFreeEligible(true); // allow on error
     }

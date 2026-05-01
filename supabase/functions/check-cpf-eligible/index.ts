@@ -51,8 +51,10 @@ serve(async (req) => {
     });
 
     if (!res.ok) {
-      // On DB error, allow by default (don't block the purchase)
-      return new Response(JSON.stringify({ eligible: true }), {
+      const errBody = await res.text().catch(() => "");
+      console.error("check-cpf-eligible DB error:", res.status, errBody);
+      // Log the error but default to NOT eligible to be safe
+      return new Response(JSON.stringify({ eligible: false, error: "db_error" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -65,8 +67,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("check-cpf-eligible error:", e);
-    // On unexpected error, allow by default
-    return new Response(JSON.stringify({ eligible: true }), {
+    return new Response(JSON.stringify({ eligible: false, error: "unexpected" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
