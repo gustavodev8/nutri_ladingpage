@@ -146,7 +146,6 @@ const LojaPage = () => {
               <img src={slide.desktop} alt="" className="hidden sm:block w-full h-full object-cover object-top" />
             </div>
           ))}
-          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
           {heroImages.length > 1 && (
             <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
               {heroImages.map((_, i) => (
