@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, ArrowRight, Gift } from "lucide-react";
+import { BookOpen, ArrowRight, Gift, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
@@ -46,7 +46,7 @@ const DigitalProductsSection = () => {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {produtosDigitais.items.map((item, i) => (
+          {produtosDigitais.items.slice(0, 6).map((item, i) => (
             <Card
               key={i}
               className={`relative group hover:shadow-xl hover:-translate-y-1 transition-all duration-700 ease-smooth ${
@@ -105,6 +105,28 @@ const DigitalProductsSection = () => {
             </Card>
           ))}
         </div>
+
+        {produtosDigitais.items.length > 0 && (
+          <div
+            className={`mt-12 text-center transition-[opacity,transform] duration-700 ease-smooth ${
+              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            }`}
+            style={{ transitionDelay: isVisible ? "750ms" : "0ms" }}
+          >
+            <p className="text-muted-foreground text-sm mb-4">
+              {produtosDigitais.items.length > 6
+                ? `Veja todos os ${produtosDigitais.items.length} produtos na nossa loja`
+                : "Explore todos os nossos materiais na loja"}
+            </p>
+            <Button asChild size="lg" className="rounded-full gap-2 px-8">
+              <Link to="/loja">
+                <ShoppingBag className="h-5 w-5" />
+                Ver loja completa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
