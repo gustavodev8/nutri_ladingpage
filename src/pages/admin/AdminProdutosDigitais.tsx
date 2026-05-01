@@ -17,7 +17,21 @@ type ProdutosContent = SiteContent["produtosDigitais"];
 
 const AdminProdutosDigitais = () => {
   const { content, updateContent } = useContent();
-  const [form, setForm] = useState<ProdutosContent>(content.produtosDigitais);
+  const [form, setForm] = useState<ProdutosContent>(() => {
+    const base = content.produtosDigitais;
+    return {
+      ...base,
+      items: base.items.map((item) => ({
+        ...item,
+        pdfFiles:
+          item.pdfFiles && item.pdfFiles.length > 0
+            ? item.pdfFiles
+            : item.pdfUrl
+            ? [{ url: item.pdfUrl, label: "E-book" }]
+            : [],
+      })),
+    };
+  });
   const [pdfUploading, setPdfUploading] = useState<Record<string, boolean>>({});
   const [pdfStatus, setPdfStatus]       = useState<Record<string, string>>({});
   const [screenshotUploading, setScreenshotUploading] = useState<Record<string, boolean>>({});
