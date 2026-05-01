@@ -1,4 +1,9 @@
-import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import jsPDF from "jspdf";
+
+// Worker set up once at module load (module is lazy-loaded with the Ferramentas page)
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export type PdfQuality = "baixa" | "media" | "alta";
 
@@ -13,42 +18,46 @@ export async function compressPdf(
   quality: PdfQuality,
   onProgress?: (done: number, total: number) => void,
 ): Promise<Blob> {
-  // Dynamic import keeps pdfjs out of the main bundle and avoids worker init at module load time
-  const pdfjsLib = await import("pdfjs-dist");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
   const { dpi, q } = PRESETS[quality];
   const scale = dpi / 72;
 
   const arrayBuffer = await file.arrayBuffer();
-  const srcDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const srcDoc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
   const total = srcDoc.numPages;
-  const outDoc = await PDFDocument.create();
+
+  let outPdf: jsPDF | null = null;
 
   for (let n = 1; n <= total; n++) {
     onProgress?.(n - 1, total);
 
     const page = await srcDoc.getPage(n);
     const vp = page.getViewport({ scale });
+    const w = Math.round(vp.width);
+    const h = Math.round(vp.height);
 
     const canvas = document.createElement("canvas");
-    canvas.width  = Math.round(vp.width);
-    canvas.height = Math.round(vp.height);
+    canvas.width  = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
 
-    await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
 
-    const jpegBlob = await new Promise<Blob>((res, rej) =>
-      canvas.toBlob(b => (b ? res(b) : rej(new Error("toBlob falhou"))), "image/jpeg", q),
-    );
+    const dataUrl = canvas.toDataURL("image/jpeg", q);
 
-    const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
-    const img = await outDoc.embedJpg(jpegBytes);
-    const p = outDoc.addPage([canvas.width, canvas.height]);
-    p.drawImage(img, { x: 0, y: 0, width: canvas.width, height: canvas.height });
+    if (!outPdf) {
+      outPdf = new jsPDF({ unit: "px", format: [w, h], compress: true });
+    } else {
+      outPdf.addPage([w, h]);
+    }
+    outPdf.addImage(dataUrl, "JPEG", 0, 0, w, h, undefined, "FAST");
+
+    // Free canvas memory immediately
+    canvas.width = 0;
+    canvas.height = 0;
 
     onProgress?.(n, total);
   }
 
-  const bytes = await outDoc.save();
-  return new Blob([bytes], { type: "application/pdf" });
+  if (!outPdf) throw new Error("PDF sem páginas.");
+  return outPdf.output("blob");
 }
