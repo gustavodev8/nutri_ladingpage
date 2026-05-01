@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, Leaf } from "lucide-react";
+import { Menu, X, Leaf, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
@@ -21,11 +21,46 @@ const NAV_LINKS: NavLink[] = [
   { href: "#faq",         label: "FAQ",          type: "anchor" },
 ];
 
+function useCountdown(expiresAt: string | null) {
+  const getRemaining = () => {
+    if (!expiresAt) return null;
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return diff > 0 ? diff : 0;
+  };
+  const [remaining, setRemaining] = useState(getRemaining);
+  useEffect(() => {
+    if (!expiresAt) return;
+    const id = setInterval(() => {
+      const r = getRemaining();
+      setRemaining(r);
+      if (r === 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  return remaining;
+}
+
+function formatTime(ms: number) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}h ${p(m)}m ${p(sec)}s` : `${p(m)}m ${p(sec)}s`;
+}
+
 const Navbar = () => {
   const { content } = useContent();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const { active, percentage, expiresAt, message } = content.discount;
+  const remaining = useCountdown(expiresAt);
+  const bannerVisible =
+    active && !bannerDismissed &&
+    (expiresAt === null || (remaining !== null && remaining > 0));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -98,6 +133,27 @@ const Navbar = () => {
         scrolled ? "bg-card/95 backdrop-blur-md shadow-md" : "bg-transparent"
       }`}
     >
+      {bannerVisible && (
+        <div className="relative bg-gradient-to-r from-green-700 via-green-600 to-green-700 text-white text-sm">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2 flex-wrap">
+            <Tag className="h-3.5 w-3.5 shrink-0" />
+            <span className="font-medium text-xs sm:text-sm">{message}</span>
+            <span className="font-bold text-green-100 text-xs sm:text-sm">{percentage}% OFF</span>
+            {expiresAt && remaining !== null && remaining > 0 && (
+              <span className="bg-white/20 rounded-full px-2.5 py-0.5 font-mono font-semibold text-xs tracking-wider">
+                ⏱ {formatTime(remaining)}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-70 hover:opacity-100 transition-opacity"
+            aria-label="Fechar"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       <div className="container mx-auto px-4 flex items-center justify-between h-16 lg:h-20">
         <a href="/" onClick={handleLogoClick} className="flex items-center gap-2">
           <Leaf className="h-7 w-7 text-primary" />

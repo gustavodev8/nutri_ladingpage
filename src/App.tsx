@@ -55,7 +55,6 @@ import AdminAlimentos from "./pages/admin/AdminAlimentos";
 import AdminLoja from "./pages/admin/AdminLoja";
 import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
 import AdminDesconto from "./pages/admin/AdminDesconto";
-import DiscountBanner from "./components/DiscountBanner";
 const AdminFerramentas = lazy(() => import("./pages/admin/AdminFerramentas"));
 
 const queryClient = new QueryClient();
@@ -75,7 +74,6 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
-            <DiscountBanner />
             <Routes>
               {/* Landing page */}
               <Route path="/" element={<Index />} />
