@@ -196,6 +196,21 @@ const ProdutoPage = () => {
 
   if (!produto) return <Navigate to="/" replace />;
 
+  const checkEligibility = async (cpfValue: string, emailValue: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/check-cpf-eligible`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf: cpfValue, email: emailValue }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data.eligible === true;
+    } catch {
+      return false;
+    }
+  };
+
   const startPolling = (paymentId: number) => {
     pollingRef.current = setInterval(async () => {
       try {
@@ -207,6 +222,11 @@ const ProdutoPage = () => {
         const data = await res.json();
         if (data.status === "approved") {
           clearInterval(pollingRef.current!);
+          // Re-check eligibility after approval — at this point payment_logs
+          // already has the CURRENT purchase written by the webhook, so a
+          // second purchase will correctly return eligible=false.
+          const eligible = await checkEligibility(cpf, email);
+          setFreeEligible(eligible);
           setStage("approved");
         }
       } catch (_) { /* keep polling */ }
@@ -236,18 +256,8 @@ const ProdutoPage = () => {
     setStage("loading");
     setErrorMsg("");
 
-    // Check CPF eligibility for free consultation
-    try {
-      const eligRes = await fetch(`${SUPABASE_URL}/functions/v1/check-cpf-eligible`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf, email }),
-      });
-      const eligData = await eligRes.json();
-      setFreeEligible(eligData.eligible === true);
-    } catch {
-      setFreeEligible(true); // allow on error
-    }
+    // Pre-check eligibility — result is overridden again after payment approval
+    setFreeEligible(await checkEligibility(cpf, email));
 
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-pix-payment`, {
