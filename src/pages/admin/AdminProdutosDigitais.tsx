@@ -18,6 +18,7 @@ const AdminProdutosDigitais = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<ProdutosContent>(content.produtosDigitais);
   const [pdfUploading, setPdfUploading] = useState<Record<number, boolean>>({});
+  const [pdfStatus, setPdfStatus]       = useState<Record<number, string>>({});
   const [screenshotUploading, setScreenshotUploading] = useState<Record<string, boolean>>({});
 
   const setHeader = (key: "sectionTitle" | "sectionSubtitle", value: string) => {
@@ -35,20 +36,34 @@ const AdminProdutosDigitais = () => {
   const handlePdfUpload = async (index: number, file: File) => {
     setPdfUploading((prev) => ({ ...prev, [index]: true }));
     try {
-      const url = await uploadPdf(file);
-      if (url) setItem(index, "pdfUrl", url);
+      let uploadFile: File = file;
+
+      if (file.size > 50 * 1024 * 1024) {
+        setPdfStatus((prev) => ({ ...prev, [index]: "Comprimindo PDF..." }));
+        toast({ title: "PDF grande detectado", description: "Comprimindo automaticamente antes do upload…" });
+        const { compressPdf } = await import("@/lib/pdfCompress");
+        const blob = await compressPdf(file, "media", (done, total) => {
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          setPdfStatus((prev) => ({ ...prev, [index]: `Comprimindo… ${pct}%` }));
+        });
+        uploadFile = new File([blob], file.name, { type: "application/pdf" });
+      }
+
+      setPdfStatus((prev) => ({ ...prev, [index]: "Enviando…" }));
+      const url = await uploadPdf(uploadFile);
+      if (url) {
+        setItem(index, "pdfUrl", url);
+        toast({ title: "PDF enviado!", description: uploadFile !== file ? `Comprimido de ${(file.size / 1e6).toFixed(1)} MB → ${(uploadFile.size / 1e6).toFixed(1)} MB` : undefined });
+      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      const isTooBig = msg.toLowerCase().includes("too large") || msg.toLowerCase().includes("size");
       toast({
         title: "Falha no upload do PDF",
-        description: isTooBig
-          ? `Arquivo muito grande para o Supabase. Comprima o PDF em Ferramentas → Compressor de PDF antes de fazer upload.`
-          : msg,
+        description: e instanceof Error ? e.message : "Erro desconhecido",
         variant: "destructive",
       });
     } finally {
       setPdfUploading((prev) => ({ ...prev, [index]: false }));
+      setPdfStatus((prev) => ({ ...prev, [index]: "" }));
     }
   };
 
@@ -187,7 +202,7 @@ const AdminProdutosDigitais = () => {
                         {pdfUploading[i] ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            Enviando PDF...
+                            {pdfStatus[i] || "Processando…"}
                           </>
                         ) : (
                           <>
