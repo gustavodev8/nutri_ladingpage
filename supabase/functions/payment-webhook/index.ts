@@ -252,8 +252,9 @@ serve(async (req) => {
     const productName = escapeHtml(
       payment.additional_info?.items?.[0]?.title || payment.description || "E-book"
     );
+    const customerName = parts[3] ? escapeHtml(decodeURIComponent(parts[3])) : "";
 
-    if (!customerEmail || !RESEND_API_KEY) {
+    if (!customerEmail) {
       return new Response("ok", { status: 200 });
     }
 
@@ -282,88 +283,7 @@ serve(async (req) => {
       } catch { /* fall through to fallback */ }
     }
 
-    // Build PDF links block for email
-    const isCombo = pdfFiles.length > 1;
-    const pdfsBlock = pdfFiles.length > 0
-      ? pdfFiles.map((pf, idx) => {
-          const label = escapeHtml(pf.label || `E-book ${idx + 1}`);
-          const url = escapeHtml(pf.url);
-          return `
-            <div style="margin-bottom:12px;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">${label}</p>
-              <table cellpadding="0" cellspacing="0">
-                <tr><td style="background:#2d5a27;border-radius:8px;padding:12px 24px;">
-                  <a href="${url}" style="color:#fff;font-size:14px;font-weight:600;text-decoration:none;">Baixar PDF</a>
-                </td></tr>
-              </table>
-              <p style="margin:6px 0 0;font-size:11px;color:#2d5a27;word-break:break-all;line-height:1.5;">${url}</p>
-            </div>
-          `;
-        }).join("")
-      : primaryPdfUrl
-        ? `
-          <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-            <tr><td style="background:#2d5a27;border-radius:8px;padding:14px 28px;">
-              <a href="${escapeHtml(primaryPdfUrl)}" style="color:#fff;font-size:14px;font-weight:600;text-decoration:none;">Baixar e-book</a>
-            </td></tr>
-          </table>
-          <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">Link direto:</p>
-          <p style="margin:0 0 24px;font-size:12px;color:#2d5a27;word-break:break-all;line-height:1.5;">${escapeHtml(primaryPdfUrl)}</p>
-        `
-        : `
-          <div style="background:#f9fafb;border-radius:8px;padding:20px 24px;margin-bottom:24px;">
-            <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">Em breve você receberá o link de acesso. Qualquer dúvida, responda este email.</p>
-          </div>
-        `;
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-      <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="padding:48px 24px;">
-          <tr><td align="center">
-            <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-              <tr><td style="height:4px;background:#2d5a27;"></td></tr>
-              <tr><td style="padding:32px 40px 0;"><p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;">NutriVida</p></td></tr>
-              <tr><td style="padding:20px 40px 0;"><div style="height:1px;background:#f0f0f0;"></div></td></tr>
-              <tr><td style="padding:32px 40px;">
-                <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">
-                  ${isCombo ? "Seu combo está pronto" : "Seu e-book está pronto"}
-                </h2>
-                <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Pagamento confirmado — obrigado pela sua compra!</p>
-                <div style="background:#f9fafb;border-radius:8px;padding:20px 24px;margin-bottom:24px;">
-                  <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.6px;font-weight:500;">Material adquirido</p>
-                  <p style="margin:0;font-size:16px;font-weight:600;color:#111827;">${productName}</p>
-                </div>
-                ${isCombo ? `<p style="margin:0 0 16px;font-size:14px;color:#374151;font-weight:600;">Seus ${pdfFiles.length} e-books:</p>` : ""}
-                ${pdfsBlock}
-                <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">Dúvidas? Responda este email ou entre em contato pelo WhatsApp.</p>
-              </td></tr>
-              <tr><td style="padding:0 40px 32px;">
-                <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
-                <p style="margin:0;font-size:12px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Este é um email automático</p>
-              </td></tr>
-            </table>
-          </td></tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: customerEmail,
-        subject: isCombo ? `Seu combo "${productName}" está aqui!` : `Seu e-book "${productName}" está aqui!`,
-        html: emailHtml,
-      }),
-    });
-
-    const customerName = parts[3] ? escapeHtml(decodeURIComponent(parts[3])) : "";
-
+    // Insert payment log before email — ensures it's always written even if email fails
     if (supabaseUrl && supabaseServiceKey) {
       await fetch(`${supabaseUrl}/rest/v1/payment_logs`, {
         method: "POST",
@@ -385,6 +305,90 @@ serve(async (req) => {
           pdf_url: pdfFiles.length > 0 ? pdfFiles[0].url : primaryPdfUrl,
         }),
       });
+    }
+
+    // Send email (in its own try/catch so failures never block the log insert above)
+    if (RESEND_API_KEY) {
+      try {
+        const isCombo = pdfFiles.length > 1;
+        const pdfsBlock = pdfFiles.length > 0
+          ? pdfFiles.map((pf, idx) => {
+              const label = escapeHtml(pf.label || `E-book ${idx + 1}`);
+              const url = escapeHtml(pf.url);
+              return `
+                <div style="margin-bottom:12px;">
+                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">${label}</p>
+                  <table cellpadding="0" cellspacing="0">
+                    <tr><td style="background:#2d5a27;border-radius:8px;padding:12px 24px;">
+                      <a href="${url}" style="color:#fff;font-size:14px;font-weight:600;text-decoration:none;">Baixar PDF</a>
+                    </td></tr>
+                  </table>
+                  <p style="margin:6px 0 0;font-size:11px;color:#2d5a27;word-break:break-all;line-height:1.5;">${url}</p>
+                </div>
+              `;
+            }).join("")
+          : primaryPdfUrl
+            ? `
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr><td style="background:#2d5a27;border-radius:8px;padding:14px 28px;">
+                  <a href="${escapeHtml(primaryPdfUrl)}" style="color:#fff;font-size:14px;font-weight:600;text-decoration:none;">Baixar e-book</a>
+                </td></tr>
+              </table>
+              <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">Link direto:</p>
+              <p style="margin:0 0 24px;font-size:12px;color:#2d5a27;word-break:break-all;line-height:1.5;">${escapeHtml(primaryPdfUrl)}</p>
+            `
+            : `
+              <div style="background:#f9fafb;border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+                <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">Em breve você receberá o link de acesso. Qualquer dúvida, responda este email.</p>
+              </div>
+            `;
+
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html lang="pt-BR">
+          <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+          <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="padding:48px 24px;">
+              <tr><td align="center">
+                <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                  <tr><td style="height:4px;background:#2d5a27;"></td></tr>
+                  <tr><td style="padding:32px 40px 0;"><p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;">NutriVida</p></td></tr>
+                  <tr><td style="padding:20px 40px 0;"><div style="height:1px;background:#f0f0f0;"></div></td></tr>
+                  <tr><td style="padding:32px 40px;">
+                    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">
+                      ${isCombo ? "Seu combo está pronto" : "Seu e-book está pronto"}
+                    </h2>
+                    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Pagamento confirmado — obrigado pela sua compra!</p>
+                    <div style="background:#f9fafb;border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+                      <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.6px;font-weight:500;">Material adquirido</p>
+                      <p style="margin:0;font-size:16px;font-weight:600;color:#111827;">${productName}</p>
+                    </div>
+                    ${isCombo ? `<p style="margin:0 0 16px;font-size:14px;color:#374151;font-weight:600;">Seus ${pdfFiles.length} e-books:</p>` : ""}
+                    ${pdfsBlock}
+                    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">Dúvidas? Responda este email ou entre em contato pelo WhatsApp.</p>
+                  </td></tr>
+                  <tr><td style="padding:0 40px 32px;">
+                    <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
+                    <p style="margin:0;font-size:12px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Este é um email automático</p>
+                  </td></tr>
+                </table>
+              </td></tr>
+            </table>
+          </body>
+          </html>
+        `;
+
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            to: customerEmail,
+            subject: isCombo ? `Seu combo "${productName}" está aqui!` : `Seu e-book "${productName}" está aqui!`,
+            html: emailHtml,
+          }),
+        });
+      } catch { /* email failure must not prevent the log from being written */ }
     }
 
     return new Response("ok", { status: 200 });
