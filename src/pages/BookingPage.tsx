@@ -96,6 +96,7 @@ const BookingPage = () => {
   const [sex, setSex] = useState("");
   const [linkedPatientId, setLinkedPatientId] = useState<number | undefined>();
   const [cpfLookingUp, setCpfLookingUp] = useState(false);
+  const [cpfError, setCpfError] = useState("");
   const [returningPatient, setReturningPatient] = useState<string | null>(null);
 
   // Clinical info
@@ -119,6 +120,17 @@ const BookingPage = () => {
 
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
 
+  const validateCpf = (cpf: string): boolean => {
+    const d = cpf.replace(/\D/g, "");
+    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    const calc = (n: number) => {
+      const sum = Array.from({ length: n - 1 }, (_, i) => parseInt(d[i]) * (n - i)).reduce((a, b) => a + b, 0);
+      const rem = (sum * 10) % 11;
+      return rem >= 10 ? 0 : rem;
+    };
+    return calc(10) === parseInt(d[9]) && calc(11) === parseInt(d[10]);
+  };
+
   const formatCPF = (v: string) => {
     const d = v.replace(/\D/g, "").slice(0, 11);
     if (d.length <= 3) return d;
@@ -129,7 +141,12 @@ const BookingPage = () => {
 
   const handleCpfBlur = async () => {
     const digits = clientCpf.replace(/\D/g, "");
-    if (digits.length !== 11) return;
+    if (digits.length === 0) { setCpfError(""); return; }
+    if (digits.length !== 11 || !validateCpf(digits)) {
+      setCpfError("CPF inválido. Verifique os números digitados.");
+      return;
+    }
+    setCpfError("");
     setCpfLookingUp(true);
     const patient = await findPatientByCPF(digits);
     setCpfLookingUp(false);
@@ -346,6 +363,11 @@ const BookingPage = () => {
       toast({ title: "Preço não configurado para este plano.", variant: "destructive" });
       return;
     }
+    const cpfDigits = clientCpf.replace(/\D/g, "");
+    if (cpfDigits && !validateCpf(cpfDigits)) {
+      setCpfError("CPF inválido. Verifique os números digitados.");
+      return;
+    }
     setStage("loading");
     try {
       // Salva o booking como "pending" ANTES de criar o pagamento
@@ -417,6 +439,11 @@ const BookingPage = () => {
   };
 
   const handleFreeBooking = async () => {
+    const cpfDigits = clientCpf.replace(/\D/g, "");
+    if (cpfDigits && !validateCpf(cpfDigits)) {
+      setCpfError("CPF inválido. Verifique os números digitados.");
+      return;
+    }
     setStage("loading");
     const ok = await saveBookings("confirmed");
     if (!ok) {
@@ -733,15 +760,19 @@ const BookingPage = () => {
                       onChange={e => {
                         setReturningPatient(null);
                         setLinkedPatientId(undefined);
+                        setCpfError("");
                         setClientCpf(formatCPF(e.target.value));
                       }}
                       onBlur={handleCpfBlur}
                       placeholder="000.000.000-00"
-                      className="pl-9 rounded-xl"
+                      className={`pl-9 rounded-xl ${cpfError ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
                     />
                     {cpfLookingUp && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                   </div>
-                  {returningPatient && (
+                  {cpfError && (
+                    <p className="text-xs text-destructive font-medium">{cpfError}</p>
+                  )}
+                  {!cpfError && returningPatient && (
                     <p className="text-xs text-primary font-medium flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Paciente encontrado — dados preenchidos automaticamente
