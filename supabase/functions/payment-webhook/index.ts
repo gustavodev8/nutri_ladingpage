@@ -131,44 +131,19 @@ serve(async (req) => {
       const customerName = parts[3] ? escapeHtml(decodeURIComponent(parts[3])) : "";
       const planName = parts[4] ? escapeHtml(decodeURIComponent(parts[4])) : "Consulta";
 
-      // Update booking status to confirmed
+      // Update booking status to confirmed — check HTTP status, not response body
+      // (PATCH returns 204 No Content on success, so .json() would throw and give false negative)
       if (supabaseUrl && supabaseServiceKey) {
-        const patchRes = await fetch(`${supabaseUrl}/rest/v1/bookings?booking_group_id=eq.${encodeURIComponent(bookingGroupId)}`, {
+        await fetch(`${supabaseUrl}/rest/v1/bookings?booking_group_id=eq.${encodeURIComponent(bookingGroupId)}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "apikey": supabaseServiceKey,
             "Authorization": `Bearer ${supabaseServiceKey}`,
-            "Prefer": "return=representation",
+            "Prefer": "return=minimal",
           },
           body: JSON.stringify({ status: "confirmed" }),
         });
-        const patched = await patchRes.json().catch(() => []);
-
-        if (!Array.isArray(patched) || patched.length === 0) {
-          await fetch(`${supabaseUrl}/rest/v1/bookings`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": supabaseServiceKey,
-              "Authorization": `Bearer ${supabaseServiceKey}`,
-              "Prefer": "return=minimal",
-            },
-            body: JSON.stringify({
-              booking_group_id: bookingGroupId,
-              session_number: 1,
-              total_sessions: 1,
-              client_name: customerName,
-              client_email: customerEmail,
-              plan_name: planName,
-              appointment_date: new Date().toISOString().split("T")[0],
-              appointment_time: "00:00",
-              type: "online",
-              status: "confirmed",
-              notes: JSON.stringify({ _fallback: true }),
-            }),
-          });
-        }
       }
 
       // Send confirmation email
