@@ -351,6 +351,37 @@ serve(async (req) => {
       </html>
     `;
 
+    const customerName = parts[3] ? escapeHtml(decodeURIComponent(parts[3])) : "";
+
+    // ── Save Log First ───────────────────────────────────────────────────────
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        await fetch(`${supabaseUrl}/rest/v1/payment_logs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": supabaseServiceKey,
+            "Authorization": "Bearer " + supabaseServiceKey,
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            payment_id: String(payment.id),
+            customer_name: customerName,
+            customer_email: customerEmail,
+            customer_cpf_hash: cpfHash,
+            product_name: productName,
+            product_index: productIndex,
+            amount: payment.transaction_amount,
+            status: "approved",
+            pdf_url: pdfFiles.length > 0 ? pdfFiles[0].url : primaryPdfUrl,
+          }),
+        });
+      } catch (err) {
+        console.error("Database log error:", err);
+      }
+    }
+
+    // ── Send Email Second ────────────────────────────────────────────────────
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
@@ -361,31 +392,6 @@ serve(async (req) => {
         html: emailHtml,
       }),
     });
-
-    const customerName = parts[3] ? escapeHtml(decodeURIComponent(parts[3])) : "";
-
-    if (supabaseUrl && supabaseServiceKey) {
-      await fetch(`${supabaseUrl}/rest/v1/payment_logs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseServiceKey,
-          "Authorization": `Bearer ${supabaseServiceKey}`,
-          "Prefer": "return=minimal",
-        },
-        body: JSON.stringify({
-          payment_id: String(payment.id),
-          customer_name: customerName,
-          customer_email: customerEmail,
-          customer_cpf_hash: cpfHash,
-          product_name: productName,
-          product_index: productIndex,
-          amount: payment.transaction_amount,
-          status: "approved",
-          pdf_url: pdfFiles.length > 0 ? pdfFiles[0].url : primaryPdfUrl,
-        }),
-      });
-    }
 
     return new Response("ok", { status: 200 });
   } catch {
