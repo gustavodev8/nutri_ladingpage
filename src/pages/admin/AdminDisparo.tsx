@@ -86,6 +86,7 @@ const AdminDisparo = () => {
 
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [countLoading, setCountLoading]     = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [status, setStatus]     = useState<"idle"|"loading"|"success"|"error">("idle");
   const [result, setResult]     = useState<{sent:number;failed:number;total:number}|null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -177,25 +178,37 @@ const AdminDisparo = () => {
 
       {/* ── Step 1 — Audience ───────────────────────────────────────────── */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        {/* Card header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
+        {/* Card header — clickable to collapse */}
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(v => !v)}
+          className={cn(
+            "w-full flex items-center gap-3 px-6 py-4 bg-muted/30 text-left hover:bg-muted/50 transition-colors",
+            filtersOpen && "border-b border-border"
+          )}
+        >
           <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0">1</div>
           <div>
             <p className="text-sm font-semibold text-foreground">Audiência</p>
             <p className="text-xs text-muted-foreground">Defina quem vai receber este e-mail</p>
           </div>
           {/* Live count pill */}
-          <div className="ml-auto flex items-center gap-1.5 bg-primary/8 border border-primary/20 rounded-full px-3 py-1">
-            {countLoading
-              ? <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              : <Users className="h-3 w-3 text-primary" />}
-            <span className="text-xs font-semibold text-primary tabular-nums">
-              {countLoading ? "..." : (recipientCount ?? 0)} destinatários
-            </span>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-primary/8 border border-primary/20 rounded-full px-3 py-1">
+              {countLoading
+                ? <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                : <Users className="h-3 w-3 text-primary" />}
+              <span className="text-xs font-semibold text-primary tabular-nums">
+                {countLoading ? "..." : (recipientCount ?? 0)} destinatários
+              </span>
+            </div>
+            {filtersOpen
+              ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+              : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
           </div>
-        </div>
+        </button>
 
-        <div className="px-6 py-5 space-y-6">
+        {filtersOpen && <div className="px-6 py-5 space-y-6">
 
           {/* Origem */}
           <div>
@@ -290,7 +303,7 @@ const AdminDisparo = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ── Step 2 — Message ────────────────────────────────────────────── */}
