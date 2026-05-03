@@ -1,6 +1,14 @@
 -- 1. Prevent duplicate payment processing (race condition protection)
 ALTER TABLE payment_logs ADD COLUMN IF NOT EXISTS customer_cpf_hash TEXT;
 
+-- Remove duplicates keeping only the row with the lowest id per payment_id
+DELETE FROM payment_logs
+WHERE id NOT IN (
+  SELECT MIN(id)
+  FROM payment_logs
+  GROUP BY payment_id
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_logs_payment_id_unique
   ON payment_logs (payment_id);
 
