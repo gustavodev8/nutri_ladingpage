@@ -76,12 +76,17 @@ serve(async (req) => {
     const rawBody = await req.text();
     const body = JSON.parse(rawBody);
 
-    // ── Signature verification (skip if secret not configured yet) ────────────
+    // ── Signature verification — always enforce in production ─────────────────
     if (MP_WEBHOOK_SECRET) {
       const valid = await verifyMpSignature(req, rawBody, MP_WEBHOOK_SECRET);
       if (!valid) {
+        console.error("payment-webhook: invalid MP signature — possible fake webhook attempt");
         return new Response("Unauthorized", { status: 401 });
       }
+    } else {
+      // No secret configured — log a loud warning but still process (allows initial setup)
+      // ACTION REQUIRED: set MP_WEBHOOK_SECRET in Supabase Secrets to enforce validation
+      console.error("payment-webhook: WARNING — MP_WEBHOOK_SECRET not set. Webhook signature NOT verified. Set this secret immediately.");
     }
 
     // MP sends type=payment for payment events

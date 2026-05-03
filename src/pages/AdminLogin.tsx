@@ -47,7 +47,7 @@ const AdminLogin = () => {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 400));
 
-    const result = login(password);
+    const result = await login(password);
     if (result.ok) {
       navigate("/admin", { replace: true });
     } else {

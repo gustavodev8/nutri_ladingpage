@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
 
 const ADMIN_PASSWORD_KEY = "nutrivida_admin_pw";
 const SESSION_KEY = "nutrivida_admin_session";
@@ -9,13 +10,16 @@ const DEFAULT_PASSWORD = "admin123";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
+// Admin email for Supabase Auth — must match the user created in Supabase dashboard
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string | undefined ?? "admin@nutrivida.com.br";
+
 interface AuthContextValue {
   isAuthenticated: boolean;
-  login: (password: string) => { ok: boolean; locked?: boolean; remaining?: number };
-  logout: () => void;
+  login: (password: string) => Promise<{ ok: boolean; locked?: boolean; remaining?: number }>;
+  logout: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => boolean | string;
   isLocked: () => boolean;
-  lockoutRemaining: () => number; // seconds
+  lockoutRemaining: () => number;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -33,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLocked = useCallback((): boolean => {
     const lockoutUntil = parseInt(localStorage.getItem(LOCKOUT_KEY) ?? "0", 10);
     if (lockoutUntil > Date.now()) return true;
-    // Auto-clear lockout after time passes
     if (lockoutUntil > 0 && lockoutUntil <= Date.now()) {
       localStorage.removeItem(LOCKOUT_KEY);
       localStorage.removeItem(ATTEMPTS_KEY);
@@ -46,34 +49,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
   }, []);
 
-  const login = useCallback((password: string): { ok: boolean; locked?: boolean; remaining?: number } => {
+  const login = useCallback(async (password: string): Promise<{ ok: boolean; locked?: boolean; remaining?: number }> => {
     if (isLocked()) {
       return { ok: false, locked: true, remaining: lockoutRemaining() };
     }
 
-    if (password === getStoredPassword()) {
-      localStorage.removeItem(ATTEMPTS_KEY);
-      localStorage.removeItem(LOCKOUT_KEY);
-      sessionStorage.setItem(SESSION_KEY, "true");
-      setIsAuthenticated(true);
-      return { ok: true };
+    if (password !== getStoredPassword()) {
+      const attempts = getAttempts() + 1;
+      localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+      if (attempts >= MAX_ATTEMPTS) {
+        const lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
+        localStorage.setItem(LOCKOUT_KEY, String(lockoutUntil));
+        localStorage.setItem(ATTEMPTS_KEY, "0");
+        return { ok: false, locked: true, remaining: LOCKOUT_MINUTES * 60 };
+      }
+      return { ok: false, remaining: MAX_ATTEMPTS - attempts };
     }
 
-    // Increment failed attempts
-    const attempts = getAttempts() + 1;
-    localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+    // Password is correct — also sign into Supabase Auth for real JWT (needed for RLS)
+    await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password }).catch(() => null);
 
-    if (attempts >= MAX_ATTEMPTS) {
-      const lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
-      localStorage.setItem(LOCKOUT_KEY, String(lockoutUntil));
-      localStorage.setItem(ATTEMPTS_KEY, "0");
-      return { ok: false, locked: true, remaining: LOCKOUT_MINUTES * 60 };
-    }
-
-    return { ok: false, remaining: MAX_ATTEMPTS - attempts };
+    localStorage.removeItem(ATTEMPTS_KEY);
+    localStorage.removeItem(LOCKOUT_KEY);
+    sessionStorage.setItem(SESSION_KEY, "true");
+    setIsAuthenticated(true);
+    return { ok: true };
   }, [isLocked, lockoutRemaining]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut().catch(() => null);
     sessionStorage.removeItem(SESSION_KEY);
     setIsAuthenticated(false);
   }, []);
@@ -85,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!/[0-9]/.test(newPassword)) return "A nova senha deve conter ao menos um número.";
     if (newPassword === DEFAULT_PASSWORD) return "Por segurança, não use a senha padrão.";
     localStorage.setItem(ADMIN_PASSWORD_KEY, newPassword);
+    // Also update Supabase Auth password to keep them in sync
+    supabase.auth.updateUser({ password: newPassword }).catch(() => null);
     return true;
   }, []);
 

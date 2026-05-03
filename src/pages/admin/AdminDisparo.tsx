@@ -9,14 +9,19 @@ import { cn } from "@/lib/utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-// Simple markdown-ish to HTML converter for the message body
+function escHtml(s: string) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
+}
+
+// Escape HTML first, then apply safe markdown-ish formatting
 function toHtml(text: string): string {
   return text
     .split(/\n\n+/)
     .map(p => `<p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">${
-      p.replace(/\n/g, "<br>")
-       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-       .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      escHtml(p)
+        .replace(/\n/g, "<br>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
     }</p>`)
     .join("");
 }

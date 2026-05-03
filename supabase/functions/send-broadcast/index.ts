@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("SITE_URL") || "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -13,6 +13,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@nutrivida.com.br";
+
+    // ── Auth: require a valid Supabase session (admin must be signed in) ──────
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Não autorizado." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify the token against Supabase Auth
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${token}` },
+    });
+
+    if (!userRes.ok) {
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!RESEND_API_KEY) {
       return new Response(JSON.stringify({ error: "RESEND_API_KEY não configurada." }), {
@@ -56,7 +77,7 @@ serve(async (req) => {
       });
     }
 
-    // Wrap message in branded email template
+    // Wrap in branded email template
     const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -76,7 +97,7 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
         </td></tr>
         <tr><td style="padding:0 40px 28px;">
           <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
-          <p style="margin:0;font-size:11px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Este é um email informativo. Para descadastrar, responda este email.</p>
+          <p style="margin:0;font-size:11px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Para descadastrar, responda este email.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -84,7 +105,7 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
 </body>
 </html>`;
 
-    // Send in batches of 50 via Resend (rate limit safety)
+    // Send in batches of 50
     let sent = 0;
     let failed = 0;
     const BATCH = 50;
