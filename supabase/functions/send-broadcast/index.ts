@@ -46,7 +46,7 @@ serve(async (req) => {
     const { subject, html, previewText } = body;
 
     // ── Filters ───────────────────────────────────────────────────────────────
-    const sources: string[]     = body.filters?.sources ?? ["ebooks", "bookings", "patients"];
+    const sources: string[]     = body.filters?.sources ?? ["ebooks", "bookings", "patients", "leads"];
     const periodDays: number | null = body.filters?.periodDays ?? null;
     const productName: string | null = body.filters?.productName?.trim() || null;
     const manualEmails: string[] = body.filters?.manualEmails ?? [];
@@ -87,6 +87,15 @@ serve(async (req) => {
     // ── Source: patients ──────────────────────────────────────────────────────
     if (sources.includes("patients")) {
       let url = `${supabaseUrl}/rest/v1/patients?select=email`;
+      if (since) url += `&created_at=gte.${since}`;
+      const res = await fetch(url, { headers: apiHeaders });
+      const data: { email: string }[] = res.ok ? await res.json().catch(() => []) : [];
+      for (const r of data) if (r.email) emailSet.add(r.email.trim().toLowerCase());
+    }
+
+    // ── Source: leads ─────────────────────────────────────────────────────────
+    if (sources.includes("leads")) {
+      let url = `${supabaseUrl}/rest/v1/leads?select=email`;
       if (since) url += `&created_at=gte.${since}`;
       const res = await fetch(url, { headers: apiHeaders });
       const data: { email: string }[] = res.ok ? await res.json().catch(() => []) : [];

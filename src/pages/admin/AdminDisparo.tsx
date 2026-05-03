@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Send, Users, Mail, Eye, EyeOff, Loader2, CheckCircle2,
   AlertCircle, ShoppingBag, CalendarCheck, UserRound, PenLine,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ function toHtml(text: string): string {
     .join("");
 }
 
-type Source = "ebooks" | "bookings" | "patients";
+type Source = "ebooks" | "bookings" | "patients" | "leads";
 type Period = 0 | 30 | 90 | 365;
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
@@ -41,6 +41,7 @@ const SOURCE_OPTIONS: { key: Source; label: string; desc: string; icon: React.El
   { key: "ebooks",   label: "Compradores de e-books",  desc: "Clientes que realizaram compras aprovadas", icon: ShoppingBag },
   { key: "bookings", label: "Consultas agendadas",      desc: "Pacientes com consultas não canceladas",    icon: CalendarCheck },
   { key: "patients", label: "Pacientes cadastrados",    desc: "Cadastros no prontuário clínico",           icon: UserRound },
+  { key: "leads",    label: "Leads captados",           desc: "Cadastros via popup do site",               icon: UserPlus },
 ];
 
 // ── Small toggle chip ─────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ const AdminDisparo = () => {
   const { content } = useContent();
   const products = content.produtosDigitais?.items ?? [];
 
-  const [sources, setSources]         = useState<Source[]>(["ebooks","bookings","patients"]);
+  const [sources, setSources]         = useState<Source[]>(["ebooks","bookings","patients","leads"]);
   const [period, setPeriod]           = useState<Period>(0);
   const [productName, setProductName] = useState("");
   const [manualInput, setManualInput] = useState("");
@@ -119,6 +120,12 @@ const AdminDisparo = () => {
     }
     if (sources.includes("patients")) {
       let q = supabase.from("patients").select("email");
+      if (since) q = q.gte("created_at", since);
+      const { data } = await q;
+      for (const r of data ?? []) if (r.email) emailSet.add(r.email.trim().toLowerCase());
+    }
+    if (sources.includes("leads")) {
+      let q = supabase.from("leads").select("email");
       if (since) q = q.gte("created_at", since);
       const { data } = await q;
       for (const r of data ?? []) if (r.email) emailSet.add(r.email.trim().toLowerCase());
