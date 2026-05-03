@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { Leaf, Eye, EyeOff, Lock, ShieldAlert } from "lucide-react";
+import { Leaf, Eye, EyeOff, Lock, Mail, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,15 +10,15 @@ const AdminLogin = () => {
   const { login, isAuthenticated, isLocked, lockoutRemaining } = useAuth();
   const navigate = useNavigate();
 
-  const [password, setPassword] = useState("");
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [countdown, setCountdown]   = useState(0);
 
   if (isAuthenticated) return <Navigate to="/admin" replace />;
 
-  // Countdown timer for lockout
   useEffect(() => {
     if (isLocked()) {
       setCountdown(lockoutRemaining());
@@ -47,7 +47,7 @@ const AdminLogin = () => {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 400));
 
-    const result = await login(password);
+    const result = await login(email, password);
     if (result.ok) {
       navigate("/admin", { replace: true });
     } else {
@@ -57,7 +57,7 @@ const AdminLogin = () => {
         setError(`Muitas tentativas incorretas. Aguarde ${formatCountdown(result.remaining ?? 0)}.`);
       } else {
         const rem = result.remaining ?? 0;
-        setError(`Senha incorreta. ${rem > 0 ? `${rem} tentativa${rem !== 1 ? "s" : ""} restante${rem !== 1 ? "s" : ""}.` : ""}`);
+        setError(`E-mail ou senha incorretos. ${rem > 0 ? `${rem} tentativa${rem !== 1 ? "s" : ""} restante${rem !== 1 ? "s" : ""}.` : ""}`);
       }
     }
   };
@@ -93,11 +93,30 @@ const AdminLogin = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground font-medium">
-                Senha de acesso
-              </Label>
+              <Label htmlFor="email" className="text-foreground font-medium">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="pl-10 h-12 border-border/70 focus:border-primary"
+                  required
+                  autoFocus
+                  disabled={locked}
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-foreground font-medium">Senha</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -108,7 +127,6 @@ const AdminLogin = () => {
                   placeholder="Digite sua senha"
                   className="pl-10 pr-10 h-12 border-border/70 focus:border-primary"
                   required
-                  autoFocus
                   disabled={locked}
                   autoComplete="current-password"
                 />
@@ -132,8 +150,8 @@ const AdminLogin = () => {
 
             <Button
               type="submit"
-              disabled={loading || !password || locked}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-base font-semibold"
+              disabled={loading || !password || !email || locked}
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-base font-semibold mt-2"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

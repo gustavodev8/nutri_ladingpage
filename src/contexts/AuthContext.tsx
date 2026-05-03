@@ -10,12 +10,9 @@ const DEFAULT_PASSWORD = "admin123";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
-// Admin email for Supabase Auth — must match the user created in Supabase dashboard
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string | undefined ?? "admin@nutrivida.com.br";
-
 interface AuthContextValue {
   isAuthenticated: boolean;
-  login: (password: string) => Promise<{ ok: boolean; locked?: boolean; remaining?: number }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; locked?: boolean; remaining?: number }>;
   logout: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => boolean | string;
   isLocked: () => boolean;
@@ -49,12 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
   }, []);
 
-  const login = useCallback(async (password: string): Promise<{ ok: boolean; locked?: boolean; remaining?: number }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; locked?: boolean; remaining?: number }> => {
     if (isLocked()) {
       return { ok: false, locked: true, remaining: lockoutRemaining() };
     }
 
-    if (password !== getStoredPassword()) {
+    // Primary auth: Supabase Auth (email + password)
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    // Fallback: local password check (for backward compat before Supabase user is created)
+    const localOk = !authError ? true : password === getStoredPassword();
+
+    if (!localOk) {
       const attempts = getAttempts() + 1;
       localStorage.setItem(ATTEMPTS_KEY, String(attempts));
       if (attempts >= MAX_ATTEMPTS) {
@@ -65,9 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return { ok: false, remaining: MAX_ATTEMPTS - attempts };
     }
-
-    // Password is correct — also sign into Supabase Auth for real JWT (needed for RLS)
-    await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password }).catch(() => null);
 
     localStorage.removeItem(ATTEMPTS_KEY);
     localStorage.removeItem(LOCKOUT_KEY);
