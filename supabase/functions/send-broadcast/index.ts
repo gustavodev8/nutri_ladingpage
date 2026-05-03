@@ -14,9 +14,7 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@nutrivida.com.br";
 
-    // ── Auth: require a valid Supabase Auth session OR the anon key ──────────
-    // The admin panel is already protected by password; anon key is safe here
-    // because this function is not publicly linked anywhere.
+    // ── Auth ──────────────────────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "").trim();
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -27,7 +25,6 @@ serve(async (req) => {
       });
     }
 
-    // Accept if it's a valid Supabase Auth session OR the anon key
     if (token !== anonKey) {
       const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
         headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${token}` },
@@ -45,7 +42,14 @@ serve(async (req) => {
       });
     }
 
-    const { subject, html, previewText } = await req.json();
+    const body = await req.json();
+    const { subject, html, previewText } = body;
+
+    // ── Filters ───────────────────────────────────────────────────────────────
+    const sources: string[]     = body.filters?.sources ?? ["ebooks", "bookings", "patients"];
+    const periodDays: number | null = body.filters?.periodDays ?? null;
+    const productName: string | null = body.filters?.productName?.trim() || null;
+    const manualEmails: string[] = body.filters?.manualEmails ?? [];
 
     if (!subject?.trim() || !html?.trim()) {
       return new Response(JSON.stringify({ error: "Assunto e mensagem são obrigatórios." }), {
@@ -53,35 +57,57 @@ serve(async (req) => {
       });
     }
 
-    // Collect unique emails from payment_logs, bookings and patients
-    const headers = { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` };
-
-    const [logsRes, bookingsRes, patientsRes] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/payment_logs?select=customer_email&status=eq.approved`, { headers }),
-      fetch(`${supabaseUrl}/rest/v1/bookings?select=client_email&status=neq.cancelled`, { headers }),
-      fetch(`${supabaseUrl}/rest/v1/patients?select=email`, { headers }),
-    ]);
-
-    const [logs, bookings, patients] = await Promise.all([
-      logsRes.ok ? logsRes.json().catch(() => []) : [],
-      bookingsRes.ok ? bookingsRes.json().catch(() => []) : [],
-      patientsRes.ok ? patientsRes.json().catch(() => []) : [],
-    ]);
-
+    const apiHeaders = { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` };
     const emailSet = new Set<string>();
-    for (const r of logs)     if (r.customer_email) emailSet.add(r.customer_email.trim().toLowerCase());
-    for (const r of bookings) if (r.client_email)   emailSet.add(r.client_email.trim().toLowerCase());
-    for (const r of patients) if (r.email)           emailSet.add(r.email.trim().toLowerCase());
+
+    // Period cutoff
+    const since = periodDays
+      ? new Date(Date.now() - periodDays * 86400 * 1000).toISOString()
+      : null;
+
+    // ── Source: ebooks ────────────────────────────────────────────────────────
+    if (sources.includes("ebooks")) {
+      let url = `${supabaseUrl}/rest/v1/payment_logs?select=customer_email&status=eq.approved`;
+      if (since)       url += `&created_at=gte.${since}`;
+      if (productName) url += `&product_name=ilike.*${encodeURIComponent(productName)}*`;
+      const res = await fetch(url, { headers: apiHeaders });
+      const data: { customer_email: string }[] = res.ok ? await res.json().catch(() => []) : [];
+      for (const r of data) if (r.customer_email) emailSet.add(r.customer_email.trim().toLowerCase());
+    }
+
+    // ── Source: bookings ──────────────────────────────────────────────────────
+    if (sources.includes("bookings")) {
+      let url = `${supabaseUrl}/rest/v1/bookings?select=client_email&status=neq.cancelled`;
+      if (since) url += `&created_at=gte.${since}`;
+      const res = await fetch(url, { headers: apiHeaders });
+      const data: { client_email: string }[] = res.ok ? await res.json().catch(() => []) : [];
+      for (const r of data) if (r.client_email) emailSet.add(r.client_email.trim().toLowerCase());
+    }
+
+    // ── Source: patients ──────────────────────────────────────────────────────
+    if (sources.includes("patients")) {
+      let url = `${supabaseUrl}/rest/v1/patients?select=email`;
+      if (since) url += `&created_at=gte.${since}`;
+      const res = await fetch(url, { headers: apiHeaders });
+      const data: { email: string }[] = res.ok ? await res.json().catch(() => []) : [];
+      for (const r of data) if (r.email) emailSet.add(r.email.trim().toLowerCase());
+    }
+
+    // ── Source: manual emails ─────────────────────────────────────────────────
+    for (const e of manualEmails) {
+      const clean = e.trim().toLowerCase();
+      if (clean.includes("@")) emailSet.add(clean);
+    }
 
     const emails = [...emailSet].filter(e => e.includes("@"));
 
     if (emails.length === 0) {
-      return new Response(JSON.stringify({ error: "Nenhum e-mail encontrado no sistema." }), {
+      return new Response(JSON.stringify({ error: "Nenhum e-mail encontrado com os filtros selecionados." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Wrap in branded email template
+    // ── Email template ────────────────────────────────────────────────────────
     const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -109,7 +135,7 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
 </body>
 </html>`;
 
-    // Send in batches of 50
+    // ── Send in batches of 50 ─────────────────────────────────────────────────
     let sent = 0;
     let failed = 0;
     const BATCH = 50;
