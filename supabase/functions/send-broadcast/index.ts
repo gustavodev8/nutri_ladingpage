@@ -93,7 +93,7 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
         <tr><td style="height:4px;background:#2d5a27;"></td></tr>
         <tr><td style="padding:28px 40px 0;">
-          <p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;">NutriVida</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#2d5a27;">Fillipe David Nutricionista</p>
         </td></tr>
         <tr><td style="padding:16px 40px 0;"><div style="height:1px;background:#f0f0f0;"></div></td></tr>
         <tr><td style="padding:32px 40px;">
@@ -101,7 +101,7 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
         </td></tr>
         <tr><td style="padding:0 40px 28px;">
           <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
-          <p style="margin:0;font-size:11px;color:#d1d5db;text-align:center;">NutriVida &nbsp;·&nbsp; Para descadastrar, responda este email.</p>
+          <p style="margin:0;font-size:11px;color:#d1d5db;text-align:center;">Fillipe David Nutricionista &nbsp;·&nbsp; Para descadastrar, responda este email.</p>
         </td></tr>
       </table>
     </td></tr>
