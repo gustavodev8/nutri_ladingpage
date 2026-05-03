@@ -5,7 +5,7 @@ import {
   Clock, MessageSquareQuote, HelpCircle, MapPin, Megaphone, LogOut,
   Menu, ExternalLink, KeyRound, Globe, Loader2, ReceiptText,
   CalendarDays, CalendarCheck, ChevronDown, FileText, Star, Settings,
-  Stethoscope, Users, LayoutDashboard, Store, Wrench, Tag,
+  Stethoscope, Users, LayoutDashboard, Store, Wrench, Tag, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +53,7 @@ const NAV_GROUPS = [
       { to: "/admin/disponibilidade", icon: CalendarDays,  label: "Disponibilidade"    },
       { to: "/admin/agendamentos",    icon: CalendarCheck, label: "Agendamentos"        },
       { to: "/admin/pagamentos",      icon: ReceiptText,   label: "Logs de Pagamento"  },
+      { to: "/admin/disparo",         icon: Send,          label: "Disparo de E-mails"  },
     ],
   },
   {
