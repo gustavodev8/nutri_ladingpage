@@ -63,17 +63,20 @@ const AdminDisparo = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
+      if (!SUPABASE_URL) throw new Error("VITE_SUPABASE_URL não configurada.");
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-broadcast`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+          ...(token ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }),
         },
         body: JSON.stringify({ subject: subject.trim(), html: toHtml(message), previewText: subject }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao disparar.");
+      const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
 
       setResult(data);
       setStatus("success");
