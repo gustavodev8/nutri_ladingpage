@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Activity, User, Scale, Percent, Ruler, Heart, FileDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, Loader2, Activity, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -14,130 +13,213 @@ import {
   PROTOCOLS,
   SKINFOLD_LABELS,
   classifyBodyFat,
+  calcArmAnthropometry,
+  classifyAmbc,
   type SkinfoldKey,
-  type SkinfoldProtocol,
 } from "@/lib/anthropometryUtils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const calcBMI = (weight?: number, height?: number): string | null => {
-  if (!weight || !height) return null;
-  return (weight / Math.pow(height / 100, 2)).toFixed(1);
-};
-
-const bmiStatus = (bmi: number): { label: string; dot: string; badge: string } => {
-  if (bmi < 18.5) return { label: "Abaixo do peso", dot: "bg-blue-400",  badge: "text-blue-700 bg-blue-50 border-blue-200"   };
-  if (bmi < 25)   return { label: "Normal",          dot: "bg-green-400", badge: "text-green-700 bg-green-50 border-green-200" };
-  if (bmi < 30)   return { label: "Sobrepeso",        dot: "bg-amber-400", badge: "text-amber-700 bg-amber-50 border-amber-200" };
-  return              { label: "Obesidade",        dot: "bg-red-400",   badge: "text-red-700 bg-red-50 border-red-200"       };
+const calcBMI = (m: Measurement): number | null => {
+  if (!m.weight || !m.height) return null;
+  return parseFloat((m.weight / Math.pow(m.height / 100, 2)).toFixed(1));
 };
 
 const calcAge = (birthDate: string): number => {
   const today = new Date();
   const birth = new Date(birthDate + "T12:00:00");
   let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  const mo = today.getMonth() - birth.getMonth();
+  if (mo < 0 || (mo === 0 && today.getDate() < birth.getDate())) age--;
   return age;
 };
 
-const formatDate = (dateStr: string) =>
-  new Date(dateStr + "T12:00:00").toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
+const formatDate = (dateStr?: string) =>
+  dateStr
+    ? new Date(dateStr + "T12:00:00").toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
 
 const initials = (name: string) =>
   name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 
-const fmt = (v?: number, unit = "cm") => v != null ? `${v} ${unit}` : null;
+const bmiLabel = (bmi: number) => {
+  if (bmi < 18.5) return "Abaixo do peso";
+  if (bmi < 25)   return "Normal";
+  if (bmi < 30)   return "Sobrepeso";
+  return "Obesidade";
+};
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── renderDelta ──────────────────────────────────────────────────────────────
 
-function MetricCard({ label, value, unit, icon }: {
-  label: string; value: string; unit?: string; icon: React.ReactNode;
+export function renderDelta(
+  current?: number | null,
+  previous?: number | null,
+  decimals = 1
+): React.ReactNode {
+  if (current == null || previous == null) return null;
+  const diff = current - previous;
+  if (Math.abs(diff) < 0.005) return null;
+  const abs = Math.abs(diff).toFixed(decimals);
+  return diff > 0 ? (
+    <span className="ml-1.5 text-[11px] font-bold text-green-600 tabular-nums print:text-[8px]">
+      (+{abs})
+    </span>
+  ) : (
+    <span className="ml-1.5 text-[11px] font-bold text-red-500 tabular-nums print:text-[8px]">
+      (−{abs})
+    </span>
+  );
+}
+
+// ─── Table sub-components ─────────────────────────────────────────────────────
+
+function SectionRow({ label, colSpan }: { label: string; colSpan: number }) {
+  return (
+    <tr className="border-y border-border/60 bg-muted/40">
+      <td
+        colSpan={colSpan}
+        className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 print:px-3 print:py-1 print:text-[7px]"
+      >
+        {label}
+      </td>
+    </tr>
+  );
+}
+
+interface MetricRowProps {
+  label: string;
+  values: (number | null | undefined)[];
+  unit?: string;
+  decimals?: number;
+  suffix?: (val: number, idx: number) => React.ReactNode;
+}
+
+function MetricRow({ label, values, unit = "", decimals = 1, suffix }: MetricRowProps) {
+  if (values.every((v) => v == null)) return null;
+  return (
+    <tr className="border-b border-border/30 last:border-0 hover:bg-muted/10 transition-colors print:hover:bg-transparent">
+      <td className="px-4 py-2.5 text-sm text-muted-foreground print:text-[9px] print:py-1.5 print:px-3">
+        {label}
+      </td>
+      {values.map((val, i) => {
+        const prev = i > 0 ? values[i - 1] : undefined;
+        return (
+          <td
+            key={i}
+            className="px-4 py-2.5 text-sm text-right tabular-nums print:text-[9px] print:py-1.5 print:px-3"
+          >
+            {val != null ? (
+              <>
+                <span className="font-semibold text-foreground">{val.toFixed(decimals)}</span>
+                {unit && (
+                  <span className="text-xs text-muted-foreground ml-0.5 print:text-[8px]">
+                    {" "}{unit}
+                  </span>
+                )}
+                {i > 0 && renderDelta(val, prev as number, decimals)}
+                {suffix?.(val, i)}
+              </>
+            ) : (
+              <span className="text-muted-foreground/30">—</span>
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
+function BilateralRow({
+  label,
+  rights,
+  lefts,
+  unit = "cm",
+}: {
+  label: string;
+  rights: (number | null | undefined)[];
+  lefts: (number | null | undefined)[];
+  unit?: string;
 }) {
+  if ([...rights, ...lefts].every((v) => v == null)) return null;
   return (
-    <div className="rounded-lg border border-border/70 bg-card p-5 flex flex-col gap-3 shadow-sm print:p-2 print:gap-1">
-      <div className="flex items-center justify-between print:hidden">
-        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <span className="text-muted-foreground/40">{icon}</span>
-      </div>
-      <p className="hidden print:block text-[8px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
-      <p className="text-3xl font-bold tabular-nums text-foreground leading-none print:text-lg print:leading-tight">
-        {value}
-        {unit && value !== "—" && (
-          <span className="text-base font-normal text-muted-foreground ml-1.5 print:text-[9px] print:ml-0.5">{unit}</span>
-        )}
-      </p>
-    </div>
+    <tr className="border-b border-border/30 last:border-0 hover:bg-muted/10 transition-colors print:hover:bg-transparent">
+      <td className="px-4 py-2.5 text-sm text-muted-foreground print:text-[9px] print:py-1.5 print:px-3">
+        {label}
+      </td>
+      {rights.map((r, i) => {
+        const l = lefts[i];
+        const prevR = i > 0 ? rights[i - 1] : undefined;
+        return (
+          <td
+            key={i}
+            className="px-4 py-2.5 text-sm text-right tabular-nums print:text-[9px] print:py-1.5 print:px-3"
+          >
+            {r != null || l != null ? (
+              <>
+                <span className="font-semibold text-foreground">
+                  {r != null ? r.toFixed(1) : "—"}
+                </span>
+                <span className="text-muted-foreground/40 mx-1 text-xs">·</span>
+                <span className="font-semibold text-foreground">
+                  {l != null ? l.toFixed(1) : "—"}
+                </span>
+                <span className="text-xs text-muted-foreground ml-0.5 print:text-[8px]"> {unit}</span>
+                {i > 0 && r != null && renderDelta(r, prevR as number)}
+              </>
+            ) : (
+              <span className="text-muted-foreground/30">—</span>
+            )}
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 
-// linha simples: label + valor
-function MeasureRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+function StringRow({ label, values }: { label: string; values: (string | null)[] }) {
+  if (values.every((v) => v == null)) return null;
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0 print:py-[3px]">
-      <p className="text-[15px] text-muted-foreground print:text-[10px]">{label}</p>
-      <p className="text-[15px] font-semibold text-foreground tabular-nums print:text-[10px]">{value}</p>
-    </div>
-  );
-}
-
-// linha bilateral: label | valor D · valor E
-function BilateralRow({ label, right, left }: { label: string; right?: number; left?: number }) {
-  if (right == null && left == null) return null;
-  const diff = right != null && left != null ? Math.abs(right - left).toFixed(1) : null;
-  const hasDiff = diff && parseFloat(diff) > 0;
-  return (
-    <div className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0 print:py-[3px] print:gap-1.5">
-      <p className="text-[15px] text-muted-foreground flex-1 print:text-[10px]">{label}</p>
-      <div className="flex items-center gap-3 print:gap-1">
-        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-right print:text-[10px] print:w-9">
-          {right != null ? `${right} cm` : "—"}
-        </span>
-        <span className="text-xs text-muted-foreground/40 font-medium">·</span>
-        <span className="text-[15px] font-semibold text-foreground tabular-nums w-16 text-left print:text-[10px] print:w-9">
-          {left != null ? `${left} cm` : "—"}
-        </span>
-        {hasDiff && (
-          <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full tabular-nums w-14 text-center print:text-[8px] print:px-1 print:w-10">
-            Δ {diff}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// card de seção com título
-function SectionCard({ title, children, className }: {
-  title: string; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <div className={cn("rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden", className)}>
-      <div className="px-5 py-4 border-b border-border/60 print:px-3 print:py-1">
-        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground print:text-[8px]">{title}</p>
-      </div>
-      <div className="px-5 py-1 print:px-2">{children}</div>
-    </div>
+    <tr className="border-b border-border/30 last:border-0 hover:bg-muted/10 transition-colors print:hover:bg-transparent">
+      <td className="px-4 py-2.5 text-sm text-muted-foreground print:text-[9px] print:py-1.5 print:px-3">
+        {label}
+      </td>
+      {values.map((v, i) => (
+        <td
+          key={i}
+          className="px-4 py-2.5 text-sm text-right print:text-[9px] print:py-1.5 print:px-3"
+        >
+          {v != null ? (
+            <span className="font-medium text-foreground">{v}</span>
+          ) : (
+            <span className="text-muted-foreground/30">—</span>
+          )}
+        </td>
+      ))}
+    </tr>
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const ALL_SF_KEYS: SkinfoldKey[] = [
+  "sf_pectoral", "sf_midaxillary", "sf_triceps", "sf_biceps",
+  "sf_subscapular", "sf_suprailiac", "sf_abdominal", "sf_thigh_sf", "sf_calf_sf",
+];
+
 export default function AdminRelatorioAntropometrico() {
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading]           = useState(true);
-  const [patient, setPatient]           = useState<Patient | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [patient, setPatient]       = useState<Patient | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
-  const [selectedIdx, setSelectedIdx]   = useState(0);
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
     Promise.all([fetchPatient(Number(id)), fetchMeasurements(Number(id))])
-      .then(([p, m]) => { setPatient(p); setMeasurements(m); })
+      .then(([p, ms]) => { setPatient(p); setMeasurements(ms); })
       .catch(() => toast.error("Erro ao carregar dados."))
       .finally(() => setLoading(false));
   }, [id]);
@@ -153,356 +235,410 @@ export default function AdminRelatorioAntropometrico() {
 
   if (!patient || measurements.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center p-6">
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center p-6">
         <Activity className="w-10 h-10 text-muted-foreground/30" />
         <div>
           <p className="text-sm font-semibold text-foreground">
             {!patient ? "Paciente não encontrado" : "Nenhuma avaliação registrada"}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {!patient ? "Verifique se o ID está correto." : "Registre uma avaliação antropométrica primeiro."}
+            {!patient
+              ? "Verifique se o ID está correto."
+              : "Registre uma avaliação antropométrica primeiro."}
           </p>
         </div>
         <Link to={`/admin/pacientes/${id}?tab=antropometria`}>
-          <Button variant="outline" size="sm" className="rounded-lg mt-1">
-            <ArrowLeft size={14} className="mr-1.5" /> Voltar ao prontuário
-          </Button>
+          <button className="inline-flex items-center gap-2 px-4 py-2 rounded border border-border text-sm font-medium hover:bg-muted transition-colors">
+            <ArrowLeft size={14} /> Voltar ao prontuário
+          </button>
         </Link>
       </div>
     );
   }
 
-  const m       = measurements[selectedIdx] ?? measurements[0];
-  const bmi     = calcBMI(m.weight, m.height);
-  const bmiInfo = bmi ? bmiStatus(parseFloat(bmi)) : null;
+  const gender: "M" | "F" = patient.gender === "F" ? "F" : "M";
+  const age = patient.birth_date ? calcAge(patient.birth_date) : 30;
 
-  // Dobras cutâneas
-  const ALL_SF_KEYS: SkinfoldKey[] = [
-    "sf_pectoral","sf_midaxillary","sf_triceps","sf_biceps",
-    "sf_subscapular","sf_suprailiac","sf_abdominal","sf_thigh_sf","sf_calf_sf",
-  ];
-  const presentSfKeys = ALL_SF_KEYS.filter(k => (m as any)[k] != null);
-  const hasDobras  = presentSfKeys.length > 0;
-  const protocolInfo = m.sf_protocol
-    ? PROTOCOLS.find(p => p.id === m.sf_protocol)
-    : null;
-  const fatClass = m.body_fat != null && patient.gender
-    ? classifyBodyFat(m.body_fat, patient.gender === "F" ? "F" : "M")
-    : null;
-  const sfSum = presentSfKeys.reduce((acc, k) => acc + ((m as any)[k] ?? 0), 0);
+  // 3 most recent, displayed oldest → newest (left → right)
+  const cols = measurements.slice(0, 3).reverse();
+  const N = cols.length;
+  const colSpan = N + 1;
 
-  // verifica se existem medidas em cada grupo
-  const hasTronco   = [m.neck, m.shoulder, m.chest, m.waist, m.abdomen, m.hip].some(v => v != null);
-  const hasSuperior = [m.arm_relax_r, m.arm_relax_l, m.arm_contract_r, m.arm_contract_l,
-                       m.forearm_r, m.forearm_l, m.wrist_r, m.wrist_l].some(v => v != null);
-  const hasInferior = [m.thigh_prox_r, m.thigh_prox_l, m.thigh_r, m.thigh_l,
-                       m.calf_r, m.calf_l].some(v => v != null);
+  // Pre-compute derived values per column
+  const derived = cols.map((m) => ({
+    bmi: calcBMI(m),
+    fatMass:
+      m.weight != null && m.body_fat != null
+        ? parseFloat((m.weight * (m.body_fat / 100)).toFixed(1))
+        : null,
+    arm:
+      m.arm_relax_r && m.sf_triceps
+        ? calcArmAnthropometry(m.arm_relax_r, m.sf_triceps, gender)
+        : null,
+  }));
+
+  // Σ dobras per column (only for keys that belong to the saved protocol)
+  const sfSums = cols.map((m) => {
+    if (!m.sf_protocol) return null;
+    const info = PROTOCOLS.find((p) => p.id === m.sf_protocol);
+    if (!info) return null;
+    const sum = info.skinfolds.reduce((acc, k) => acc + ((m as any)[k] ?? 0), 0);
+    return sum > 0 ? sum : null;
+  });
+
+  const hasArmData = derived.some((d) => d.arm != null);
+  const hasTronco  = cols.some((m) => [m.neck, m.shoulder, m.chest, m.waist, m.abdomen, m.hip].some((v) => v != null));
+  const hasSup     = cols.some((m) => [m.arm_relax_r, m.arm_relax_l, m.arm_contract_r, m.arm_contract_l, m.forearm_r, m.wrist_r].some((v) => v != null));
+  const hasInf     = cols.some((m) => [m.thigh_prox_r, m.thigh_r, m.calf_r].some((v) => v != null));
+  const hasDobras  = cols.some((m) => ALL_SF_KEYS.some((k) => (m as any)[k] != null));
+
+  const mostRecent = cols[cols.length - 1];
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6 print:min-h-0 print:p-0 print:space-y-2">
+    <div className="min-h-screen bg-background p-6 space-y-5 print:min-h-0 print:p-0 print:space-y-3">
 
-      {/* ── Cabeçalho apenas para impressão ────────────────────────────────── */}
-      <div className="hidden print:block pb-2 mb-1 border-b-2 border-gray-800">
-        <div className="flex items-center justify-between">
+      {/* ── Print-only header ─────────────────────────────────────────────── */}
+      <div className="hidden print:block pb-3 mb-3 border-b-2 border-gray-800">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-[8px] font-bold uppercase tracking-widest text-gray-500 mb-0.5">Relatório Clínico</p>
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">Avaliação Antropométrica</h1>
-            <p className="text-[10px] text-gray-600 mt-0.5">
-              {patient.name} · {m.assessment_date ? formatDate(m.assessment_date) : "—"}
+            <p className="text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+              Relatório Clínico — Comparativo
             </p>
+            <h1 className="text-sm font-bold text-gray-900">Avaliação Antropométrica</h1>
+            <p className="text-[9px] text-gray-600 mt-0.5">{patient.name}</p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] font-bold text-gray-800">Dr. Fillipe David</p>
-            <p className="text-[9px] text-gray-500 mt-0.5">Nutricionista Clínico e Esportivo</p>
-            <p className="text-[9px] text-gray-400 mt-1">
-              Emitido em {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            <p className="text-[10px] font-bold text-gray-800">Dr. Fillipe David</p>
+            <p className="text-[8px] text-gray-500">Nutricionista Clínico e Esportivo</p>
+            <p className="text-[8px] text-gray-400 mt-0.5">
+              Emitido em{" "}
+              {new Date().toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── Header (tela) ───────────────────────────────────────────────────── */}
-      <div className="print-hide flex items-center justify-between gap-4">
+      {/* ── Screen header ─────────────────────────────────────────────────── */}
+      <div className="print:hidden flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             to={`/admin/pacientes/${id}?tab=antropometria`}
-            className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            className="w-8 h-8 rounded border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
           >
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Relatório Antropométrico</h1>
-            <p className="text-[15px] text-muted-foreground mt-0.5">
-              {patient.name} · avaliação de {m.assessment_date ? formatDate(m.assessment_date) : "—"}
-            </p>
+            <h1 className="text-xl font-bold text-foreground">Relatório Antropométrico</h1>
+            <p className="text-sm text-muted-foreground">{patient.name}</p>
           </div>
         </div>
         <button
           onClick={() => window.print()}
-          className="group relative inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-semibold shadow-sm hover:bg-foreground/90 active:scale-[0.98] transition-all duration-150 shrink-0"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-foreground text-background text-sm font-semibold hover:bg-foreground/90 active:scale-[0.98] transition-all"
         >
-          <FileDown size={16} className="transition-transform group-hover:-translate-y-0.5 duration-150" />
+          <FileDown size={15} />
           Exportar PDF
         </button>
       </div>
 
-      {/* ── Paciente ────────────────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-4 print:p-2 print:gap-2">
-        <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0 print:w-7 print:h-7 print:text-[10px]">
-          {patient.name ? initials(patient.name) : <User size={18} />}
+      {/* ── Patient card ──────────────────────────────────────────────────── */}
+      <div className="rounded border border-border bg-card px-5 py-4 flex items-center gap-4 print:px-3 print:py-2 print:gap-2">
+        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0 print:w-7 print:h-7 print:text-[10px]">
+          {initials(patient.name || "?")}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-lg font-semibold text-foreground truncate print:text-sm">{patient.name || "—"}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 print:gap-x-3">
-            {patient.email     && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.email}</span>}
-            {patient.phone     && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.phone}</span>}
-            {patient.city      && <span className="text-sm text-muted-foreground print:text-[9px]">{patient.city}</span>}
-            {patient.birth_date && <span className="text-sm text-muted-foreground print:text-[9px]">{calcAge(patient.birth_date)} anos</span>}
-          </div>
-        </div>
-        <div className="shrink-0 text-right hidden sm:block print:block">
-          <p className="text-sm text-muted-foreground print:text-[9px]">Data da avaliação</p>
-          <p className="text-[15px] font-semibold text-foreground mt-0.5 print:text-[11px]">
-            {m.assessment_date ? formatDate(m.assessment_date) : "—"}
-          </p>
-        </div>
-      </div>
-
-      {/* ── IMC destaque ────────────────────────────────────────────────────── */}
-      {bmi && bmiInfo && (
-        <div className="rounded-lg border border-border/70 bg-card shadow-sm p-5 flex items-center gap-5 print:p-2 print:gap-3">
-          <div className="shrink-0">
-            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 print:text-[8px] print:mb-0.5">
-              Índice de Massa Corporal
-            </p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold tabular-nums text-foreground print:text-2xl">{bmi}</span>
-              <span className="text-base text-muted-foreground print:text-[9px]">kg/m²</span>
-            </div>
-          </div>
-          <div className="w-px h-10 bg-border shrink-0" />
-          <div>
-            <div className="flex items-center gap-2 mb-1 print:mb-0">
-              <span className={cn("w-2 h-2 rounded-full shrink-0", bmiInfo.dot)} />
-              <span className={cn("text-sm font-semibold px-3 py-1 rounded-full border print:text-[9px] print:px-2 print:py-0.5", bmiInfo.badge)}>
-                {bmiInfo.label}
+          <p className="font-semibold text-foreground print:text-sm">{patient.name}</p>
+          <div className="flex gap-4 mt-0.5 flex-wrap">
+            {patient.birth_date && (
+              <span className="text-sm text-muted-foreground print:text-[9px]">
+                {age} anos
               </span>
-            </div>
-            <p className="text-sm text-muted-foreground print:hidden">Calculado com base no peso e altura registrados.</p>
+            )}
+            {patient.gender && (
+              <span className="text-sm text-muted-foreground print:text-[9px]">
+                {patient.gender === "F" ? "Feminino" : "Masculino"}
+              </span>
+            )}
           </div>
         </div>
-      )}
-
-      {/* ── Métricas de composição ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 print:grid-cols-5 print:gap-1.5">
-        <MetricCard label="Peso"             value={m.weight       != null ? String(m.weight)       : "—"} unit="kg" icon={<Scale size={15} />}   />
-        <MetricCard label="Altura"           value={m.height       != null ? String(m.height)       : "—"} unit="cm" icon={<Ruler size={15} />}   />
-        <MetricCard label="Gordura Corporal" value={m.body_fat     != null ? String(m.body_fat)     : "—"} unit="%"  icon={<Percent size={15} />} />
-        <MetricCard label="Massa Magra"      value={m.lean_mass    != null ? String(m.lean_mass)    : "—"} unit="kg" icon={<Activity size={15} />}/>
-        <MetricCard label="Gordura Visceral" value={m.visceral_fat != null ? String(m.visceral_fat) : "—"} icon={<Heart size={15} />}             />
-      </div>
-
-      {/* ── Dobras cutâneas ─────────────────────────────────────────────────── */}
-      {hasDobras && (
-        <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden print:break-inside-avoid">
-          <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between print:px-3 print:py-1">
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground print:text-[8px]">
-                Dobras Cutâneas
-              </p>
-              {protocolInfo && (
-                <p className="text-xs text-muted-foreground mt-0.5 print:text-[8px]">
-                  Protocolo: <span className="font-medium text-foreground">{protocolInfo.label}</span>
-                </p>
-              )}
-            </div>
-            {m.body_fat != null && fatClass && (
-              <div className="text-right">
-                <p className={cn("text-2xl font-bold tabular-nums print:text-base", fatClass.color)}>
-                  {m.body_fat.toFixed(1)}<span className="text-sm font-normal ml-0.5">%</span>
-                </p>
-                <p className={cn("text-xs font-semibold print:text-[8px]", fatClass.color)}>{fatClass.label}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-5 print:p-3">
-            {/* Grid de dobras */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
-              {presentSfKeys.map(key => (
-                <div key={key} className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5 print:px-2 print:py-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground print:text-[7px]">
-                    {SKINFOLD_LABELS[key]}
-                  </p>
-                  <p className="text-lg font-bold tabular-nums text-foreground mt-0.5 print:text-xs">
-                    {(m as any)[key]} <span className="text-xs font-normal text-muted-foreground print:text-[8px]">mm</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Rodapé com soma e densidade */}
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60 text-sm print:mt-2 print:pt-1.5">
-              <div className="flex items-center gap-4 print:gap-3">
-                <span className="text-muted-foreground print:text-[9px]">
-                  Σ dobras: <strong className="text-foreground tabular-nums">{sfSum.toFixed(1)} mm</strong>
-                </span>
-                {m.body_density != null && (
-                  <span className="text-muted-foreground print:text-[9px]">
-                    DC: <strong className="text-foreground tabular-nums">{m.body_density.toFixed(4)} g/mL</strong>
-                  </span>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground print:text-[8px]">Equação de Siri (1961)</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Medidas corporais: em print ficam lado a lado em 3 colunas ───────── */}
-      <div className="space-y-4 print:space-y-0 print:flex print:flex-row print:gap-2">
-
-        {hasTronco && (
-          <SectionCard title="Tronco" className="print:flex-1">
-            <MeasureRow label="Pescoço"  value={fmt(m.neck)}     />
-            <MeasureRow label="Ombro"    value={fmt(m.shoulder)} />
-            <MeasureRow label="Peitoral" value={fmt(m.chest)}    />
-            <MeasureRow label="Cintura"  value={fmt(m.waist)}    />
-            <MeasureRow label="Abdômen"  value={fmt(m.abdomen)}  />
-            <MeasureRow label="Quadril"  value={fmt(m.hip)}      />
-          </SectionCard>
-        )}
-
-        {(hasSuperior || hasInferior) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:contents">
-
-            {hasSuperior && (
-              <SectionCard title="Membros Superiores" className="print:flex-1">
-                {/* legenda D / E */}
-                <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5 print:hidden">
-                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
-                  </span>
-                </div>
-                {/* legenda compacta apenas no print */}
-                <div className="hidden print:flex items-center justify-end gap-2 pb-1 pt-0.5 border-b border-border/50 mb-0.5">
-                  <span className="text-[8px] text-gray-500 font-semibold">D</span>
-                  <span className="text-[8px] text-gray-400">·</span>
-                  <span className="text-[8px] text-gray-500 font-semibold">E</span>
-                </div>
-                <BilateralRow label="Braço Relaxado"   right={m.arm_relax_r}    left={m.arm_relax_l}    />
-                <BilateralRow label="Braço Contraído"  right={m.arm_contract_r} left={m.arm_contract_l} />
-                <BilateralRow label="Antebraço"        right={m.forearm_r}      left={m.forearm_l}      />
-                <BilateralRow label="Punho"            right={m.wrist_r}        left={m.wrist_l}        />
-              </SectionCard>
-            )}
-
-            {hasInferior && (
-              <SectionCard title="Membros Inferiores" className="print:flex-1">
-                <div className="flex items-center justify-end gap-3 pb-2 pt-1 border-b border-border/50 mb-0.5 print:hidden">
-                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <span className="w-2 h-2 rounded-full bg-primary/70" /> Direito
-                  </span>
-                  <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Esquerdo
-                  </span>
-                </div>
-                <div className="hidden print:flex items-center justify-end gap-2 pb-1 pt-0.5 border-b border-border/50 mb-0.5">
-                  <span className="text-[8px] text-gray-500 font-semibold">D</span>
-                  <span className="text-[8px] text-gray-400">·</span>
-                  <span className="text-[8px] text-gray-500 font-semibold">E</span>
-                </div>
-                <BilateralRow label="Coxa Proximal" right={m.thigh_prox_r} left={m.thigh_prox_l} />
-                <BilateralRow label="Coxa Medial"   right={m.thigh_r}      left={m.thigh_l}      />
-                <BilateralRow label="Panturrilha"   right={m.calf_r}       left={m.calf_l}       />
-              </SectionCard>
-            )}
-          </div>
+        {measurements.length > 3 && (
+          <p className="text-xs text-muted-foreground shrink-0 print:text-[8px]">
+            Exibindo {N} de {measurements.length} avaliações
+          </p>
         )}
       </div>
 
-      {/* ── Observações ──────────────────────────────────────────────────────── */}
-      {m.notes && (
-        <SectionCard title="Observações">
-          <p className="py-3 text-sm text-foreground/80 leading-relaxed print:py-1 print:text-[10px]">{m.notes}</p>
-        </SectionCard>
-      )}
+      {/* ── Comparison table ──────────────────────────────────────────────── */}
+      <div className="rounded border border-border overflow-hidden print:break-inside-avoid">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[480px]">
 
-      {/* ── Histórico (apenas em tela) ───────────────────────────────────────── */}
-      {measurements.length > 1 && (
-        <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden print:hidden">
-          <div className="px-5 py-3.5 border-b border-border/60 flex items-center justify-between">
-            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Histórico de Avaliações
-            </p>
-            <span className="text-sm text-muted-foreground">
-              {measurements.length} registro{measurements.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[540px] text-sm">
-              <thead>
-                <tr className="border-b border-border/60 bg-muted/20">
-                  {["Data", "Peso", "Altura", "IMC", "Gordura", "Massa Magra"].map((col) => (
-                    <th key={col} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {measurements.map((row, idx) => {
-                  const mb         = calcBMI(row.weight, row.height);
-                  const isSelected = idx === selectedIdx;
+            {/* Table header */}
+            <thead>
+              <tr className="border-b border-border bg-muted">
+                <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground w-52 print:text-[8px] print:py-2 print:px-3 print:w-40">
+                  Métrica
+                </th>
+                {cols.map((m, i) => (
+                  <th
+                    key={i}
+                    className={cn(
+                      "px-4 py-3 text-right text-xs font-black uppercase tracking-widest min-w-[148px] print:text-[8px] print:py-2 print:px-3 print:min-w-0",
+                      i === cols.length - 1
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    <div>{formatDate(m.assessment_date)}</div>
+                    {cols.length > 1 && (
+                      <div className="text-[9px] font-medium normal-case mt-0.5 opacity-60 print:hidden">
+                        {i === 0
+                          ? "Mais antiga"
+                          : i === cols.length - 1
+                          ? "Mais recente"
+                          : `Avaliação ${i + 1}`}
+                      </div>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {/* ── Medidas Gerais ─────────────────────────────────────── */}
+              <SectionRow label="Medidas Gerais" colSpan={colSpan} />
+
+              <MetricRow
+                label="Peso"
+                values={cols.map((m) => m.weight ?? null)}
+                unit="kg"
+              />
+              <MetricRow
+                label="Altura"
+                values={cols.map((m) => m.height ?? null)}
+                unit="cm"
+                decimals={0}
+              />
+              <MetricRow
+                label="IMC"
+                values={derived.map((d) => d.bmi)}
+                unit="kg/m²"
+                suffix={(val) => {
+                  const lb = bmiLabel(val);
                   return (
-                    <tr
-                      key={row.id ?? idx}
-                      onClick={() => setSelectedIdx(idx)}
+                    <span className="ml-1.5 text-[10px] text-muted-foreground print:hidden">
+                      ({lb})
+                    </span>
+                  );
+                }}
+              />
+
+              {/* ── Composição Corporal ────────────────────────────────── */}
+              <SectionRow label="Composição Corporal" colSpan={colSpan} />
+
+              <MetricRow
+                label="Gordura Corporal"
+                values={cols.map((m) => m.body_fat ?? null)}
+                unit="%"
+                suffix={(val) => {
+                  const cl = classifyBodyFat(val, gender);
+                  return (
+                    <span
                       className={cn(
-                        "cursor-pointer transition-colors",
-                        isSelected
-                          ? "bg-primary/[0.06] hover:bg-primary/[0.08]"
-                          : "hover:bg-muted/40"
+                        "ml-1.5 text-[10px] font-semibold print:hidden",
+                        cl.color
                       )}
                     >
-                      <td className="px-5 py-3.5 font-medium text-foreground">
-                        <div className="flex items-center gap-2">
-                          {row.assessment_date ? formatDate(row.assessment_date) : "—"}
-                          {isSelected && (
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                              Exibindo
-                            </span>
-                          )}
-                          {idx === 0 && !isSelected && (
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              Recente
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.weight   != null ? `${row.weight} kg`   : "—"}</td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.height   != null ? `${row.height} cm`   : "—"}</td>
-                      <td className="px-5 py-3.5 tabular-nums">
-                        {mb ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{mb}</span>
-                            <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full border", bmiStatus(parseFloat(mb)).badge)}>
-                              {bmiStatus(parseFloat(mb)).label}
-                            </span>
-                          </div>
-                        ) : "—"}
-                      </td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.body_fat  != null ? `${row.body_fat}%`  : "—"}</td>
-                      <td className="px-5 py-3.5 tabular-nums">{row.lean_mass != null ? `${row.lean_mass} kg` : "—"}</td>
-                    </tr>
+                      ({cl.label})
+                    </span>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                }}
+              />
+              <MetricRow
+                label="Massa Gorda"
+                values={derived.map((d) => d.fatMass)}
+                unit="kg"
+              />
+              <MetricRow
+                label="Massa Magra"
+                values={cols.map((m) => m.lean_mass ?? null)}
+                unit="kg"
+              />
+              <MetricRow
+                label="Gordura Visceral"
+                values={cols.map((m) => m.visceral_fat ?? null)}
+                decimals={0}
+              />
+
+              {/* ── Índices do Braço (AMB / AGB) ──────────────────────── */}
+              {hasArmData && (
+                <>
+                  <SectionRow label="Índices do Braço — AMB / AGB" colSpan={colSpan} />
+                  <MetricRow
+                    label="Circ. Muscular do Braço (CMB)"
+                    values={derived.map((d) => d.arm?.cmb ?? null)}
+                    unit="cm"
+                  />
+                  <MetricRow
+                    label="Área do Braço (AB)"
+                    values={derived.map((d) => d.arm?.ab ?? null)}
+                    unit="cm²"
+                  />
+                  <MetricRow
+                    label="Área Muscular do Braço (AMB)"
+                    values={derived.map((d) => d.arm?.amb ?? null)}
+                    unit="cm²"
+                  />
+                  <MetricRow
+                    label="AMB Corrigida — Heymsfield (AMBc)"
+                    values={derived.map((d) => d.arm?.ambc ?? null)}
+                    unit="cm²"
+                  />
+                  <MetricRow
+                    label="Área Gordurosa do Braço (AGB)"
+                    values={derived.map((d) => d.arm?.agb ?? null)}
+                    unit="cm²"
+                  />
+                  <StringRow
+                    label="Adequação AMBc (Frisancho, 1990)"
+                    values={derived.map((d) => {
+                      if (!d.arm) return null;
+                      const cl = classifyAmbc(d.arm.ambc, gender, age);
+                      return `${cl.pct}% — ${cl.label}`;
+                    })}
+                  />
+                </>
+              )}
+
+              {/* ── Circunferências — Tronco ───────────────────────────── */}
+              {hasTronco && (
+                <>
+                  <SectionRow label="Circunferências — Tronco" colSpan={colSpan} />
+                  <MetricRow label="Pescoço"  values={cols.map((m) => m.neck     ?? null)} unit="cm" />
+                  <MetricRow label="Ombro"    values={cols.map((m) => m.shoulder ?? null)} unit="cm" />
+                  <MetricRow label="Peitoral" values={cols.map((m) => m.chest    ?? null)} unit="cm" />
+                  <MetricRow label="Cintura"  values={cols.map((m) => m.waist    ?? null)} unit="cm" />
+                  <MetricRow label="Abdômen"  values={cols.map((m) => m.abdomen  ?? null)} unit="cm" />
+                  <MetricRow label="Quadril"  values={cols.map((m) => m.hip      ?? null)} unit="cm" />
+                </>
+              )}
+
+              {/* ── Circunferências — Membros Superiores ──────────────── */}
+              {hasSup && (
+                <>
+                  <SectionRow label="Circunferências — Membros Superiores (D · E)" colSpan={colSpan} />
+                  <BilateralRow
+                    label="Braço Relaxado"
+                    rights={cols.map((m) => m.arm_relax_r    ?? null)}
+                    lefts={cols.map((m)  => m.arm_relax_l    ?? null)}
+                  />
+                  <BilateralRow
+                    label="Braço Contraído"
+                    rights={cols.map((m) => m.arm_contract_r ?? null)}
+                    lefts={cols.map((m)  => m.arm_contract_l ?? null)}
+                  />
+                  <BilateralRow
+                    label="Antebraço"
+                    rights={cols.map((m) => m.forearm_r      ?? null)}
+                    lefts={cols.map((m)  => m.forearm_l      ?? null)}
+                  />
+                  <BilateralRow
+                    label="Punho"
+                    rights={cols.map((m) => m.wrist_r        ?? null)}
+                    lefts={cols.map((m)  => m.wrist_l        ?? null)}
+                  />
+                </>
+              )}
+
+              {/* ── Circunferências — Membros Inferiores ──────────────── */}
+              {hasInf && (
+                <>
+                  <SectionRow label="Circunferências — Membros Inferiores (D · E)" colSpan={colSpan} />
+                  <BilateralRow
+                    label="Coxa Proximal"
+                    rights={cols.map((m) => m.thigh_prox_r ?? null)}
+                    lefts={cols.map((m)  => m.thigh_prox_l ?? null)}
+                  />
+                  <BilateralRow
+                    label="Coxa Medial"
+                    rights={cols.map((m) => m.thigh_r      ?? null)}
+                    lefts={cols.map((m)  => m.thigh_l      ?? null)}
+                  />
+                  <BilateralRow
+                    label="Panturrilha"
+                    rights={cols.map((m) => m.calf_r       ?? null)}
+                    lefts={cols.map((m)  => m.calf_l       ?? null)}
+                  />
+                </>
+              )}
+
+              {/* ── Dobras Cutâneas ────────────────────────────────────── */}
+              {hasDobras && (
+                <>
+                  <SectionRow label="Dobras Cutâneas" colSpan={colSpan} />
+                  {ALL_SF_KEYS.map((key) => (
+                    <MetricRow
+                      key={key}
+                      label={SKINFOLD_LABELS[key]}
+                      values={cols.map((m) => (m as any)[key] ?? null)}
+                      unit="mm"
+                      decimals={1}
+                    />
+                  ))}
+                  <MetricRow
+                    label="Σ Dobras do protocolo"
+                    values={sfSums}
+                    unit="mm"
+                    decimals={1}
+                  />
+                  <MetricRow
+                    label="Densidade Corporal"
+                    values={cols.map((m) => m.body_density ?? null)}
+                    unit="g/mL"
+                    decimals={4}
+                  />
+                  <StringRow
+                    label="Protocolo"
+                    values={cols.map((m) => {
+                      if (!m.sf_protocol) return null;
+                      return PROTOCOLS.find((p) => p.id === m.sf_protocol)?.label ?? m.sf_protocol;
+                    })}
+                  />
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Legend ───────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-5 text-xs text-muted-foreground print:text-[8px]">
+        <span className="flex items-center gap-1.5">
+          <span className="font-bold text-green-600">(+X)</span>
+          Aumento em relação à coluna anterior
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="font-bold text-red-500">(−X)</span>
+          Redução em relação à coluna anterior
+        </span>
+        <span className="text-muted-foreground/60">
+          Bilateral: delta calculado pelo lado Direito · AMBc: Heymsfield et al. (1982) · Adequação: Frisancho (1990)
+        </span>
+      </div>
+
+      {/* ── Notes ────────────────────────────────────────────────────────── */}
+      {mostRecent?.notes && (
+        <div className="rounded border border-border bg-card px-5 py-4 print:px-3 print:py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5 print:text-[7px]">
+            Observações — {formatDate(mostRecent.assessment_date)}
+          </p>
+          <p className="text-sm text-foreground/80 leading-relaxed print:text-[9px]">
+            {mostRecent.notes}
+          </p>
         </div>
       )}
     </div>
