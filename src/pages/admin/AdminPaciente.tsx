@@ -22,6 +22,9 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { ExamesTab } from "@/components/admin/ExamesTab";
+import { StrategyModal } from "@/components/admin/StrategyModal";
+import { calcMacros, type StrategyType, type MacroResult } from "@/lib/strategyUtils";
+import { type EnergyInput } from "@/lib/energyUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -483,7 +486,7 @@ export default function AdminPaciente() {
             />
           )}
           {activeTab === "planos" && (
-            <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} />
+            <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} patient={patient} />
           )}
           {activeTab === "exames" && (
             <ExamesTab patientId={Number(id)} />
@@ -1270,43 +1273,134 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 // TAB 4: Planos Alimentares
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PlanosTab({ patientId, patientRouteId, navigate }: any) {
+const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
+  deficit:     { label: "Déficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  maintenance: { label: "Manutenção",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  surplus:     { label: "Superávit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
+};
+
+function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
   const pid = Number(patientId);
-  const [plans, setPlans] = useState<MealPlan[]>([]);
+  const [plans, setPlans]   = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [latestMeasurement, setLatestMeasurement] = useState<Measurement | null>(null);
 
   useEffect(() => {
-    fetchMealPlans(pid).then(setPlans).finally(() => setLoading(false));
+    Promise.all([
+      fetchMealPlans(pid),
+      fetchMeasurements(pid).then((ms) => ms[0] ?? null),
+    ]).then(([ps, m]) => {
+      setPlans(ps);
+      setLatestMeasurement(m);
+    }).finally(() => setLoading(false));
   }, [pid]);
 
-  const handleNew = async () => {
-    const np = await upsertMealPlan({ patient_id: pid, title: "Plano Alimentar" } as MealPlan);
+  // Monta EnergyInput a partir da medição mais recente + dados do paciente
+  const energyInput: EnergyInput | undefined = (() => {
+    if (!latestMeasurement?.weight || !latestMeasurement?.height) return undefined;
+    if (!patient?.birth_date) return undefined;
+    const age = calcAge(patient.birth_date);
+    return {
+      weight: latestMeasurement.weight,
+      height: latestMeasurement.height,
+      age,
+      gender: patient.gender === "F" ? "F" : "M",
+    };
+  })();
+
+  const handleModalConfirm = async (
+    title: string,
+    strategy: StrategyType | null,
+    macros: MacroResult | null
+  ) => {
+    setShowModal(false);
+    const payload: MealPlan = {
+      patient_id: pid,
+      title,
+      ...(strategy && macros
+        ? {
+            strategy_type: strategy,
+            target_calories: macros.calories,
+            target_protein_g: macros.protein_g,
+            target_carbs_g: macros.carbs_g,
+            target_fat_g: macros.fat_g,
+            daily_calories: macros.calories,
+          }
+        : {}),
+    };
+    const np = await upsertMealPlan(payload);
     if (np && (np as any).id) navigate(`/admin/pacientes/${patientRouteId}/plano/${(np as any).id}`);
   };
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-black text-lg">Dieta & Planos</h2>
-        <Button onClick={handleNew} className="rounded-2xl h-11 px-6 font-bold shadow-lg shadow-primary/20"><Plus size={18} className="mr-2" /> Novo Plano</Button>
-      </div>
+    <>
+      {showModal && (
+        <StrategyModal
+          energyInput={energyInput}
+          onConfirm={handleModalConfirm}
+          onClose={() => setShowModal(false)}
+        />
+      )}
 
-      <div className="grid grid-cols-1 gap-3">
-        {plans.map(p => (
-          <div key={(p as any).id} className="bg-card border border-border/60 rounded-2xl p-5 flex items-center justify-between group">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><BookOpen size={24} /></div>
-              <div>
-                <p className="font-black text-foreground">{p.title || "Plano sem título"}</p>
-                <p className="text-xs text-muted-foreground font-semibold">Criado em {new Date((p as any).created_at).toLocaleDateString("pt-BR")}</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-lg">Dieta & Planos</h2>
+          <Button
+            onClick={() => setShowModal(true)}
+            className="rounded-2xl h-11 px-6 font-bold shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} className="mr-2" /> Novo Plano
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          {plans.map((p) => {
+            const strategyInfo = p.strategy_type ? STRATEGY_LABELS[p.strategy_type] : null;
+            return (
+              <div
+                key={(p as any).id}
+                className="bg-card border border-border/60 rounded-2xl p-5 flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <BookOpen size={24} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-black text-foreground">{p.title || "Plano sem título"}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {strategyInfo && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${strategyInfo.cls}`}>
+                          {strategyInfo.label}
+                        </span>
+                      )}
+                      {p.target_calories && (
+                        <span className="text-[10px] text-muted-foreground font-semibold">
+                          {p.target_calories} kcal · {p.target_protein_g}g PTN · {p.target_carbs_g}g CHO · {p.target_fat_g}g LIP
+                        </span>
+                      )}
+                      {!p.target_calories && (
+                        <span className="text-xs text-muted-foreground font-semibold">
+                          Criado em {new Date((p as any).created_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/admin/pacientes/${patientRouteId}/plano/${(p as any).id}`)}
+                  className="rounded-xl font-bold border-border/60 hover:bg-primary hover:text-white hover:border-primary transition-all"
+                >
+                  Abrir Plano
+                </Button>
               </div>
-            </div>
-            <Button variant="outline" onClick={() => navigate(`/admin/pacientes/${patientRouteId}/plano/${(p as any).id}`)} className="rounded-xl font-bold border-border/60 hover:bg-primary hover:text-white hover:border-primary transition-all">Abrir Plano</Button>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

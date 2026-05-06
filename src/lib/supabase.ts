@@ -301,6 +301,12 @@ export interface MealPlan {
   end_date?: string;
   daily_calories?: number;
   notes?: string;
+  // Epic 4: estratégia dietética
+  strategy_type?: string;       // 'deficit' | 'maintenance' | 'surplus'
+  target_calories?: number;
+  target_protein_g?: number;
+  target_carbs_g?: number;
+  target_fat_g?: number;
   created_at?: string;
 }
 
