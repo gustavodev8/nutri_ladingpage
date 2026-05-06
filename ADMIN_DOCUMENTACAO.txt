@@ -1,0 +1,385 @@
+================================================================================
+  DOCUMENTAÇÃO DO PAINEL ADMINISTRATIVO
+  Projeto: Fillipe David Nutricionista — Landing Page + Sistema de Gestão
+  Stack: React 18 + TypeScript + Vite + Tailwind CSS + Supabase
+================================================================================
+
+ACESSO
+------
+URL: /admin/login
+Autenticação via Supabase Auth (e-mail + senha).
+Possui bloqueio após 5 tentativas incorretas (15 minutos de lockout).
+
+--------------------------------------------------------------------------------
+ESTRUTURA DE NAVEGAÇÃO (sidebar)
+--------------------------------------------------------------------------------
+
+Grupos:
+  1. Conteúdo do Site
+  2. Consultas & Produtos
+  3. Clínica
+  4. Agendamentos
+  5. Prova Social
+  6. Conta
+  7. Ferramentas
+
+--------------------------------------------------------------------------------
+1. DASHBOARD  (/admin)
+--------------------------------------------------------------------------------
+Painel inicial com cards de atalho para as principais áreas do sistema.
+Acesso rápido a: Perfil, Hero, Sobre, Serviços, Horários, Depoimentos,
+FAQ, CTA, Endereço & Redes, e Alterar Senha.
+
+--------------------------------------------------------------------------------
+2. CONTEÚDO DO SITE
+--------------------------------------------------------------------------------
+
+2.1 Seção Principal — Hero  (/admin/hero)
+  - Edita o badge de status exibido no topo da página
+  - Título principal, subtítulo com especialidade e CRN
+  - Tagline completa com destaque de palavras específicas em cor primária
+  - Prova social: número de pacientes + texto descritivo
+  - Badge de avaliação: nota e quantidade
+  - Preview em tempo real de todas as alterações
+
+2.2 Sobre Mim  (/admin/sobre)
+  - Upload de foto do profissional
+  - Eyebrow (texto acima do título)
+  - Título e dois parágrafos de biografia
+  - 3 cards de estatísticas (valor + rótulo), ex: "10 anos de experiência"
+
+2.3 Serviços  (/admin/servicos)
+  - Lista de cards de serviços exibidos na landing page
+  - Cada serviço: ícone (6 opções), título e descrição
+  - Adicionar / editar / remover serviços
+  - Sem limite fixo de quantidade
+
+2.4 Modalidades  (/admin/modalidades)
+  - Título da seção
+  - Configuração de atendimento online: título + descrição
+  - Configuração de atendimento presencial: título + descrição
+  - URL do embed do Google Maps para exibir localização
+
+2.5 Horários  (/admin/horarios)
+  - Toggle on/off para cada dia da semana (seg–dom)
+  - Campo de texto livre para horários de cada dia
+  - Dias desativados exibem "Fechado" no site
+
+2.6 FAQ  (/admin/faq)
+  - Lista de perguntas frequentes com accordion
+  - Adicionar / editar / remover perguntas
+  - Cada item: pergunta e resposta
+
+2.7 Chamada Final — CTA  (/admin/cta)
+  - Título e subtítulo do bloco CTA
+  - Texto do botão de ação
+  - Mensagem pré-preenchida do WhatsApp ao clicar no botão
+
+--------------------------------------------------------------------------------
+3. CONSULTAS & PRODUTOS
+--------------------------------------------------------------------------------
+
+3.1 Marketplace — Loja  (/admin/loja)
+  - Banner da loja: badge, título, subtítulo
+  - Carrossel de imagens de fundo (desktop 16:5 e mobile 2:3)
+  - Múltiplos slides que alternam a cada 5 segundos
+  - Links rápidos para gerenciar planos e produtos digitais
+
+3.2 Loja de Consultas  (/admin/precos)
+  - Upload de vídeo de apresentação dos planos
+  - Gerenciamento de planos de consultas:
+      - Nome, descrição, preço (texto + valor numérico)
+      - Badge de destaque, mensagem WhatsApp personalizada
+      - Número de consultas e retornos incluídos
+      - Tipo: online, presencial ou ambos
+      - Marcar plano como "Destaque" (exibido em evidência)
+
+3.3 Produtos Digitais — E-books  (/admin/produtos)
+  - Gerenciamento completo de e-books e materiais digitais
+  - Cada produto:
+      - Nome, descrição curta e descrição longa
+      - Foto de capa
+      - Múltiplos PDFs com labels individuais
+      - Compressão automática de PDFs acima de 50MB
+      - Lista de detalhes (bullet points, um por linha)
+      - Preço, badge, mensagem WhatsApp
+      - Galeria de prints de compradores (com legenda opcional)
+
+3.4 Desconto Global  (/admin/desconto)
+  - Cria desconto temporário com percentual configurável
+  - Define duração em horas
+  - Mensagem personalizada do banner
+  - Banner aparece no topo do site com contagem regressiva
+  - Toggle para ativar/desativar
+  - Preview em tempo real do banner
+
+--------------------------------------------------------------------------------
+4. CLÍNICA
+--------------------------------------------------------------------------------
+
+4.1 Pacientes  (/admin/pacientes)
+  Visão geral da base de pacientes com:
+  - Estatísticas: total, novos no mês, média de idade, cidades atendidas,
+    distribuição feminino/masculino, perfis incompletos
+  - Busca por nome ou e-mail
+  - Filtros: cidade, faixa etária, data de cadastro
+  - Abas separadas por gênero com contagem
+  - Tabela paginada (10 por página): nome, contato, gênero, idade, data cadastro
+  - Cadastrar novo paciente: nome, e-mail, telefone, data de nascimento,
+    gênero, cidade, ocupação
+  - Deletar com confirmação
+
+4.2 Prontuário do Paciente  (/admin/pacientes/:id)
+  Prontuário clínico completo com 4 abas:
+
+  ABA PERFIL:
+    - Editar dados básicos (nome, e-mail, telefone, nascimento, gênero, cidade)
+    - Upload de foto principal do paciente
+    - Galeria de fotos de evolução com lightbox (upload múltiplo)
+
+  ABA ANAMNESE:
+    - Queixa principal e histórico médico
+    - Medicamentos em uso e alergias alimentares
+    - Aversões e preferências alimentares
+    - Número de refeições/dia, consumo de água, qualidade do sono
+    - Funcionamento intestinal, atividade física, objetivos do paciente
+
+  ABA ANTROPOMETRIA:
+    - Registro de avaliações corporais ao longo do tempo
+    - Formulário de entrada: peso, altura, % gordura corporal,
+      massa magra, gordura visceral
+    - Medidas: abdômen, cintura, quadril, tórax, ombro
+    - Membros superiores: braço direito/esquerdo, antebraço D/E
+    - Membros inferiores: coxa D/E, panturrilha D/E
+    - Histório de avaliações em tabela com seletor de data
+    - Cálculo automático de diferença entre lados (bilateral)
+
+  ABA PLANOS ALIMENTARES:
+    - Lista dos planos criados para o paciente
+    - Botão para criar novo plano
+    - Acesso individual a cada plano
+
+4.3 Editor de Plano Alimentar  (/admin/pacientes/:id/plano/:planId)
+  - Título do plano, datas de início e fim
+  - Meta calórica diária
+  - Observações e restrições
+  - Até 6 refeições padrão (café da manhã, lanche manhã, almoço,
+    lanche tarde, jantar, ceia) com nomes e horários editáveis
+  - Cada refeição: tabela de alimentos com quantidade e unidade
+  - Cálculo automático de macros: kcal, proteína, carboidratos, gordura
+  - Notas opcionais por refeição
+  - Resumo nutricional diário com barra de progresso vs meta
+  - Gráfico de distribuição percentual de macros
+  - Busca de alimentos integrada ao banco de dados
+  - Enviar plano por e-mail ao paciente
+
+4.4 Relatório Antropométrico  (/admin/pacientes/:id/relatorio-antropometrico)
+  Relatório completo de avaliação corporal para impressão/PDF:
+  - Header com nome, data e foto do paciente
+  - IMC em destaque com classificação (Abaixo do peso / Normal /
+    Sobrepeso / Obesidade)
+  - 5 cards de métricas principais
+  - Seções de medidas: tronco, membros superiores, membros inferiores
+    com diferença bilateral calculada automaticamente
+  - Parecer técnico nutricional
+  - Histórico comparativo em tabela
+  - Exportação para PDF via impressão
+
+4.5 Banco de Alimentos  (/admin/alimentos)
+  - Lista fusionada de alimentos: banco padrão (built-in) + personalizados
+  - Busca por nome ou categoria
+  - Filtro por categoria
+  - Adicionar alimento personalizado: nome, categoria, macros por 100g
+    (kcal, proteína, carboidratos, gordura, fibra)
+  - Editar alimentos personalizados ou criar override dos padrões
+  - Excluir apenas alimentos personalizados
+  - Indicador visual de "Personalizado" vs padrão
+
+--------------------------------------------------------------------------------
+5. AGENDAMENTOS
+--------------------------------------------------------------------------------
+
+5.1 Disponibilidade  (/admin/disponibilidade)
+  - Calendário interativo para gerenciar horários disponíveis
+  - Selecionar data + tipo de atendimento (online / presencial)
+  - Para presencial: escolher cidade
+  - Adicionar / remover horários específicos (07:00–20:00)
+  - Calendário destaca dias com disponibilidade cadastrada
+
+5.2 Agendamentos  (/admin/agendamentos)
+  Gestão completa de consultas agendadas:
+  - Visualização em calendário mensal ou lista
+  - Status de cada agendamento: pendente, confirmado, concluído,
+    falta (no-show), cancelado
+  - Dados do agendamento: nome, e-mail, telefone, tipo de atendimento,
+    cidade, anamnese pré-consulta (queixa, medicamentos, alergias, etc.)
+  - Mudar status com um clique
+  - Auto-completar consultas passadas
+  - Expirar agendamentos pendentes sem confirmação
+  - Vincular agendamento a paciente existente (por CPF) ou criar novo
+  - Arquivos anexados à consulta (uploads)
+  - Registros de consulta: criar / editar / deletar anotações
+  - Agendamento manual pelo admin (sem passar pelo site)
+
+5.3 Logs de Pagamento  (/admin/pagamentos)
+  - Total de vendas (número de transações)
+  - Receita total acumulada em R$
+  - Tabela de todas as compras:
+      - Nome e e-mail do cliente
+      - Produto adquirido
+      - Valor pago
+      - ID do pagamento (Mercado Pago)
+      - Status da transação
+      - Data e hora
+
+5.4 Disparo de E-mails  (/admin/disparo)
+  Sistema de campanhas de e-mail segmentadas em 3 etapas:
+
+  ETAPA 1 — AUDIÊNCIA (colapsável):
+    - Origens disponíveis (seleção múltipla):
+        * Compradores de e-books (payment_logs com status aprovado)
+        * Consultas agendadas (bookings não cancelados)
+        * Pacientes cadastrados (prontuário clínico)
+        * Leads captados (popup do site)
+    - Período: todo o período / últimos 30 / 90 / 365 dias
+    - Filtro por produto (quando e-books selecionado)
+    - Adição manual de e-mails extras (separados por vírgula/enter)
+    - Contador de destinatários em tempo real (deduplica automaticamente)
+
+  ETAPA 2 — MENSAGEM:
+    - Campo de assunto com ícone
+    - Editor de corpo do e-mail com suporte a:
+        **negrito**, *itálico*, parágrafos, quebras de linha
+    - Pré-visualização do e-mail renderizado
+
+  ETAPA 3 — REVISAR E ENVIAR:
+    - Resumo de todos os filtros ativos
+    - Checkbox de confirmação obrigatória
+    - Botão de disparo (desabilitado até confirmação)
+    - Resultado após envio: e-mails entregues / com falha / total
+
+5.5 Leads Captados  (/admin/leads)
+  - Contatos cadastrados via popup de captação do site (nome + e-mail)
+  - Estatísticas: total, últimos 7 dias, últimos 30 dias
+  - Busca por nome ou e-mail
+  - Tabela: nome, e-mail (clicável para abrir cliente de e-mail),
+    origem, data/hora do cadastro
+  - Deletar lead individual com confirmação
+  - Exportar lista completa em CSV
+  - Botão de atualizar manualmente
+
+--------------------------------------------------------------------------------
+6. PROVA SOCIAL
+--------------------------------------------------------------------------------
+
+6.1 Resultados  (/admin/resultados)
+  - Configurar seção de transformações (antes e depois)
+  - Título, subtítulo, texto do botão CTA, mensagem WhatsApp
+  - Disclaimer legal personalizável
+  - Cada case de resultado:
+      - Foto "antes" e foto "depois"
+      - Iniciais do paciente (preserva privacidade)
+      - Tempo de acompanhamento
+      - Depoimento do paciente
+  - Adicionar / remover cases
+
+6.2 Depoimentos  (/admin/depoimentos)
+  - Configura título da seção
+  - Grid de slots para fotos de depoimentos
+  - Upload de prints (WhatsApp, Instagram, Google, etc.)
+  - Adicionar / remover imagens
+
+6.3 Blog  (/admin/blog)
+  Sistema completo de blog:
+  - Lista de posts com thumbnail, título, slug, data e status
+  - Criar novo post:
+      - Título (gera slug automático)
+      - Slug personalizável
+      - Imagem de capa
+      - Conteúdo em Markdown (**negrito**, *itálico*, ## títulos, - listas)
+      - Escolha de fonte (Sans-serif / Serif / Display)
+  - Toggle publicado / rascunho (sem deletar)
+  - Editar posts existentes
+  - Deletar com confirmação
+
+--------------------------------------------------------------------------------
+7. CONTA
+--------------------------------------------------------------------------------
+
+7.1 Perfil & Contato  (/admin/perfil)
+  - Nome da marca / clínica
+  - Nome completo do profissional
+  - CRN (número de registro)
+  - Especialidade
+  - Número de WhatsApp (com validação de formato)
+  - Foto principal do profissional
+  - Preview ao vivo de como as informações aparecem no site
+  - Teste de link do WhatsApp
+
+7.2 Endereço & Redes  (/admin/contato)
+  - Endereço: rua, bairro, cidade/UF, CEP
+  - URL do perfil do Instagram
+  - URL do perfil do Facebook
+
+7.3 Alterar Senha  (/admin/senha)
+  - Senha atual + nova senha + confirmação
+  - Requisitos: mínimo 8 caracteres, ao menos 1 maiúscula e 1 número
+  - Toggle mostrar/ocultar senha
+  - Sincroniza com Supabase Auth automaticamente
+
+--------------------------------------------------------------------------------
+8. FERRAMENTAS
+--------------------------------------------------------------------------------
+
+8.1 Compressor de PDF  (/admin/ferramentas)
+  - Drag-and-drop ou seleção de arquivo PDF
+  - Converte páginas para JPEG e reconstrói o PDF
+  - Barra de progresso com indicação de página atual
+  - Exibe: tamanho original → tamanho comprimido → % de redução
+  - Download do PDF comprimido
+
+================================================================================
+BANCO DE DADOS (Supabase — PostgreSQL)
+================================================================================
+
+Tabelas principais:
+  - site_content      Único registro JSONB com todo o conteúdo editável do site
+  - bookings          Agendamentos (status: pending/confirmed/completed/no_show/cancelled)
+  - availability_slots Horários disponíveis por data e tipo
+  - consultation_records Registros/anotações de consultas
+  - payment_logs      Log de pagamentos via Mercado Pago Pix
+  - patients          Cadastro de pacientes do prontuário
+  - patient_photos    Galeria de fotos de evolução dos pacientes
+  - anamnesis         Anamnese clínica por paciente
+  - measurements      Avaliações antropométricas por paciente
+  - meal_plans        Planos alimentares por paciente
+  - meals             Refeições dentro de um plano
+  - meal_foods        Alimentos dentro de cada refeição
+  - leads             Contatos captados via popup do site (nome + e-mail)
+
+Segurança:
+  - RLS (Row Level Security) ativo em todas as tabelas sensíveis
+  - Tabelas clínicas: acesso apenas a usuários autenticados
+  - Tabelas públicas (bookings, leads): anon pode inserir, autenticado gerencia
+  - Pagamentos: índice único em payment_id (previne duplicatas)
+
+================================================================================
+INTEGRAÇÕES EXTERNAS
+================================================================================
+
+  - Mercado Pago      Pagamentos Pix para e-books e consultas
+  - Resend            Envio de e-mails transacionais e campanhas
+  - Supabase Auth     Autenticação do painel admin
+  - Supabase Storage  Upload de imagens e PDFs
+  - Supabase Edge Functions (Deno):
+      * payment-webhook         Processa notificações de pagamento do MP
+      * send-broadcast          Disparo de e-mail em lote
+      * create-pix-payment      Cria cobrança Pix via MP
+      * check-cpf-eligible      Verifica elegibilidade de CPF
+      * send-material           Envia PDF por e-mail após compra
+      * complete-booking        Finaliza agendamento
+      * reschedule-booking      Reagenda consulta
+
+================================================================================
+FIM DA DOCUMENTAÇÃO
+================================================================================
