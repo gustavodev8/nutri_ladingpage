@@ -277,6 +277,18 @@ export interface Measurement {
   body_fat?: number;
   lean_mass?: number;
   visceral_fat?: number;
+  body_density?: number;
+  // Dobras cutâneas (mm)
+  sf_pectoral?: number;
+  sf_midaxillary?: number;
+  sf_triceps?: number;
+  sf_biceps?: number;
+  sf_subscapular?: number;
+  sf_suprailiac?: number;
+  sf_abdominal?: number;
+  sf_thigh_sf?: number;
+  sf_calf_sf?: number;
+  sf_protocol?: string;
   notes?: string;
   created_at?: string;
 }
