@@ -869,3 +869,66 @@ export async function uploadBlogImage(file: File): Promise<string | null> {
   if (error) { console.error('uploadBlogImage error:', error); return null; }
   return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
 }
+
+// ─── Lab Exams ────────────────────────────────────────────────────────────────
+
+export interface LabExam {
+  id?: number;
+  patient_id: number;
+  exam_date: string;
+  lab_name?: string;
+  notes?: string;
+  created_at?: string;
+  results?: LabResult[];
+}
+
+export interface LabResult {
+  id?: number;
+  exam_id?: number;
+  exam_name: string;
+  value_num?: number;
+  value_text?: string;
+  unit?: string;
+  ref_min?: number;
+  ref_max?: number;
+  ref_text?: string;
+  status?: string;
+  notes?: string;
+}
+
+export async function fetchLabExams(patientId: number): Promise<LabExam[]> {
+  const { data, error } = await supabaseAdmin
+    .from("lab_exams")
+    .select("*, results:lab_results(*)")
+    .eq("patient_id", patientId)
+    .order("exam_date", { ascending: false });
+  if (error) { console.error("[Supabase] fetchLabExams:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function upsertLabExam(exam: LabExam): Promise<LabExam | null> {
+  const { results: _, ...fields } = exam;
+  if (exam.id) {
+    const { data, error } = await supabaseAdmin.from("lab_exams").update(fields).eq("id", exam.id).select().single();
+    if (error) { console.error("[Supabase] upsertLabExam update:", error.message); return null; }
+    return data;
+  }
+  const { data, error } = await supabaseAdmin.from("lab_exams").insert(fields).select().single();
+  if (error) { console.error("[Supabase] upsertLabExam insert:", error.message); return null; }
+  return data;
+}
+
+export async function deleteLabExam(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("lab_exams").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteLabExam:", error.message); return false; }
+  return true;
+}
+
+export async function saveLabResults(examId: number, results: LabResult[]): Promise<boolean> {
+  await supabaseAdmin.from("lab_results").delete().eq("exam_id", examId);
+  if (results.length === 0) return true;
+  const rows = results.map(r => ({ ...r, exam_id: examId, id: undefined }));
+  const { error } = await supabaseAdmin.from("lab_results").insert(rows);
+  if (error) { console.error("[Supabase] saveLabResults:", error.message); return false; }
+  return true;
+}

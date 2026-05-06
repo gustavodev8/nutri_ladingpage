@@ -19,7 +19,9 @@ import {
   Eye,
   MapPin,
   MessageSquareQuote,
+  FlaskConical,
 } from "lucide-react";
+import { ExamesTab } from "@/components/admin/ExamesTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,7 +102,7 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type TabKey = "perfil" | "anamnese" | "antropometria" | "planos";
+type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "exames";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil", label: "Perfil", icon: <User size={16} /> },
@@ -111,6 +113,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     icon: <Activity size={16} />,
   },
   { key: "planos", label: "Planos Alimentares", icon: <BookOpen size={16} /> },
+  { key: "exames", label: "Exames Laboratoriais", icon: <FlaskConical size={16} /> },
 ];
 
 // ─── Shared Textarea ─────────────────────────────────────────────────────────
@@ -481,6 +484,9 @@ export default function AdminPaciente() {
           )}
           {activeTab === "planos" && (
             <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} />
+          )}
+          {activeTab === "exames" && (
+            <ExamesTab patientId={Number(id)} />
           )}
         </div>
       </div>
