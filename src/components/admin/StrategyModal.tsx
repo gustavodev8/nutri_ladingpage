@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
 import { X, Zap, TrendingDown, Minus, TrendingUp, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,263 +17,300 @@ import {
   type EnergyInput,
 } from "@/lib/energyUtils";
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface StrategyModalProps {
-  energyInput?: EnergyInput;   // peso/altura/idade/gênero do paciente
-  onConfirm: (
-    title: string,
-    strategy: StrategyType | null,
-    macros: MacroResult | null
-  ) => void;
+  energyInput?: EnergyInput;
+  onConfirm: (title: string, strategy: StrategyType | null, macros: MacroResult | null) => void;
   onClose: () => void;
 }
 
-// ─── Icons per strategy ───────────────────────────────────────────────────────
-
 const STRATEGY_ICONS: Record<StrategyType, React.ReactNode> = {
-  deficit:     <TrendingDown size={20} />,
-  maintenance: <Minus size={20} />,
-  surplus:     <TrendingUp size={20} />,
+  deficit:     <TrendingDown size={16} />,
+  maintenance: <Minus size={16} />,
+  surplus:     <TrendingUp size={16} />,
 };
 
-// ─── Macro bar ────────────────────────────────────────────────────────────────
+// ─── Macro row in summary table ───────────────────────────────────────────────
 
-function MacroBar({
+function MacroRow({
   label,
   grams,
-  pct,
-  color,
   kcal,
+  pct,
+  accent,
 }: {
   label: string;
   grams: number;
-  pct: number;
-  color: string;
   kcal: number;
+  pct: number;
+  accent: string;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-bold text-foreground">{label}</span>
-        <span className="text-muted-foreground">
-          {grams}g · {kcal} kcal · {pct}%
-        </span>
-      </div>
-      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all duration-300", color)}
-          style={{ width: `${Math.min(100, pct)}%` }}
-        />
-      </div>
-    </div>
+    <tr className="border-b border-border/50 last:border-0">
+      <td className="py-2 pr-4">
+        <div className="flex items-center gap-2">
+          <span className={cn("w-2 h-2 rounded-sm shrink-0", accent)} />
+          <span className="text-sm font-semibold text-foreground">{label}</span>
+        </div>
+      </td>
+      <td className="py-2 text-right tabular-nums text-sm text-foreground font-bold">{grams} g</td>
+      <td className="py-2 text-right tabular-nums text-sm text-muted-foreground">{kcal} kcal</td>
+      <td className="py-2 pl-4 text-right tabular-nums text-sm text-muted-foreground">{pct}%</td>
+    </tr>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function StrategyModal({ energyInput, onConfirm, onClose }: StrategyModalProps) {
-  const [title, setTitle]       = useState("Plano Alimentar");
-  const [strategy, setStrategy] = useState<StrategyType>("maintenance");
-  const [activity, setActivity] = useState<ActivityLevel>("moderate");
+  const [title, setTitle]           = useState("Plano Alimentar");
+  const [strategy, setStrategy]     = useState<StrategyType>("maintenance");
+  const [activity, setActivity]     = useState<ActivityLevel>("moderate");
   const [skipMacros, setSkipMacros] = useState(false);
 
-  const hasEnergyData = !!(energyInput?.weight && energyInput?.height && energyInput?.age);
+  const hasData = !!(energyInput?.weight && energyInput?.height && energyInput?.age);
 
-  const energyResult = hasEnergyData
-    ? calcEnergy(energyInput!, "mifflin", activity)
-    : null;
+  const energyResult = hasData ? calcEnergy(energyInput!, "mifflin", activity) : null;
 
-  const macros = energyResult && energyInput?.weight
-    ? calcMacros(energyResult.get, energyInput.weight, strategy)
-    : null;
+  const macros =
+    energyResult && energyInput?.weight && !skipMacros
+      ? calcMacros(energyResult.get, energyInput.weight, strategy)
+      : null;
 
   const handleConfirm = () => {
-    onConfirm(
-      title.trim() || "Plano Alimentar",
-      skipMacros ? null : strategy,
-      skipMacros ? null : macros
-    );
+    onConfirm(title.trim() || "Plano Alimentar", skipMacros ? null : strategy, macros);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-background border border-border rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      {/* Modal container — sharp, professional */}
+      <div className="bg-background border border-border rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
           <div>
-            <h2 className="font-black text-lg text-foreground">Novo Plano Alimentar</h2>
-            <p className="text-xs text-muted-foreground font-medium mt-0.5">
-              Defina o objetivo e o sistema calculará os macros automaticamente.
+            <h2 className="font-bold text-base text-foreground tracking-tight">
+              Novo Plano Alimentar
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Selecione o objetivo e o sistema irá calcular os macronutrientes.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-muted hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-5 max-h-[80vh] overflow-y-auto">
+        {/* ── Body ── */}
+        <div className="flex flex-1 overflow-hidden">
 
-          {/* Plan title */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-              Título do Plano
-            </Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Plano Emagrecimento — Fase 1"
-              className="h-10 rounded-xl"
-            />
-          </div>
+          {/* Left column — inputs */}
+          <div className="w-64 shrink-0 border-r border-border px-5 py-5 space-y-5 overflow-y-auto">
 
-          {/* GET display */}
-          {hasEnergyData ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+            {/* Title */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Título
+              </Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: Fase 1 — Déficit"
+                className="h-9 rounded text-sm"
+              />
+            </div>
+
+            {/* Activity level */}
+            {hasData && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Nível de Atividade
                 </Label>
+                <div className="relative">
+                  <select
+                    value={activity}
+                    onChange={(e) => setActivity(e.target.value as ActivityLevel)}
+                    className="w-full h-9 rounded border border-input bg-background px-2.5 pr-7 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {ACTIVITY_OPTIONS.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="absolute right-2.5 top-3 text-muted-foreground pointer-events-none" />
+                </div>
+                {energyResult && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {ACTIVITY_OPTIONS.find((o) => o.key === activity)?.description}
+                  </p>
+                )}
               </div>
-              <div className="relative">
-                <select
-                  value={activity}
-                  onChange={(e) => setActivity(e.target.value as ActivityLevel)}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 pr-8 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {ACTIVITY_OPTIONS.map((opt) => (
-                    <option key={opt.key} value={opt.key}>
-                      {opt.label} — {opt.description}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-3 text-muted-foreground pointer-events-none" />
-              </div>
+            )}
 
-              {energyResult && (
-                <div className="flex gap-3">
-                  <div className="flex-1 bg-muted/50 rounded-2xl p-3 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">TMB</p>
-                    <p className="text-xl font-black tabular-nums text-foreground">{energyResult.tmb}</p>
-                    <p className="text-[10px] text-muted-foreground font-semibold">kcal/dia</p>
+            {/* Energy cards */}
+            {energyResult && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Gasto Energético
+                </Label>
+                <div className="rounded border border-border divide-y divide-border">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <span className="text-xs text-muted-foreground">TMB</span>
+                    <span className="text-sm font-bold tabular-nums text-foreground">
+                      {energyResult.tmb} <span className="text-xs font-normal text-muted-foreground">kcal</span>
+                    </span>
                   </div>
-                  <div className="flex-1 bg-primary/10 border border-primary/20 rounded-2xl p-3 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">GET</p>
-                    <p className="text-xl font-black tabular-nums text-primary">{energyResult.get}</p>
-                    <p className="text-[10px] text-primary/70 font-semibold">kcal/dia</p>
+                  <div className="flex items-center justify-between px-3 py-2 bg-primary/5">
+                    <span className="text-xs font-semibold text-primary">GET</span>
+                    <span className="text-sm font-bold tabular-nums text-primary">
+                      {energyResult.get} <span className="text-xs font-normal">kcal</span>
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
-              <Zap size={16} className="text-amber-500 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                Sem avaliação antropométrica recente. O GET não pode ser calculado.
-                O plano será criado sem metas de macronutrientes.
-              </p>
-            </div>
-          )}
-
-          {/* Strategy selection */}
-          {hasEnergyData && !skipMacros && (
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                Objetivo / Estratégia
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["deficit", "maintenance", "surplus"] as StrategyType[]).map((s) => {
-                  const cfg = STRATEGY_CONFIG[s];
-                  const isSelected = strategy === s;
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setStrategy(s)}
-                      className={cn(
-                        "rounded-2xl border-2 p-3 text-center transition-all duration-200 space-y-1",
-                        isSelected
-                          ? `${cfg.badgeBg} border-current`
-                          : "bg-muted/30 border-border hover:border-muted-foreground/30"
-                      )}
-                    >
-                      <div className={cn("flex justify-center", isSelected ? cfg.colorClass : "text-muted-foreground")}>
-                        {STRATEGY_ICONS[s]}
-                      </div>
-                      <p className={cn("text-xs font-black", isSelected ? cfg.colorClass : "text-foreground")}>
-                        {cfg.label}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-medium">{cfg.subtitle}</p>
-                      {energyResult && (
-                        <p className={cn("text-[11px] font-black tabular-nums mt-1", isSelected ? cfg.colorClass : "text-muted-foreground")}>
-                          {Math.max(1200, energyResult.get + cfg.kcalDelta)} kcal
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Macro breakdown */}
-          {macros && !skipMacros && (
-            <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-                  Distribuição de Macros
-                </p>
-                <p className="text-sm font-black text-foreground tabular-nums">
-                  {macros.calories} kcal/dia
+            {!hasData && (
+              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2.5 flex gap-2">
+                <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Sem avaliação antropométrica. O plano será criado sem metas de macros.
                 </p>
               </div>
-              <MacroBar
-                label="Proteína"
-                grams={macros.protein_g}
-                kcal={macros.proteinKcal}
-                pct={macros.proteinPct}
-                color="bg-blue-500"
-              />
-              <MacroBar
-                label="Carboidrato"
-                grams={macros.carbs_g}
-                kcal={macros.carbsKcal}
-                pct={macros.carbsPct}
-                color="bg-amber-400"
-              />
-              <MacroBar
-                label="Gordura"
-                grams={macros.fat_g}
-                kcal={macros.fatKcal}
-                pct={macros.fatPct}
-                color="bg-rose-400"
-              />
-              <p className="text-[10px] text-muted-foreground/60 pt-1">
-                Proteína {STRATEGY_CONFIG[strategy].proteinPerKg}g/kg · Gordura {STRATEGY_CONFIG[strategy].fatPerKg}g/kg · Carboidrato = restante
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Skip macros toggle */}
-          {hasEnergyData && (
-            <button
-              onClick={() => setSkipMacros((v) => !v)}
-              className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 transition-colors"
-            >
-              {skipMacros ? "Usar cálculo automático de macros" : "Criar sem metas de macros"}
-            </button>
-          )}
+            {/* Skip toggle */}
+            {hasData && (
+              <button
+                onClick={() => setSkipMacros((v) => !v)}
+                className="text-xs text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 transition-colors"
+              >
+                {skipMacros ? "Usar cálculo de macros" : "Criar sem metas de macros"}
+              </button>
+            )}
+          </div>
+
+          {/* Right column — strategy + macros */}
+          <div className="flex-1 px-5 py-5 space-y-5 overflow-y-auto">
+
+            {/* Strategy selector */}
+            {hasData && !skipMacros && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Objetivo
+                </Label>
+                <div className="space-y-1.5">
+                  {(["deficit", "maintenance", "surplus"] as StrategyType[]).map((s) => {
+                    const cfg = STRATEGY_CONFIG[s];
+                    const isSelected = strategy === s;
+                    const targetKcal = energyResult
+                      ? Math.max(1200, energyResult.get + cfg.kcalDelta)
+                      : null;
+
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setStrategy(s)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 rounded border text-left transition-all duration-150",
+                          isSelected
+                            ? `${cfg.badgeBg} border-current`
+                            : "border-border bg-background hover:bg-muted/40"
+                        )}
+                      >
+                        <span className={cn(isSelected ? cfg.colorClass : "text-muted-foreground")}>
+                          {STRATEGY_ICONS[s]}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("text-sm font-bold", isSelected ? cfg.colorClass : "text-foreground")}>
+                            {cfg.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2">{cfg.subtitle}</span>
+                        </div>
+                        {targetKcal && (
+                          <span className={cn("text-sm font-bold tabular-nums shrink-0", isSelected ? cfg.colorClass : "text-muted-foreground")}>
+                            {targetKcal} kcal
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cfg.colorClass.replace("text-", "bg-"))} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Macro breakdown table */}
+            {macros && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Distribuição de Macronutrientes
+                  </Label>
+                  <span className="text-sm font-bold tabular-nums text-foreground">
+                    {macros.calories} kcal/dia
+                  </span>
+                </div>
+
+                <div className="rounded border border-border overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border">
+                        <th className="py-1.5 px-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Macro</th>
+                        <th className="py-1.5 px-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gramas</th>
+                        <th className="py-1.5 px-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">kcal</th>
+                        <th className="py-1.5 pl-3 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 bg-background">
+                      <MacroRow label="Proteína"   grams={macros.protein_g} kcal={macros.proteinKcal} pct={macros.proteinPct} accent="bg-blue-500" />
+                      <MacroRow label="Carboidrato" grams={macros.carbs_g}  kcal={macros.carbsKcal}   pct={macros.carbsPct}   accent="bg-amber-400" />
+                      <MacroRow label="Gordura"    grams={macros.fat_g}    kcal={macros.fatKcal}     pct={macros.fatPct}     accent="bg-rose-400" />
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Stacked bar */}
+                <div className="h-2 w-full rounded overflow-hidden flex">
+                  <div className="bg-blue-500  transition-all duration-300" style={{ width: `${macros.proteinPct}%` }} />
+                  <div className="bg-amber-400 transition-all duration-300" style={{ width: `${macros.carbsPct}%` }} />
+                  <div className="bg-rose-400  transition-all duration-300" style={{ width: `${macros.fatPct}%` }} />
+                </div>
+
+                <p className="text-[10px] text-muted-foreground/60">
+                  Proteína {STRATEGY_CONFIG[strategy].proteinPerKg} g/kg · Gordura {STRATEGY_CONFIG[strategy].fatPerKg} g/kg · Carboidrato = restante calórico
+                </p>
+              </div>
+            )}
+
+            {/* Empty state when skipping macros */}
+            {skipMacros && (
+              <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                <p className="text-sm font-semibold text-muted-foreground">Sem metas de macros</p>
+                <p className="text-xs text-muted-foreground/60">O plano será criado em branco e você poderá definir as metas manualmente.</p>
+              </div>
+            )}
+
+            {!hasData && (
+              <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                <p className="text-sm font-semibold text-muted-foreground">Sem dados de avaliação</p>
+                <p className="text-xs text-muted-foreground/60">Cadastre uma avaliação antropométrica para habilitar o cálculo automático.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-border">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl">
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-end gap-3 px-6 py-3 border-t border-border bg-muted/20">
+          <Button variant="outline" onClick={onClose} className="h-9 px-5 rounded text-sm">
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} className="flex-1 rounded-xl font-bold shadow-lg shadow-primary/20">
+          <Button onClick={handleConfirm} className="h-9 px-6 rounded text-sm font-semibold">
             Criar Plano
           </Button>
         </div>
