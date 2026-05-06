@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Printer, Activity, User, Scale, Percent, Ruler, Heart, FileDown } from "lucide-react";
+import { ArrowLeft, Loader2, Activity, User, Scale, Percent, Ruler, Heart, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,13 @@ import {
   type Patient,
   type Measurement,
 } from "@/lib/supabase";
+import {
+  PROTOCOLS,
+  SKINFOLD_LABELS,
+  classifyBodyFat,
+  type SkinfoldKey,
+  type SkinfoldProtocol,
+} from "@/lib/anthropometryUtils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -169,6 +176,21 @@ export default function AdminRelatorioAntropometrico() {
   const bmi     = calcBMI(m.weight, m.height);
   const bmiInfo = bmi ? bmiStatus(parseFloat(bmi)) : null;
 
+  // Dobras cutâneas
+  const ALL_SF_KEYS: SkinfoldKey[] = [
+    "sf_pectoral","sf_midaxillary","sf_triceps","sf_biceps",
+    "sf_subscapular","sf_suprailiac","sf_abdominal","sf_thigh_sf","sf_calf_sf",
+  ];
+  const presentSfKeys = ALL_SF_KEYS.filter(k => (m as any)[k] != null);
+  const hasDobras  = presentSfKeys.length > 0;
+  const protocolInfo = m.sf_protocol
+    ? PROTOCOLS.find(p => p.id === m.sf_protocol)
+    : null;
+  const fatClass = m.body_fat != null && patient.gender
+    ? classifyBodyFat(m.body_fat, patient.gender === "F" ? "F" : "M")
+    : null;
+  const sfSum = presentSfKeys.reduce((acc, k) => acc + ((m as any)[k] ?? 0), 0);
+
   // verifica se existem medidas em cada grupo
   const hasTronco   = [m.neck, m.shoulder, m.chest, m.waist, m.abdomen, m.hip].some(v => v != null);
   const hasSuperior = [m.arm_relax_r, m.arm_relax_l, m.arm_contract_r, m.arm_contract_l,
@@ -279,6 +301,63 @@ export default function AdminRelatorioAntropometrico() {
         <MetricCard label="Massa Magra"      value={m.lean_mass    != null ? String(m.lean_mass)    : "—"} unit="kg" icon={<Activity size={15} />}/>
         <MetricCard label="Gordura Visceral" value={m.visceral_fat != null ? String(m.visceral_fat) : "—"} icon={<Heart size={15} />}             />
       </div>
+
+      {/* ── Dobras cutâneas ─────────────────────────────────────────────────── */}
+      {hasDobras && (
+        <div className="rounded-lg border border-border/70 bg-card shadow-sm overflow-hidden print:break-inside-avoid">
+          <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between print:px-3 print:py-1">
+            <div>
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground print:text-[8px]">
+                Dobras Cutâneas
+              </p>
+              {protocolInfo && (
+                <p className="text-xs text-muted-foreground mt-0.5 print:text-[8px]">
+                  Protocolo: <span className="font-medium text-foreground">{protocolInfo.label}</span>
+                </p>
+              )}
+            </div>
+            {m.body_fat != null && fatClass && (
+              <div className="text-right">
+                <p className={cn("text-2xl font-bold tabular-nums print:text-base", fatClass.color)}>
+                  {m.body_fat.toFixed(1)}<span className="text-sm font-normal ml-0.5">%</span>
+                </p>
+                <p className={cn("text-xs font-semibold print:text-[8px]", fatClass.color)}>{fatClass.label}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="p-5 print:p-3">
+            {/* Grid de dobras */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
+              {presentSfKeys.map(key => (
+                <div key={key} className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5 print:px-2 print:py-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground print:text-[7px]">
+                    {SKINFOLD_LABELS[key]}
+                  </p>
+                  <p className="text-lg font-bold tabular-nums text-foreground mt-0.5 print:text-xs">
+                    {(m as any)[key]} <span className="text-xs font-normal text-muted-foreground print:text-[8px]">mm</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Rodapé com soma e densidade */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60 text-sm print:mt-2 print:pt-1.5">
+              <div className="flex items-center gap-4 print:gap-3">
+                <span className="text-muted-foreground print:text-[9px]">
+                  Σ dobras: <strong className="text-foreground tabular-nums">{sfSum.toFixed(1)} mm</strong>
+                </span>
+                {m.body_density != null && (
+                  <span className="text-muted-foreground print:text-[9px]">
+                    DC: <strong className="text-foreground tabular-nums">{m.body_density.toFixed(4)} g/mL</strong>
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground print:text-[8px]">Equação de Siri (1961)</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Medidas corporais: em print ficam lado a lado em 3 colunas ───────── */}
       <div className="space-y-4 print:space-y-0 print:flex print:flex-row print:gap-2">
