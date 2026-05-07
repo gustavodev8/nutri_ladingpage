@@ -9,10 +9,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans, fetchPatient,
-  fetchMeasurements,
-  type Meal, type MealFood, type MealPlan, type Patient, type Measurement,
+  fetchMeasurements, fetchAnamnesis,
+  type Meal, type MealFood, type MealPlan, type Patient, type Measurement, type Anamnesis,
 } from "@/lib/supabase";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
+import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
+import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import {
   calcEnergy, applyAdjustment, auditDiet,
   ACTIVITY_OPTIONS,
@@ -310,6 +312,7 @@ export default function AdminPlanoAlimentar() {
   const [meals, setMeals]       = useState<Meal[]>([]);
   const [patient, setPatient]   = useState<Patient | null>(null);
   const [latestMeasurement, setLatestMeasurement] = useState<Measurement | null>(null);
+  const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [showEmail, setShowEmail] = useState(false);
@@ -322,12 +325,14 @@ export default function AdminPlanoAlimentar() {
   const loadPlan = useCallback(async () => {
     setLoading(true);
     try {
-      const [patientData, measurementsData] = await Promise.all([
+      const [patientData, measurementsData, anamnesisData] = await Promise.all([
         fetchPatient(patientId),
         fetchMeasurements(patientId),
+        fetchAnamnesis(patientId),
       ]);
       setPatient(patientData);
       setLatestMeasurement(measurementsData[0] ?? null);
+      setAnamnesis(anamnesisData);
       if (isNew) {
         setMeals(DEFAULT_MEALS.map((p) => ({ plan_id: 0, ...p, foods: [] })));
       } else {
@@ -384,6 +389,9 @@ export default function AdminPlanoAlimentar() {
 
   const energyResult = energyInput ? calcEnergy(energyInput, energyFormula, activityLevel) : null;
   const suggestedKcal = energyResult ? applyAdjustment(energyResult.get, adjustment) : null;
+
+  // ── Clinical alerts ───────────────────────────────────────────────────────
+  const clinicalAlerts = generateClinicalAlerts(anamnesis, latestMeasurement);
 
   // ── Diet audit ────────────────────────────────────────────────────────────
   const audit = auditDiet({
@@ -475,6 +483,9 @@ export default function AdminPlanoAlimentar() {
             </div>
           </div>
         </section>
+
+        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────── */}
+        <ClinicalInsightsPanel alerts={clinicalAlerts} />
 
         {/* ── Painel de Metas Energéticas ─────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg overflow-hidden">
