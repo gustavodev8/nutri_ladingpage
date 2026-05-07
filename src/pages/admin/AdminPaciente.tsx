@@ -709,6 +709,46 @@ function PerfilTab({
 // TAB 2: Anamnese (Histórico Clínico)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Field auxiliar da Anamnese — fora do componente para não perder foco
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AnamneseField({
+  label,
+  field,
+  type = "textarea",
+  placeholder,
+  form,
+  onChange,
+}: {
+  label: string;
+  field: string;
+  type?: "textarea" | "input";
+  placeholder?: string;
+  form: Record<string, any>;
+  onChange: (field: string, value: any) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="font-bold text-foreground/80">{label}</Label>
+      {type === "textarea" ? (
+        <Textarea
+          value={form[field] || ""}
+          onChange={(e) => onChange(field, e.target.value)}
+          placeholder={placeholder}
+          minRows={3}
+        />
+      ) : (
+        <Input
+          value={form[field] || ""}
+          onChange={(e) => onChange(field, e.target.value)}
+          placeholder={placeholder}
+        />
+      )}
+    </div>
+  );
+}
+
 function AnamneseTab({ patientId }: { patientId: string }) {
   const pid = Number(patientId);
   const [form, setForm] = useState<AnamnesisForm>({ patient_id: pid });
@@ -727,7 +767,8 @@ function AnamneseTab({ patientId }: { patientId: string }) {
     });
   }, [pid]);
 
-  const set = (field: string, value: any) => setForm(p => ({ ...p, [field]: value }));
+  const set = (field: string, value: any) =>
+    setForm((p) => ({ ...p, [field]: value }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -738,36 +779,25 @@ function AnamneseTab({ patientId }: { patientId: string }) {
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
-  const Field = ({ label, field, type = "textarea", placeholder }: any) => (
-    <div className="space-y-1.5">
-      <Label className="font-bold text-foreground/80">{label}</Label>
-      {type === "textarea" ? (
-        <Textarea value={(form as any)[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} minRows={3} />
-      ) : (
-        <Input value={(form as any)[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} />
-      )}
-    </div>
-  );
-
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-6">
-        <Field label="Queixa Principal" field="main_complaint" />
-        <Field label="Histórico Médico" field="medical_history" />
-        <Field label="Medicamentos em Uso" field="medications" />
-        <Field label="Alergias / Intolerâncias" field="allergies" />
-        
+        <AnamneseField label="Queixa Principal"        field="main_complaint"  form={form} onChange={set} />
+        <AnamneseField label="Histórico Médico"        field="medical_history" form={form} onChange={set} />
+        <AnamneseField label="Medicamentos em Uso"     field="medications"     form={form} onChange={set} />
+        <AnamneseField label="Alergias / Intolerâncias" field="allergies"      form={form} onChange={set} />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-border/40">
-          <Field label="Aversões" field="food_aversions" type="input" />
-          <Field label="Preferências" field="food_preferences" type="input" />
-          <Field label="Refeições/dia" field="meals_per_day" type="input" />
-          <Field label="Água (L/dia)" field="water_intake" type="input" />
-          <Field label="Sono (Horas)" field="sleep_hours" type="input" />
-          <Field label="Intestino" field="bowel_function" type="input" />
+          <AnamneseField label="Aversões"      field="food_aversions"  type="input" form={form} onChange={set} />
+          <AnamneseField label="Preferências"  field="food_preferences" type="input" form={form} onChange={set} />
+          <AnamneseField label="Refeições/dia" field="meals_per_day"   type="input" form={form} onChange={set} />
+          <AnamneseField label="Água (L/dia)"  field="water_intake"    type="input" form={form} onChange={set} />
+          <AnamneseField label="Sono (Horas)"  field="sleep_hours"     type="input" form={form} onChange={set} />
+          <AnamneseField label="Intestino"     field="bowel_function"  type="input" form={form} onChange={set} />
         </div>
 
-        <Field label="Atividade Física" field="physical_activity" />
-        <Field label="Objetivos do Paciente" field="goals" />
+        <AnamneseField label="Atividade Física"        field="physical_activity" form={form} onChange={set} />
+        <AnamneseField label="Objetivos do Paciente"   field="goals"             form={form} onChange={set} />
       </div>
 
       <div className="flex justify-end pt-4">
@@ -780,8 +810,7 @@ function AnamneseTab({ patientId }: { patientId: string }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 3: Antropometria (Avaliação Corporal)
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 type MeasurementForm = {
