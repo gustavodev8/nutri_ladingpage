@@ -226,9 +226,68 @@ export interface PatientPhoto {
   created_at?: string;
 }
 
+// ─── Epic 6: Triagem Clínica Estruturada ─────────────────────────────────────
+export interface AnamnesisStructured {
+  // OBJETIVO
+  goal_primary?: "emagrecimento" | "hipertrofia" | "saude_geral" | "performance" | "recomposicao" | "outro";
+  goal_libido?: boolean;
+  goal_energy?: boolean;
+  goal_aesthetics?: boolean;
+  goal_notes?: string;
+
+  // DIETA
+  diet_fruits_vegs?: boolean;
+  diet_processed?: boolean;
+  diet_healthy_fats?: boolean;
+  diet_meals_per_day?: "1-2" | "3" | "4-5" | "6+";
+  diet_water_liters?: "<1L" | "1-1.5L" | "1.5-2L" | "2-2.5L" | ">2.5L";
+  diet_aversions?: string;
+  diet_preferences?: string;
+  diet_notes?: string;
+
+  // TREINO
+  training_active?: boolean;
+  training_modality?: string;
+  training_frequency?: "1-2x" | "3x" | "4-5x" | "6-7x";
+  training_supplement?: boolean;
+  training_supplement_types?: string;
+  training_notes?: string;
+
+  // HÁBITOS
+  habit_smokes?: boolean;
+  habit_alcohol?: "nunca" | "raramente" | "fins_semana" | "frequente";
+  habit_sleep?: "<5h" | "5-6h" | "6-7h" | "7-8h" | ">8h";
+  habit_bowel?: "regular" | "preso" | "solto" | "irregular";
+  habit_stress?: "baixo" | "moderado" | "alto";
+  habit_notes?: string;
+
+  // CLÍNICO / PATOLOGIAS
+  clinical_treatment?: boolean;
+  clinical_medications?: boolean;
+  clinical_medications_list?: string;
+  clinical_family_history?: boolean;
+  clinical_hypertension?: boolean;
+  clinical_diabetes?: boolean;
+  clinical_dyslipidemia?: boolean;
+  clinical_hypothyroidism?: boolean;
+  clinical_pcos?: boolean;
+  clinical_mental_health?: boolean;
+  clinical_allergies?: string;
+  clinical_food_aversions?: string;
+  clinical_notes?: string;
+
+  // EXAMES LABORATORIAIS
+  exam_anemia?: boolean;
+  exam_low_b12?: boolean;
+  exam_low_vitd?: boolean;
+  exam_low_iron?: boolean;
+  exam_notes?: string;
+}
+
 export interface Anamnesis {
   id?: number;
   patient_id: number;
+  // Legacy text fields (mantidos para compatibilidade)
   main_complaint?: string;
   medical_history?: string;
   medications?: string;
@@ -241,6 +300,8 @@ export interface Anamnesis {
   sleep_hours?: number;
   bowel_function?: string;
   goals?: string;
+  // Epic 6: triagem estruturada
+  structured_data?: AnamnesisStructured;
   updated_at?: string;
 }
 
