@@ -226,9 +226,68 @@ export interface PatientPhoto {
   created_at?: string;
 }
 
+// ─── Epic 6: Triagem Clínica Estruturada ─────────────────────────────────────
+export interface AnamnesisStructured {
+  // OBJETIVO
+  goal_primary?: "emagrecimento" | "hipertrofia" | "saude_geral" | "performance" | "recomposicao" | "outro";
+  goal_libido?: boolean;
+  goal_energy?: boolean;
+  goal_aesthetics?: boolean;
+  goal_notes?: string;
+
+  // DIETA
+  diet_fruits_vegs?: boolean;
+  diet_processed?: boolean;
+  diet_healthy_fats?: boolean;
+  diet_meals_per_day?: "1-2" | "3" | "4-5" | "6+";
+  diet_water_liters?: "<1L" | "1-1.5L" | "1.5-2L" | "2-2.5L" | ">2.5L";
+  diet_aversions?: string;
+  diet_preferences?: string;
+  diet_notes?: string;
+
+  // TREINO
+  training_active?: boolean;
+  training_modality?: string;
+  training_frequency?: "1-2x" | "3x" | "4-5x" | "6-7x";
+  training_supplement?: boolean;
+  training_supplement_types?: string;
+  training_notes?: string;
+
+  // HÁBITOS
+  habit_smokes?: boolean;
+  habit_alcohol?: "nunca" | "raramente" | "fins_semana" | "frequente";
+  habit_sleep?: "<5h" | "5-6h" | "6-7h" | "7-8h" | ">8h";
+  habit_bowel?: "regular" | "preso" | "solto" | "irregular";
+  habit_stress?: "baixo" | "moderado" | "alto";
+  habit_notes?: string;
+
+  // CLÍNICO / PATOLOGIAS
+  clinical_treatment?: boolean;
+  clinical_medications?: boolean;
+  clinical_medications_list?: string;
+  clinical_family_history?: boolean;
+  clinical_hypertension?: boolean;
+  clinical_diabetes?: boolean;
+  clinical_dyslipidemia?: boolean;
+  clinical_hypothyroidism?: boolean;
+  clinical_pcos?: boolean;
+  clinical_mental_health?: boolean;
+  clinical_allergies?: string;
+  clinical_food_aversions?: string;
+  clinical_notes?: string;
+
+  // EXAMES LABORATORIAIS
+  exam_anemia?: boolean;
+  exam_low_b12?: boolean;
+  exam_low_vitd?: boolean;
+  exam_low_iron?: boolean;
+  exam_notes?: string;
+}
+
 export interface Anamnesis {
   id?: number;
   patient_id: number;
+  // Legacy text fields (mantidos para compatibilidade)
   main_complaint?: string;
   medical_history?: string;
   medications?: string;
@@ -241,6 +300,8 @@ export interface Anamnesis {
   sleep_hours?: number;
   bowel_function?: string;
   goals?: string;
+  // Epic 6: triagem estruturada
+  structured_data?: AnamnesisStructured;
   updated_at?: string;
 }
 
@@ -307,6 +368,9 @@ export interface MealPlan {
   target_protein_g?: number;
   target_carbs_g?: number;
   target_fat_g?: number;
+  // Epic 8: linhagem — vincula o plano à avaliação que embasou o cálculo
+  measurement_id?: number;      // measurements.id usado como base do GET
+  get_kcal?: number;            // GET calculado no momento da criação (kcal/dia)
   created_at?: string;
 }
 
@@ -337,6 +401,10 @@ export interface MealFood {
   protein_per_100g?: number;
   carbs_per_100g?: number;
   fat_per_100g?: number;
+  // Epic 7: medidas caseiras
+  household_measure?: string;   // ex: "colher de sopa", "unidade média"
+  measure_amount?: number;      // ex: 1, 2, 0.5
+  food_group?: string;          // ex: "Carboidrato", "Proteína" — para substituições
 }
 
 // ─── Clínica – CRUD ───────────────────────────────────────────────────────────
@@ -539,16 +607,23 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
 
     if (meal.foods && meal.foods.length > 0) {
       const foodRows = meal.foods.map((f, fi) => ({
-        meal_id: mealData.id,
-        food_name: f.food_name,
-        quantity: f.quantity ?? null,
-        unit: f.unit ?? "g",
-        calories: f.calories ?? null,
-        protein: f.protein ?? null,
-        carbs: f.carbs ?? null,
-        fat: f.fat ?? null,
-        notes: f.notes ?? "",
-        sort_order: fi,
+        meal_id:           mealData.id,
+        food_name:         f.food_name,
+        quantity:          f.quantity          ?? null,
+        unit:              f.unit              ?? "g",
+        calories:          f.calories          ?? null,
+        protein:           f.protein           ?? null,
+        carbs:             f.carbs             ?? null,
+        fat:               f.fat               ?? null,
+        notes:             f.notes             ?? "",
+        sort_order:        fi,
+        kcal_per_100g:     f.kcal_per_100g     ?? null,
+        protein_per_100g:  f.protein_per_100g  ?? null,
+        carbs_per_100g:    f.carbs_per_100g    ?? null,
+        fat_per_100g:      f.fat_per_100g      ?? null,
+        household_measure: f.household_measure ?? null,
+        measure_amount:    f.measure_amount    ?? null,
+        food_group:        f.food_group        ?? null,
       }));
       const { error: foodErr } = await supabaseAdmin.from("meal_foods").insert(foodRows);
       if (foodErr) { console.error("[Supabase] saveMeals insert foods:", foodErr.message); return false; }
@@ -874,6 +949,152 @@ export async function uploadBlogImage(file: File): Promise<string | null> {
     .from(BUCKET).upload(path, blob, { upsert: true, contentType: mime });
   if (error) { console.error('uploadBlogImage error:', error); return null; }
   return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
+}
+
+// ─── Epic 7: Diet Templates ───────────────────────────────────────────────────
+
+export interface DietTemplateFood {
+  id:                 number;
+  template_meal_id:   number;
+  food_name:          string;
+  quantity?:          number;
+  unit?:              string;
+  household_measure?: string;
+  measure_amount?:    number;
+  kcal_per_100g?:     number;
+  protein_per_100g?:  number;
+  carbs_per_100g?:    number;
+  fat_per_100g?:      number;
+  order_index?:       number;
+}
+
+export interface DietTemplateMeal {
+  id:               number;
+  template_id:      number;
+  meal_name:        string;
+  time_suggestion?: string;
+  order_index?:     number;
+  foods?:           DietTemplateFood[];
+}
+
+export interface DietTemplate {
+  id:           number;
+  name:         string;
+  description?: string;
+  strategy?:    string;
+  total_kcal?:  number;
+  protein_g?:   number;
+  carbs_g?:     number;
+  fat_g?:       number;
+  is_active?:   boolean;
+  created_at?:  string;
+  meals?:       DietTemplateMeal[];
+}
+
+export async function fetchDietTemplates(): Promise<DietTemplate[]> {
+  const { data, error } = await supabase
+    .from("diet_templates")
+    .select("*, meals:diet_template_meals(*, foods:diet_template_foods(*))")
+    .eq("is_active", true)
+    .order("name");
+  if (error) { console.error("[Supabase] fetchDietTemplates:", error.message); return []; }
+  return (data ?? []).map((t: any) => ({
+    ...t,
+    meals: (t.meals ?? [])
+      .sort((a: DietTemplateMeal, b: DietTemplateMeal) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .map((m: any) => ({
+        ...m,
+        foods: (m.foods ?? []).sort((a: DietTemplateFood, b: DietTemplateFood) => (a.order_index ?? 0) - (b.order_index ?? 0)),
+      })),
+  }));
+}
+
+export async function upsertDietTemplate(
+  template: Omit<DietTemplate, "meals" | "created_at">
+): Promise<DietTemplate | null> {
+  const { id, ...fields } = template;
+  if (id) {
+    const { error } = await supabaseAdmin.from("diet_templates").update(fields).eq("id", id);
+    if (error) { console.error("[Supabase] upsertDietTemplate update:", error.message); return null; }
+    return { id, ...fields } as DietTemplate;
+  }
+  const { data, error } = await supabaseAdmin
+    .from("diet_templates")
+    .insert(fields)
+    .select()
+    .single();
+  if (error) { console.error("[Supabase] upsertDietTemplate insert:", error.message); return null; }
+  return data;
+}
+
+export async function deleteDietTemplate(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("diet_templates").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteDietTemplate:", error.message); return false; }
+  return true;
+}
+
+/** Apaga e re-insere todas as refeições (+ alimentos) de um template. */
+export async function saveDietTemplateMeals(
+  templateId: number,
+  meals: Array<{
+    meal_name:       string;
+    time_suggestion?: string;
+    order_index:     number;
+    foods: Array<{
+      food_name:        string;
+      quantity?:        number;
+      unit?:            string;
+      kcal_per_100g?:   number;
+      protein_per_100g?: number;
+      carbs_per_100g?:  number;
+      fat_per_100g?:    number;
+      household_measure?: string;
+      measure_amount?:  number;
+      food_group?:      string;
+      order_index:      number;
+    }>;
+  }>
+): Promise<boolean> {
+  // Apaga as refeições antigas (cascade apaga os alimentos via FK)
+  const { error: delErr } = await supabaseAdmin
+    .from("diet_template_meals")
+    .delete()
+    .eq("template_id", templateId);
+  if (delErr) { console.error("[Supabase] saveDietTemplateMeals delete:", delErr.message); return false; }
+
+  for (const meal of meals) {
+    const { data: mealData, error: mealErr } = await supabaseAdmin
+      .from("diet_template_meals")
+      .insert({
+        template_id:     templateId,
+        meal_name:       meal.meal_name,
+        time_suggestion: meal.time_suggestion ?? "",
+        order_index:     meal.order_index,
+      })
+      .select()
+      .single();
+    if (mealErr || !mealData) { console.error("[Supabase] saveDietTemplateMeals insert meal:", mealErr?.message); return false; }
+
+    if (meal.foods.length > 0) {
+      const foodRows = meal.foods.map((f) => ({
+        template_meal_id:  mealData.id,
+        food_name:         f.food_name,
+        quantity:          f.quantity          ?? null,
+        unit:              f.unit              ?? "g",
+        kcal_per_100g:     f.kcal_per_100g     ?? null,
+        protein_per_100g:  f.protein_per_100g  ?? null,
+        carbs_per_100g:    f.carbs_per_100g    ?? null,
+        fat_per_100g:      f.fat_per_100g      ?? null,
+        household_measure: f.household_measure ?? null,
+        measure_amount:    f.measure_amount    ?? null,
+        food_group:        f.food_group        ?? null,
+        order_index:       f.order_index,
+      }));
+      const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
+      if (foodErr) { console.error("[Supabase] saveDietTemplateMeals insert foods:", foodErr.message); return false; }
+    }
+  }
+  return true;
 }
 
 // ─── Lab Exams ────────────────────────────────────────────────────────────────

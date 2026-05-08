@@ -1,22 +1,31 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
-import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
+import {
+  ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap,
+  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans, fetchPatient,
-  fetchMeasurements, fetchAnamnesis,
-  type Meal, type MealFood, type MealPlan, type Patient, type Measurement, type Anamnesis,
+  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
+  type Meal, type MealFood, type MealPlan,
 } from "@/lib/supabase";
+import {
+  MealSection, EditorMeal, sumFoods, n0, n1,
+} from "@/components/admin/MealTableEditor";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
+import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
+import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
+import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
+import { type MacroGoals } from "@/lib/planningUtils";
 import {
   calcEnergy, applyAdjustment, auditDiet,
+  canUseCunningham,
   ACTIVITY_OPTIONS,
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
@@ -32,268 +41,24 @@ const DEFAULT_MEALS = [
   { meal_name: "Ceia",            time_suggestion: "21:30 – 22:00" },
 ];
 
-const UNITS = ["g", "ml", "unid.", "col. sopa", "col. chá", "xícara", "fatia", "porção"];
+// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────
 
-// Left-border accent per meal — subtle, single color per slot
-const MEAL_BORDER = [
-  "border-l-slate-400",
-  "border-l-teal-500",
-  "border-l-indigo-400",
-  "border-l-amber-500",
-  "border-l-rose-400",
-  "border-l-emerald-500",
-];
+const mealToEditor = (m: Meal): EditorMeal => ({
+  _dbId:           m.id,
+  meal_name:       m.meal_name,
+  time_suggestion: m.time_suggestion,
+  notes:           m.notes,
+  foods:           (m.foods ?? []) as MealFood[],
+});
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const sum = (foods: MealFood[]) =>
-  foods.reduce(
-    (a, f) => ({ cal: a.cal + (f.calories ?? 0), prot: a.prot + (f.protein ?? 0), carbs: a.carbs + (f.carbs ?? 0), fat: a.fat + (f.fat ?? 0) }),
-    { cal: 0, prot: 0, carbs: 0, fat: 0 }
-  );
-
-const n1 = (v: number) => (v > 0 ? v.toFixed(1) : "—");
-const n0 = (v: number) => (v > 0 ? Math.round(v).toString() : "—");
-
-const calcMacros = (food: MealFood): MealFood => {
-  const qty = food.quantity;
-  if (!qty || !food.kcal_per_100g) return food;
-  const f = qty / 100;
-  return {
-    ...food,
-    calories: parseFloat(((food.kcal_per_100g  ?? 0) * f).toFixed(1)),
-    protein:  parseFloat(((food.protein_per_100g ?? 0) * f).toFixed(1)),
-    carbs:    parseFloat(((food.carbs_per_100g  ?? 0) * f).toFixed(1)),
-    fat:      parseFloat(((food.fat_per_100g    ?? 0) * f).toFixed(1)),
-  };
-};
-
-function emptyFood(): MealFood {
-  return { meal_id: 0, food_name: "", quantity: undefined, unit: "g" };
-}
-
-// ─── Shared cell styles ───────────────────────────────────────────────────────
-
-const cellNum = "h-8 w-full bg-transparent border border-border/60 rounded px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary";
-const cellTxt = "h-8 w-full bg-transparent border border-border/60 rounded px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary";
-
-// ─── FoodRow ──────────────────────────────────────────────────────────────────
-
-function FoodRow({ food, idx, onChange, onRemove }: {
-  food: MealFood; idx: number;
-  onChange: (f: MealFood) => void; onRemove: () => void;
-}) {
-  const handleSelect = (s: { name: string; kcal_per_100g: number; protein_per_100g: number; carbs_per_100g: number; fat_per_100g: number }) =>
-    onChange(calcMacros({ ...food, food_name: s.name, kcal_per_100g: s.kcal_per_100g, protein_per_100g: s.protein_per_100g, carbs_per_100g: s.carbs_per_100g, fat_per_100g: s.fat_per_100g }));
-
-  const handleQty = (val: string) =>
-    onChange(calcMacros({ ...food, quantity: val === "" ? undefined : parseFloat(val) }));
-
-  const numCell = (v?: number) => (
-    <td className="hidden sm:table-cell py-2 pr-3 text-right tabular-nums text-sm text-foreground/80 w-16 align-middle">
-      {v !== undefined && v > 0 ? v.toFixed(1) : <span className="text-muted-foreground/30">—</span>}
-    </td>
-  );
-
-  return (
-    <tr className="group border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
-      {/* # */}
-      <td className="pl-4 pr-3 py-2 text-xs text-muted-foreground/40 tabular-nums w-8 select-none align-middle">
-        {idx + 1}
-      </td>
-
-      {/* Alimento */}
-      <td className="py-1.5 pr-3 align-middle" style={{ minWidth: 220 }}>
-        <FoodSearchInput
-          value={food.food_name}
-          onSelect={handleSelect}
-          onCustomName={(name) => onChange({ ...food, food_name: name })}
-        />
-      </td>
-
-      {/* Quantidade */}
-      <td className="py-1.5 pr-2 w-20 align-middle">
-        <input
-          type="number" min={0} step="any" placeholder="—"
-          value={food.quantity !== undefined ? String(food.quantity) : ""}
-          onChange={(e) => handleQty(e.target.value)}
-          className={cellNum}
-        />
-      </td>
-
-      {/* Unidade */}
-      <td className="py-1.5 pr-3 w-24 align-middle">
-        <input type="text" list="unit-list" value={food.unit ?? "g"}
-          onChange={(e) => onChange({ ...food, unit: e.target.value })}
-          className={cellTxt}
-        />
-        <datalist id="unit-list">{UNITS.map((u) => <option key={u} value={u} />)}</datalist>
-      </td>
-
-      {/* Macros — sem cores */}
-      {numCell(food.calories)}
-      {numCell(food.protein)}
-      {numCell(food.carbs)}
-      {numCell(food.fat)}
-
-      {/* Excluir */}
-      <td className="py-2 pr-3 w-9 align-middle">
-        <button type="button" onClick={onRemove}
-          className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-          <Trash2 size={13} />
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-// ─── MealSection ──────────────────────────────────────────────────────────────
-
-function MealSection({ meal, idx, onUpdate, onRemove }: {
-  meal: Meal; idx: number;
-  onUpdate: (m: Meal) => void; onRemove: () => void;
-}) {
-  const foods = meal.foods ?? [];
-  const totals = sum(foods);
-  const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
-  const [showNotes, setShowNotes] = useState(!!meal.notes);
-
-  const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
-  const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
-  const addFood = () => onUpdate({ ...meal, foods: [...foods, emptyFood()] });
-
-  return (
-    <div className={`bg-card border border-border/50 rounded-lg overflow-hidden border-l-[3px] ${borderCls}`}>
-
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/30 border-b border-border/40">
-        {/* Número da refeição */}
-        <span className="text-xs font-bold text-muted-foreground/60 w-5 flex-shrink-0 select-none tabular-nums">
-          {String(idx + 1).padStart(2, "0")}
-        </span>
-
-        {/* Nome */}
-        <input
-          type="text"
-          value={meal.meal_name}
-          onChange={(e) => onUpdate({ ...meal, meal_name: e.target.value })}
-          className="text-base font-bold bg-transparent border-0 focus:outline-none text-foreground flex-1 min-w-0 placeholder:text-muted-foreground"
-          placeholder="Nome da refeição"
-        />
-
-        {/* Horário */}
-        <input
-          type="text"
-          value={meal.time_suggestion ?? ""}
-          onChange={(e) => onUpdate({ ...meal, time_suggestion: e.target.value })}
-          className="hidden sm:block text-xs bg-transparent border-0 focus:outline-none w-28 text-muted-foreground text-right flex-shrink-0"
-          placeholder="00:00 – 00:00"
-        />
-
-        {/* kcal subtotal */}
-        {totals.cal > 0 && (
-          <span className="text-xs tabular-nums text-muted-foreground font-medium flex-shrink-0 ml-2 border-l border-border pl-3">
-            {n0(totals.cal)} kcal
-          </span>
-        )}
-
-        {/* Excluir refeição */}
-        <button type="button" onClick={onRemove}
-          className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0 ml-1">
-          <Trash2 size={13} />
-        </button>
-      </div>
-
-      {/* ── Tabela ── */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-border/40 bg-background/60">
-              <th className="pl-4 pr-3 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-8">#</th>
-              <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Alimento</th>
-              <th className="py-1.5 pr-2 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-20">Qtd</th>
-              <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-24">Un.</th>
-              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">kcal</th>
-              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
-              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
-              <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Gord. g</th>
-              <th className="w-9" />
-            </tr>
-          </thead>
-          <tbody>
-            {foods.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="py-5 text-center text-sm text-primary/60 italic">
-                  Nenhum alimento adicionado a esta refeição
-                </td>
-              </tr>
-            ) : (
-              foods.map((f, i) => (
-                <FoodRow key={i} food={f} idx={i}
-                  onChange={(u) => updateFood(i, u)}
-                  onRemove={() => removeFood(i)}
-                />
-              ))
-            )}
-          </tbody>
-
-          {/* Subtotal */}
-          {foods.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-border/50 bg-muted/20">
-                <td colSpan={4} className="pl-4 py-1.5 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  <span className="sm:hidden">{n0(totals.cal)} kcal</span>
-                  <span className="hidden sm:inline">Subtotal</span>
-                </td>
-                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n0(totals.cal)}</td>
-                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.prot)}</td>
-                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.carbs)}</td>
-                <td className="hidden sm:table-cell py-1.5 pr-3 text-right text-xs font-semibold text-foreground tabular-nums">{n1(totals.fat)}</td>
-                <td />
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* ── Footer: adicionar alimento + observação ── */}
-      <div className="border-t border-border/30 bg-background/40">
-        <div className="flex items-center justify-between px-4 py-2">
-          <button type="button" onClick={addFood}
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium">
-            <Plus size={12} />
-            Adicionar alimento
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowNotes(v => !v); if (showNotes) onUpdate({ ...meal, notes: "" }); }}
-            className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-              showNotes || meal.notes
-                ? "text-primary hover:text-primary/80"
-                : "text-muted-foreground/50 hover:text-muted-foreground"
-            }`}
-          >
-            <MessageSquare size={12} />
-            {showNotes ? "Remover observação" : "Adicionar observação"}
-          </button>
-        </div>
-
-        {/* Observação textarea */}
-        {showNotes && (
-          <div className="px-4 pb-3">
-            <textarea
-              rows={2}
-              value={meal.notes ?? ""}
-              onChange={e => onUpdate({ ...meal, notes: e.target.value })}
-              placeholder="Observações para esta refeição (substituições, preparo, orientações…)"
-              className="w-full text-sm bg-muted/30 border border-border/50 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary placeholder:text-muted-foreground/30 text-foreground/80"
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
+  id:              m._dbId,
+  plan_id:         planId,
+  meal_name:       m.meal_name,
+  time_suggestion: m.time_suggestion,
+  notes:           m.notes,
+  foods:           m.foods,
+});
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -301,45 +66,52 @@ export default function AdminPlanoAlimentar() {
   const { id, planId } = useParams<{ id: string; planId: string }>();
   const navigate = useNavigate();
 
-  const patientId = Number(id);
-  const resolvedPlanId = Number(planId);
-  const isNew = planId === "novo";
+  const patientId       = Number(id);
+  const resolvedPlanId  = Number(planId);
+  const isNew           = planId === "novo";
+
+  // ── ConsultationContext — fonte única de verdade para dados do paciente ───
+  const {
+    patient,
+    latestMeasurement,
+    latestAnamnesis: anamnesis,
+    ageYears,
+    isLoading: ctxLoading,
+  } = useConsultation();
 
   const [plan, setPlan] = useState<MealPlan>({
     patient_id: patientId, title: "Plano Alimentar",
     start_date: "", end_date: "", daily_calories: undefined, notes: "",
   });
-  const [meals, setMeals]       = useState<Meal[]>([]);
-  const [patient, setPatient]   = useState<Patient | null>(null);
-  const [latestMeasurement, setLatestMeasurement] = useState<Measurement | null>(null);
-  const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
+  const [meals, setMeals]   = useState<EditorMeal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [showEmail, setShowEmail]       = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
+  const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
 
   // ── Energy panel state ────────────────────────────────────────────────────
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
-  const [adjustment, setAdjustment]       = useState(0); // % déficit (-) ou superávit (+)
+  const [adjustment, setAdjustment]       = useState(0);
 
   const loadPlan = useCallback(async () => {
     setLoading(true);
     try {
-      const [patientData, measurementsData, anamnesisData] = await Promise.all([
-        fetchPatient(patientId),
-        fetchMeasurements(patientId),
-        fetchAnamnesis(patientId),
-      ]);
-      setPatient(patientData);
-      setLatestMeasurement(measurementsData[0] ?? null);
-      setAnamnesis(anamnesisData);
       if (isNew) {
-        setMeals(DEFAULT_MEALS.map((p) => ({ plan_id: 0, ...p, foods: [] })));
+        setMeals(DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] })));
       } else {
-        const [plans, loadedMeals] = await Promise.all([fetchMealPlans(patientId), fetchFullMealPlan(resolvedPlanId)]);
+        const [plans, loadedMeals] = await Promise.all([
+          fetchMealPlans(patientId),
+          fetchFullMealPlan(resolvedPlanId),
+        ]);
         const found = plans.find((p) => p.id === resolvedPlanId);
         if (found) setPlan(found);
-        setMeals(loadedMeals.length > 0 ? loadedMeals : DEFAULT_MEALS.map((p) => ({ plan_id: resolvedPlanId, ...p, foods: [] })));
+        setMeals(
+          loadedMeals.length > 0
+            ? loadedMeals.map(mealToEditor)
+            : DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] }))
+        );
       }
     } catch { toast.error("Erro ao carregar o plano."); }
     finally { setLoading(false); }
@@ -347,27 +119,41 @@ export default function AdminPlanoAlimentar() {
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
 
-
   const handleSave = async () => {
     if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
     setSaving(true);
-    const savedPlan = await upsertMealPlan(plan);
+    const planWithLineage: MealPlan = {
+      ...plan,
+      measurement_id: latestMeasurement?.id  ?? plan.measurement_id,
+      get_kcal:       suggestedKcal           ?? plan.get_kcal,
+    };
+    const savedPlan = await upsertMealPlan(planWithLineage);
     if (!savedPlan?.id) { toast.error("Erro ao salvar o plano."); setSaving(false); return; }
     setPlan((p) => ({ ...p, id: savedPlan.id }));
-    const ok = await saveMeals(savedPlan.id, meals);
+    const dbMeals = meals.map((m) => editorToMeal(m, savedPlan.id!));
+    const ok = await saveMeals(savedPlan.id, dbMeals);
     setSaving(false);
     if (!ok) { toast.error("Erro ao salvar as refeições."); return; }
     toast.success("Plano salvo com sucesso.");
     if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
   };
 
-  const updateMeal = (i: number, m: Meal) => setMeals((prev) => { const n = [...prev]; n[i] = m; return n; });
-  const removeMeal = (i: number) => setMeals((prev) => prev.filter((_, fi) => fi !== i));
-  const addMeal = () => setMeals((prev) => [...prev, { plan_id: isNew ? 0 : resolvedPlanId, meal_name: "Nova refeição", time_suggestion: "", foods: [] }]);
-  const setPF = <K extends keyof MealPlan>(k: K, v: MealPlan[K]) => setPlan((p) => ({ ...p, [k]: v }));
+  const updateMeal = (i: number, m: EditorMeal) =>
+    setMeals((prev) => { const n = [...prev]; n[i] = m; return n; });
+  const removeMeal = (i: number) =>
+    setMeals((prev) => prev.filter((_, fi) => fi !== i));
+  const addMeal = () =>
+    setMeals((prev) => [...prev, { meal_name: "Nova refeição", time_suggestion: "", foods: [] }]);
+  const setPF = <K extends keyof MealPlan>(k: K, v: MealPlan[K]) =>
+    setPlan((p) => ({ ...p, [k]: v }));
+
+  const handleTemplateImport = (importedMeals: Meal[], mode: "replace" | "append") => {
+    const editorMeals = importedMeals.map(mealToEditor);
+    setMeals((prev) => mode === "replace" ? editorMeals : [...prev, ...editorMeals]);
+  };
 
   const grand = meals.reduce(
-    (a, m) => { const t = sum(m.foods ?? []); return { cal: a.cal + t.cal, prot: a.prot + t.prot, carbs: a.carbs + t.carbs, fat: a.fat + t.fat }; },
+    (a, m) => { const t = sumFoods(m.foods); return { cal: a.cal + t.cal, prot: a.prot + t.prot, carbs: a.carbs + t.carbs, fat: a.fat + t.fat }; },
     { cal: 0, prot: 0, carbs: 0, fat: 0 }
   );
 
@@ -375,19 +161,25 @@ export default function AdminPlanoAlimentar() {
     ? Math.min(100, Math.round((grand.cal / plan.daily_calories) * 100))
     : 0;
 
-  // ── Energy calculations (reactive) ────────────────────────────────────────
-  const calcAge = (birthDate: string) => {
-    const today = new Date(); const b = new Date(birthDate + "T12:00:00");
-    let age = today.getFullYear() - b.getFullYear();
-    if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
-    return age;
-  };
+  // ── Energy calculations — reactivos ao ConsultationContext ────────────────
+  const energyInput = useMemo(() => {
+    if (!latestMeasurement?.weight || !latestMeasurement?.height || !patient?.birth_date || !patient?.gender) return null;
+    return {
+      weight:    latestMeasurement.weight,
+      height:    latestMeasurement.height,
+      age:       ageYears ?? 0,
+      gender:    patient.gender === "F" ? "F" as const : "M" as const,
+      lean_mass: latestMeasurement.lean_mass ?? null,
+    };
+  }, [latestMeasurement, patient, ageYears]);
 
-  const energyInput = latestMeasurement?.weight && latestMeasurement?.height && patient?.birth_date && patient?.gender
-    ? { weight: latestMeasurement.weight, height: latestMeasurement.height, age: calcAge(patient.birth_date), gender: patient.gender === "F" ? "F" as const : "M" as const }
-    : null;
+  const cunninghamAvailable = energyInput ? canUseCunningham(energyInput) : false;
 
-  const energyResult = energyInput ? calcEnergy(energyInput, energyFormula, activityLevel) : null;
+  const resolvedFormula: EnergyFormula = (energyFormula === "cunningham" && !cunninghamAvailable)
+    ? "mifflin"
+    : energyFormula;
+
+  const energyResult  = energyInput ? calcEnergy(energyInput, resolvedFormula, activityLevel) : null;
   const suggestedKcal = energyResult ? applyAdjustment(energyResult.get, adjustment) : null;
 
   // ── Clinical alerts ───────────────────────────────────────────────────────
@@ -401,7 +193,7 @@ export default function AdminPlanoAlimentar() {
     weightKg:     latestMeasurement?.weight,
   });
 
-  if (loading) {
+  if (loading || ctxLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -505,15 +297,26 @@ export default function AdminPlanoAlimentar() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Fórmula</Label>
-                  <div className="flex gap-2">
-                    {([ ["mifflin", "Mifflin-St Jeor"], ["harris_benedict", "Harris-Benedict"] ] as [EnergyFormula, string][]).map(([val, label]) => (
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      ["mifflin",         "Mifflin-St Jeor"],
+                      ["harris_benedict", "Harris-Benedict"],
+                      ...(cunninghamAvailable ? [["cunningham", "Cunningham (MLG)"]] as [EnergyFormula, string][] : []),
+                    ] as [EnergyFormula, string][]).map(([val, label]) => (
                       <button key={val} type="button" onClick={() => setEnergyFormula(val)}
-                        className={cn("flex-1 h-8 rounded-md text-xs font-medium border transition-all",
-                          energyFormula === val ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                        className={cn("flex-1 h-8 rounded-md text-xs font-medium border transition-all min-w-[120px]",
+                          resolvedFormula === val
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50")}>
                         {label}
                       </button>
                     ))}
                   </div>
+                  {cunninghamAvailable && resolvedFormula === "cunningham" && (
+                    <p className="text-[10px] text-muted-foreground">
+                      MLG: <strong className="text-foreground">{latestMeasurement!.lean_mass} kg</strong> — TMB = 500 + 22 × MLG
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -579,23 +382,35 @@ export default function AdminPlanoAlimentar() {
 
               {/* Dados usados no cálculo */}
               <p className="text-[10px] text-muted-foreground">
-                Calculado com: {energyInput!.weight} kg · {energyInput!.height} cm · {energyInput!.age} anos · {energyInput!.gender === "F" ? "Feminino" : "Masculino"} — avaliação mais recente
+                Calculado com: {energyInput!.weight} kg · {energyInput!.height} cm · {energyInput!.age} anos · {energyInput!.gender === "F" ? "Feminino" : "Masculino"}
+                {energyInput!.lean_mass ? ` · MLG ${energyInput!.lean_mass} kg` : ""}
+                {" "}— avaliação mais recente
+                {latestMeasurement?.id && (
+                  <span className="ml-1 opacity-50">(avaliação #{latestMeasurement.id})</span>
+                )}
               </p>
             </div>
           )}
         </section>
 
+        {/* ── Planejamento Dietético (travamento de macros) ───────────────── */}
+        <DietaryPlanningPanel
+          weightKg={latestMeasurement?.weight}
+          totalKcal={plan.daily_calories}
+          actual={grand}
+          onGoalsChange={setMacroGoals}
+        />
+
         {/* ── Resumo nutricional ──────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
-          {/* 4 colunas de dados */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:divide-x sm:divide-border/60 mb-5">
             {[
-              { label: "Energia total",  value: grand.cal  > 0 ? `${n0(grand.cal)} kcal`  : "— kcal"  },
-              { label: "Proteínas",      value: grand.prot  > 0 ? `${n1(grand.prot)} g`    : "— g"     },
-              { label: "Carboidratos",   value: grand.carbs > 0 ? `${n1(grand.carbs)} g`   : "— g"     },
-              { label: "Gorduras",       value: grand.fat   > 0 ? `${n1(grand.fat)} g`     : "— g"     },
+              { label: "Energia total",  value: grand.cal   > 0 ? `${n0(grand.cal)} kcal`  : "— kcal" },
+              { label: "Proteínas",      value: grand.prot  > 0 ? `${n1(grand.prot)} g`    : "— g"    },
+              { label: "Carboidratos",   value: grand.carbs > 0 ? `${n1(grand.carbs)} g`   : "— g"    },
+              { label: "Gorduras",       value: grand.fat   > 0 ? `${n1(grand.fat)} g`     : "— g"    },
             ].map(({ label, value }) => (
               <div key={label} className="sm:px-4 sm:first:pl-0 sm:last:pr-0 bg-muted/20 sm:bg-transparent rounded-lg sm:rounded-none p-3 sm:p-0">
                 <p className="text-[10px] text-primary uppercase tracking-wider mb-1.5">{label}</p>
@@ -604,7 +419,7 @@ export default function AdminPlanoAlimentar() {
             ))}
           </div>
 
-          {/* ── Alertas de auditoria ── */}
+          {/* Alertas de auditoria */}
           {grand.cal > 0 && (audit.proteinExcess || audit.calorieOverage || audit.calorieDeficit) && (
             <div className="flex flex-wrap gap-2 mb-4">
               {audit.proteinExcess && (
@@ -636,26 +451,52 @@ export default function AdminPlanoAlimentar() {
 
           {/* Barras de macros */}
           <div className="space-y-2 mb-4">
-            {(() => {
-              const totalCal = grand.cal || 1;
-              const macros = [
-                { label: "Proteínas",    pct: Math.round((grand.prot  * 4 / totalCal) * 100) },
-                { label: "Carboidratos", pct: Math.round((grand.carbs * 4 / totalCal) * 100) },
-                { label: "Gorduras",     pct: Math.round((grand.fat   * 9 / totalCal) * 100) },
-              ];
-              return macros.map(({ label, pct }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
-                    <div className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${grand.cal > 0 ? pct : 0}%` }} />
+            {macroGoals ? (
+              [
+                { label: "Proteínas",    actual: grand.prot,  goal: macroGoals.protein_g, color: "bg-blue-500"  },
+                { label: "Carboidratos", actual: grand.carbs, goal: macroGoals.carbs_g,   color: "bg-amber-400" },
+                { label: "Gorduras",     actual: grand.fat,   goal: macroGoals.fat_g,     color: "bg-rose-400"  },
+              ].map(({ label, actual, goal, color }) => {
+                const pct   = goal > 0 ? Math.min((actual / goal) * 100, 100) : 0;
+                const over  = goal > 0 && actual > goal * 1.08;
+                const onTgt = goal > 0 && actual >= goal * 0.92 && actual <= goal * 1.08;
+                return (
+                  <div key={label} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500",
+                          over ? "bg-red-500" : onTgt ? "bg-emerald-500" : color)}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground w-28 text-right">
+                      {actual.toFixed(1)}g / {goal.toFixed(0)}g
+                    </span>
                   </div>
-                  <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
-                    {grand.cal > 0 ? `${pct}%` : "0%"}
-                  </span>
-                </div>
-              ));
-            })()}
+                );
+              })
+            ) : (
+              (() => {
+                const totalCal = grand.cal || 1;
+                return [
+                  { label: "Proteínas",    pct: Math.round((grand.prot  * 4 / totalCal) * 100) },
+                  { label: "Carboidratos", pct: Math.round((grand.carbs * 4 / totalCal) * 100) },
+                  { label: "Gorduras",     pct: Math.round((grand.fat   * 9 / totalCal) * 100) },
+                ].map(({ label, pct }) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${grand.cal > 0 ? pct : 0}%` }} />
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
+                      {grand.cal > 0 ? `${pct}%` : "0%"}
+                    </span>
+                  </div>
+                ));
+              })()
+            )}
           </div>
 
           {/* Barra de progresso calórico */}
@@ -681,11 +522,19 @@ export default function AdminPlanoAlimentar() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Refeições — {meals.length} cadastradas
             </p>
-            <button type="button" onClick={addMeal}
-              className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
-              <Plus size={13} />
-              Nova refeição
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setShowTemplate(true)}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <LayoutList size={13} />
+                <span className="hidden sm:inline">Importar template</span>
+                <span className="sm:hidden">Template</span>
+              </button>
+              <button type="button" onClick={addMeal}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <Plus size={13} />
+                Nova refeição
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -711,11 +560,19 @@ export default function AdminPlanoAlimentar() {
       {showEmail && (
         <EmailPlanModal
           plan={plan}
-          meals={meals}
+          meals={meals.map((m) => editorToMeal(m, plan.id ?? 0))}
           patient={patient}
           onClose={() => setShowEmail(false)}
         />
       )}
+
+      {/* ── Modal de importação de template ─────────────────────────────── */}
+      <TemplateImportModal
+        open={showTemplate}
+        hasMeals={meals.some((m) => m.foods.length > 0)}
+        onClose={() => setShowTemplate(false)}
+        onImport={handleTemplateImport}
+      />
     </div>
   );
 }

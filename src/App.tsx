@@ -57,6 +57,9 @@ import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropomet
 import AdminDesconto from "./pages/admin/AdminDesconto";
 import AdminDisparo from "./pages/admin/AdminDisparo";
 import AdminLeads from "./pages/admin/AdminLeads";
+import PatientLayout from "./pages/admin/PatientLayout";
+import AdminTemplates from "./pages/admin/AdminTemplates";
+import AdminTemplateEditor from "./pages/admin/AdminTemplateEditor";
 const AdminFerramentas = lazy(() => import("./pages/admin/AdminFerramentas"));
 
 const queryClient = new QueryClient();
@@ -131,10 +134,15 @@ const App = () => (
                 <Route path="agendamentos" element={<AdminAgendamentos />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="pacientes" element={<AdminPacientes />} />
-                <Route path="pacientes/:id" element={<AdminPaciente />} />
-                <Route path="pacientes/:id/plano/:planId" element={<AdminPlanoAlimentar />} />
-                <Route path="pacientes/:id/relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
+                {/* Patient sub-routes share ConsultationContext via PatientLayout */}
+                <Route path="pacientes/:id" element={<PatientLayout />}>
+                  <Route index element={<AdminPaciente />} />
+                  <Route path="plano/:planId" element={<AdminPlanoAlimentar />} />
+                  <Route path="relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
+                </Route>
                 <Route path="alimentos" element={<AdminAlimentos />} />
+                <Route path="modelos" element={<AdminTemplates />} />
+                <Route path="modelos/:templateId" element={<AdminTemplateEditor />} />
                 <Route path="loja" element={<AdminLoja />} />
                 <Route path="desconto" element={<AdminDesconto />} />
                 <Route path="disparo" element={<AdminDisparo />} />
