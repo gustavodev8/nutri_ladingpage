@@ -2,9 +2,10 @@
 // Referências:
 //   Harris & Benedict (1918) — revisado por Roza & Shizgal (1984)
 //   Mifflin, St Jeor et al. (1990)
+//   Cunningham (1980) — baseado em massa magra (MLG)
 //   FAO/WHO/UNU (2001) — fatores de nível de atividade física (NAF)
 
-export type EnergyFormula = "harris_benedict" | "mifflin";
+export type EnergyFormula = "harris_benedict" | "mifflin" | "cunningham";
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
 
 export interface ActivityOption {
@@ -23,15 +24,16 @@ export const ACTIVITY_OPTIONS: ActivityOption[] = [
 ];
 
 export interface EnergyInput {
-  weight: number;   // kg
-  height: number;   // cm
-  age: number;      // anos
-  gender: "M" | "F";
+  weight:     number;        // kg
+  height:     number;        // cm
+  age:        number;        // anos
+  gender:     "M" | "F";
+  lean_mass?: number | null; // kg — necessário para Cunningham
 }
 
 export interface EnergyResult {
-  tmb: number;   // Taxa Metabólica Basal (kcal/dia)
-  get: number;   // Gasto Energético Total (kcal/dia)
+  tmb:     number;          // Taxa Metabólica Basal (kcal/dia)
+  get:     number;          // Gasto Energético Total (kcal/dia)
   formula: EnergyFormula;
   activity: ActivityLevel;
 }
@@ -52,15 +54,32 @@ export function calcMifflin(input: EnergyInput): number {
   return gender === "M" ? base + 5 : base - 161;
 }
 
+// ─── Cunningham (1980) ───────────────────────────────────────────────────────
+// TMB = 500 + 22 × massa magra (kg)
+// Indicada quando a composição corporal é conhecida (bioimpedância / adipômetro).
+export function calcCunningham(leanMassKg: number): number {
+  return 500 + 22 * leanMassKg;
+}
+
+/** True only when lean_mass is present — used to decide if Cunningham is selectable */
+export function canUseCunningham(input: EnergyInput): boolean {
+  return typeof input.lean_mass === "number" && input.lean_mass > 0;
+}
+
 // ─── Dispatcher: TMB → GET ───────────────────────────────────────────────────
 export function calcEnergy(
   input: EnergyInput,
   formula: EnergyFormula,
   activity: ActivityLevel
 ): EnergyResult {
-  const tmb = formula === "harris_benedict"
-    ? calcHarrisBenedict(input)
-    : calcMifflin(input);
+  let tmb: number;
+  if (formula === "cunningham" && input.lean_mass && input.lean_mass > 0) {
+    tmb = calcCunningham(input.lean_mass);
+  } else if (formula === "harris_benedict") {
+    tmb = calcHarrisBenedict(input);
+  } else {
+    tmb = calcMifflin(input);
+  }
   const factor = ACTIVITY_OPTIONS.find(a => a.key === activity)?.factor ?? 1.2;
   return {
     tmb: Math.round(tmb),

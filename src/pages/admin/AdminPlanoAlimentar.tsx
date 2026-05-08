@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, ChevronDown, ChevronUp, ArrowLeftRight } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
@@ -8,19 +8,20 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans, fetchPatient,
-  fetchMeasurements, fetchAnamnesis,
-  type Meal, type MealFood, type MealPlan, type Patient, type Measurement, type Anamnesis,
+  fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
+  type Meal, type MealFood, type MealPlan,
 } from "@/lib/supabase";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
+import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { type MacroGoals } from "@/lib/planningUtils";
 import {
   calcEnergy, applyAdjustment, auditDiet,
+  canUseCunningham,
   ACTIVITY_OPTIONS,
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
@@ -410,19 +411,25 @@ export default function AdminPlanoAlimentar() {
   const resolvedPlanId = Number(planId);
   const isNew = planId === "novo";
 
+  // ── ConsultationContext — fonte única de verdade para dados do paciente ───
+  const {
+    patient,
+    latestMeasurement,
+    latestAnamnesis: anamnesis,
+    ageYears,
+    isLoading: ctxLoading,
+  } = useConsultation();
+
   const [plan, setPlan] = useState<MealPlan>({
     patient_id: patientId, title: "Plano Alimentar",
     start_date: "", end_date: "", daily_calories: undefined, notes: "",
   });
-  const [meals, setMeals]       = useState<Meal[]>([]);
-  const [patient, setPatient]   = useState<Patient | null>(null);
-  const [latestMeasurement, setLatestMeasurement] = useState<Measurement | null>(null);
-  const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [showEmail, setShowEmail]         = useState(false);
-  const [showTemplate, setShowTemplate]   = useState(false);
-  const [macroGoals, setMacroGoals]       = useState<MacroGoals | null>(null);
+  const [meals, setMeals]   = useState<Meal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [showEmail, setShowEmail]       = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
+  const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
 
   // ── Energy panel state ────────────────────────────────────────────────────
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
@@ -432,21 +439,18 @@ export default function AdminPlanoAlimentar() {
   const loadPlan = useCallback(async () => {
     setLoading(true);
     try {
-      const [patientData, measurementsData, anamnesisData] = await Promise.all([
-        fetchPatient(patientId),
-        fetchMeasurements(patientId),
-        fetchAnamnesis(patientId),
-      ]);
-      setPatient(patientData);
-      setLatestMeasurement(measurementsData[0] ?? null);
-      setAnamnesis(anamnesisData);
       if (isNew) {
         setMeals(DEFAULT_MEALS.map((p) => ({ plan_id: 0, ...p, foods: [] })));
       } else {
-        const [plans, loadedMeals] = await Promise.all([fetchMealPlans(patientId), fetchFullMealPlan(resolvedPlanId)]);
+        const [plans, loadedMeals] = await Promise.all([
+          fetchMealPlans(patientId),
+          fetchFullMealPlan(resolvedPlanId),
+        ]);
         const found = plans.find((p) => p.id === resolvedPlanId);
         if (found) setPlan(found);
-        setMeals(loadedMeals.length > 0 ? loadedMeals : DEFAULT_MEALS.map((p) => ({ plan_id: resolvedPlanId, ...p, foods: [] })));
+        setMeals(loadedMeals.length > 0
+          ? loadedMeals
+          : DEFAULT_MEALS.map((p) => ({ plan_id: resolvedPlanId, ...p, foods: [] })));
       }
     } catch { toast.error("Erro ao carregar o plano."); }
     finally { setLoading(false); }
@@ -458,7 +462,13 @@ export default function AdminPlanoAlimentar() {
   const handleSave = async () => {
     if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
     setSaving(true);
-    const savedPlan = await upsertMealPlan(plan);
+    // Linhagem: registra qual avaliação e GET embasaram este plano
+    const planWithLineage: MealPlan = {
+      ...plan,
+      measurement_id: latestMeasurement?.id  ?? plan.measurement_id,
+      get_kcal:       suggestedKcal           ?? plan.get_kcal,
+    };
+    const savedPlan = await upsertMealPlan(planWithLineage);
     if (!savedPlan?.id) { toast.error("Erro ao salvar o plano."); setSaving(false); return; }
     setPlan((p) => ({ ...p, id: savedPlan.id }));
     const ok = await saveMeals(savedPlan.id, meals);
@@ -488,19 +498,26 @@ export default function AdminPlanoAlimentar() {
     ? Math.min(100, Math.round((grand.cal / plan.daily_calories) * 100))
     : 0;
 
-  // ── Energy calculations (reactive) ────────────────────────────────────────
-  const calcAge = (birthDate: string) => {
-    const today = new Date(); const b = new Date(birthDate + "T12:00:00");
-    let age = today.getFullYear() - b.getFullYear();
-    if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
-    return age;
-  };
+  // ── Energy calculations — reactivos ao ConsultationContext ────────────────
+  const energyInput = useMemo(() => {
+    if (!latestMeasurement?.weight || !latestMeasurement?.height || !patient?.birth_date || !patient?.gender) return null;
+    return {
+      weight:    latestMeasurement.weight,
+      height:    latestMeasurement.height,
+      age:       ageYears ?? 0,
+      gender:    patient.gender === "F" ? "F" as const : "M" as const,
+      lean_mass: latestMeasurement.lean_mass ?? null,
+    };
+  }, [latestMeasurement, patient, ageYears]);
 
-  const energyInput = latestMeasurement?.weight && latestMeasurement?.height && patient?.birth_date && patient?.gender
-    ? { weight: latestMeasurement.weight, height: latestMeasurement.height, age: calcAge(patient.birth_date), gender: patient.gender === "F" ? "F" as const : "M" as const }
-    : null;
+  const cunninghamAvailable = energyInput ? canUseCunningham(energyInput) : false;
 
-  const energyResult = energyInput ? calcEnergy(energyInput, energyFormula, activityLevel) : null;
+  // Se Cunningham estava selecionado mas a avaliação não tem lean_mass, recai em Mifflin
+  const resolvedFormula: EnergyFormula = (energyFormula === "cunningham" && !cunninghamAvailable)
+    ? "mifflin"
+    : energyFormula;
+
+  const energyResult  = energyInput ? calcEnergy(energyInput, resolvedFormula, activityLevel) : null;
   const suggestedKcal = energyResult ? applyAdjustment(energyResult.get, adjustment) : null;
 
   // ── Clinical alerts ───────────────────────────────────────────────────────
@@ -514,7 +531,7 @@ export default function AdminPlanoAlimentar() {
     weightKg:     latestMeasurement?.weight,
   });
 
-  if (loading) {
+  if (loading || ctxLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -618,15 +635,26 @@ export default function AdminPlanoAlimentar() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Fórmula</Label>
-                  <div className="flex gap-2">
-                    {([ ["mifflin", "Mifflin-St Jeor"], ["harris_benedict", "Harris-Benedict"] ] as [EnergyFormula, string][]).map(([val, label]) => (
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      ["mifflin",          "Mifflin-St Jeor"],
+                      ["harris_benedict",  "Harris-Benedict"],
+                      ...(cunninghamAvailable ? [["cunningham", "Cunningham (MLG)"]] as [EnergyFormula, string][] : []),
+                    ] as [EnergyFormula, string][]).map(([val, label]) => (
                       <button key={val} type="button" onClick={() => setEnergyFormula(val)}
-                        className={cn("flex-1 h-8 rounded-md text-xs font-medium border transition-all",
-                          energyFormula === val ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                        className={cn("flex-1 h-8 rounded-md text-xs font-medium border transition-all min-w-[120px]",
+                          resolvedFormula === val
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50")}>
                         {label}
                       </button>
                     ))}
                   </div>
+                  {cunninghamAvailable && resolvedFormula === "cunningham" && (
+                    <p className="text-[10px] text-muted-foreground">
+                      MLG: <strong className="text-foreground">{latestMeasurement!.lean_mass} kg</strong> — TMB = 500 + 22 × MLG
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -692,7 +720,12 @@ export default function AdminPlanoAlimentar() {
 
               {/* Dados usados no cálculo */}
               <p className="text-[10px] text-muted-foreground">
-                Calculado com: {energyInput!.weight} kg · {energyInput!.height} cm · {energyInput!.age} anos · {energyInput!.gender === "F" ? "Feminino" : "Masculino"} — avaliação mais recente
+                Calculado com: {energyInput!.weight} kg · {energyInput!.height} cm · {energyInput!.age} anos · {energyInput!.gender === "F" ? "Feminino" : "Masculino"}
+                {energyInput!.lean_mass ? ` · MLG ${energyInput!.lean_mass} kg` : ""}
+                {" "}— avaliação mais recente
+                {latestMeasurement?.id && (
+                  <span className="ml-1 opacity-50">(avaliação #{latestMeasurement.id})</span>
+                )}
               </p>
             </div>
           )}

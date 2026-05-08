@@ -368,6 +368,9 @@ export interface MealPlan {
   target_protein_g?: number;
   target_carbs_g?: number;
   target_fat_g?: number;
+  // Epic 8: linhagem — vincula o plano à avaliação que embasou o cálculo
+  measurement_id?: number;      // measurements.id usado como base do GET
+  get_kcal?: number;            // GET calculado no momento da criação (kcal/dia)
   created_at?: string;
 }
 

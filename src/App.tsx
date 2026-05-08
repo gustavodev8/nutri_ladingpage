@@ -51,9 +51,10 @@ import AdminBlog from "./pages/admin/AdminBlog";
 import AdminPacientes from "./pages/admin/AdminPacientes";
 import AdminPaciente from "./pages/admin/AdminPaciente";
 import AdminPlanoAlimentar from "./pages/admin/AdminPlanoAlimentar";
+import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
+import PatientLayout from "./pages/admin/PatientLayout";
 import AdminAlimentos from "./pages/admin/AdminAlimentos";
 import AdminLoja from "./pages/admin/AdminLoja";
-import AdminRelatorioAntropometrico from "./pages/admin/AdminRelatorioAntropometrico";
 import AdminDesconto from "./pages/admin/AdminDesconto";
 import AdminDisparo from "./pages/admin/AdminDisparo";
 import AdminLeads from "./pages/admin/AdminLeads";
@@ -131,9 +132,12 @@ const App = () => (
                 <Route path="agendamentos" element={<AdminAgendamentos />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="pacientes" element={<AdminPacientes />} />
-                <Route path="pacientes/:id" element={<AdminPaciente />} />
-                <Route path="pacientes/:id/plano/:planId" element={<AdminPlanoAlimentar />} />
-                <Route path="pacientes/:id/relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
+                {/* Patient sub-routes share ConsultationContext via PatientLayout */}
+                <Route path="pacientes/:id" element={<PatientLayout />}>
+                  <Route index element={<AdminPaciente />} />
+                  <Route path="plano/:planId" element={<AdminPlanoAlimentar />} />
+                  <Route path="relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
+                </Route>
                 <Route path="alimentos" element={<AdminAlimentos />} />
                 <Route path="loja" element={<AdminLoja />} />
                 <Route path="desconto" element={<AdminDesconto />} />

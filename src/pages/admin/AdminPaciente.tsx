@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { ExamesTab } from "@/components/admin/ExamesTab";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
+import { useConsultation } from "@/contexts/ConsultationContext";
 import { StrategyModal } from "@/components/admin/StrategyModal";
 import { calcMacros, type StrategyType, type MacroResult } from "@/lib/strategyUtils";
 import { type EnergyInput } from "@/lib/energyUtils";
@@ -151,9 +152,12 @@ export default function AdminPaciente() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as TabKey) || "perfil";
 
+  // ── ConsultationContext — atualizado quando salvamos medições/anamnese ───
+  const { setMeasurement: ctxSetMeasurement, setAnamnesis: ctxSetAnamnesis } = useConsultation();
+
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
-  
+
   // ─── FULL PAGE DETAIL VIEW STATE ───
   const [selectedMeasurement, setSelectedMeasurement] = useState<Measurement | null>(null);
 
@@ -474,7 +478,7 @@ export default function AdminPaciente() {
             <PerfilTab patient={patient} onSaved={setPatient} />
           )}
           {activeTab === "anamnese" && (
-            <AnamnesisForm patientId={id!} />
+            <AnamnesisForm patientId={id!} onSaved={ctxSetAnamnesis} />
           )}
           {activeTab === "antropometria" && (
             <AntropometriaTab
@@ -880,6 +884,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     const res = await insertMeasurement(payload as Measurement);
     if (res) {
       setMeasurements(p => [res, ...p]);
+      ctxSetMeasurement(res);   // propaga imediatamente ao contexto global
       setForm({ assessment_date: todayISO() });
       toast.success("Avaliação registrada!");
     }

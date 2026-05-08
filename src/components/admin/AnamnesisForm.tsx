@@ -164,7 +164,13 @@ function NotesArea({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AnamnesisForm({ patientId }: { patientId: string }) {
+export function AnamnesisForm({
+  patientId,
+  onSaved,
+}: {
+  patientId: string;
+  onSaved?: (a: import("@/lib/supabase").Anamnesis) => void;
+}) {
   const pid = Number(patientId);
   const [anamnesisId, setAnamnesisId] = useState<number | null>(null);
   const [sd, setSd] = useState<AnamnesisStructured>({});
@@ -188,14 +194,18 @@ export function AnamnesisForm({ patientId }: { patientId: string }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const payload = {
-      patient_id: pid,
+    const payload: import("@/lib/supabase").Anamnesis = {
+      patient_id:      pid,
       structured_data: sd,
       ...(anamnesisId ? { id: anamnesisId } : {}),
     };
-    const ok = await upsertAnamnesis(payload as any);
-    if (ok === true) toast.success("Anamnese salva!");
-    else toast.error("Falha ao salvar: " + ok);
+    const ok = await upsertAnamnesis(payload);
+    if (ok === true) {
+      toast.success("Anamnese salva!");
+      onSaved?.(payload);
+    } else {
+      toast.error("Falha ao salvar: " + ok);
+    }
     setSaving(false);
   };
 
