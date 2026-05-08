@@ -941,6 +941,64 @@ export async function uploadBlogImage(file: File): Promise<string | null> {
   return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
 }
 
+// ─── Epic 7: Diet Templates ───────────────────────────────────────────────────
+
+export interface DietTemplateFood {
+  id:                 number;
+  template_meal_id:   number;
+  food_name:          string;
+  quantity?:          number;
+  unit?:              string;
+  household_measure?: string;
+  measure_amount?:    number;
+  kcal_per_100g?:     number;
+  protein_per_100g?:  number;
+  carbs_per_100g?:    number;
+  fat_per_100g?:      number;
+  order_index?:       number;
+}
+
+export interface DietTemplateMeal {
+  id:               number;
+  template_id:      number;
+  meal_name:        string;
+  time_suggestion?: string;
+  order_index?:     number;
+  foods?:           DietTemplateFood[];
+}
+
+export interface DietTemplate {
+  id:           number;
+  name:         string;
+  description?: string;
+  strategy?:    string;
+  total_kcal?:  number;
+  protein_g?:   number;
+  carbs_g?:     number;
+  fat_g?:       number;
+  is_active?:   boolean;
+  created_at?:  string;
+  meals?:       DietTemplateMeal[];
+}
+
+export async function fetchDietTemplates(): Promise<DietTemplate[]> {
+  const { data, error } = await supabase
+    .from("diet_templates")
+    .select("*, meals:diet_template_meals(*, foods:diet_template_foods(*))")
+    .eq("is_active", true)
+    .order("name");
+  if (error) { console.error("[Supabase] fetchDietTemplates:", error.message); return []; }
+  return (data ?? []).map((t: any) => ({
+    ...t,
+    meals: (t.meals ?? [])
+      .sort((a: DietTemplateMeal, b: DietTemplateMeal) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .map((m: any) => ({
+        ...m,
+        foods: (m.foods ?? []).sort((a: DietTemplateFood, b: DietTemplateFood) => (a.order_index ?? 0) - (b.order_index ?? 0)),
+      })),
+  }));
+}
+
 // ─── Lab Exams ────────────────────────────────────────────────────────────────
 
 export interface LabExam {

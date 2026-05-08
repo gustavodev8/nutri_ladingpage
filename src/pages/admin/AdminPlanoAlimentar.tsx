@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
+import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { type MacroGoals } from "@/lib/planningUtils";
 import {
@@ -317,8 +318,9 @@ export default function AdminPlanoAlimentar() {
   const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
-  const [showEmail, setShowEmail]   = useState(false);
-  const [macroGoals, setMacroGoals] = useState<MacroGoals | null>(null);
+  const [showEmail, setShowEmail]         = useState(false);
+  const [showTemplate, setShowTemplate]   = useState(false);
+  const [macroGoals, setMacroGoals]       = useState<MacroGoals | null>(null);
 
   // ── Energy panel state ────────────────────────────────────────────────────
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
@@ -368,6 +370,12 @@ export default function AdminPlanoAlimentar() {
   const removeMeal = (i: number) => setMeals((prev) => prev.filter((_, fi) => fi !== i));
   const addMeal = () => setMeals((prev) => [...prev, { plan_id: isNew ? 0 : resolvedPlanId, meal_name: "Nova refeição", time_suggestion: "", foods: [] }]);
   const setPF = <K extends keyof MealPlan>(k: K, v: MealPlan[K]) => setPlan((p) => ({ ...p, [k]: v }));
+
+  const handleTemplateImport = (importedMeals: Meal[], mode: "replace" | "append") => {
+    const planRef = isNew ? 0 : resolvedPlanId;
+    const tagged  = importedMeals.map((m) => ({ ...m, plan_id: planRef }));
+    setMeals((prev) => mode === "replace" ? tagged : [...prev, ...tagged]);
+  };
 
   const grand = meals.reduce(
     (a, m) => { const t = sum(m.foods ?? []); return { cal: a.cal + t.cal, prot: a.prot + t.prot, carbs: a.carbs + t.carbs, fat: a.fat + t.fat }; },
@@ -720,11 +728,19 @@ export default function AdminPlanoAlimentar() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Refeições — {meals.length} cadastradas
             </p>
-            <button type="button" onClick={addMeal}
-              className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
-              <Plus size={13} />
-              Nova refeição
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setShowTemplate(true)}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <LayoutList size={13} />
+                <span className="hidden sm:inline">Importar template</span>
+                <span className="sm:hidden">Template</span>
+              </button>
+              <button type="button" onClick={addMeal}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <Plus size={13} />
+                Nova refeição
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -755,6 +771,14 @@ export default function AdminPlanoAlimentar() {
           onClose={() => setShowEmail(false)}
         />
       )}
+
+      {/* ── Modal de importação de template ─────────────────────────────── */}
+      <TemplateImportModal
+        open={showTemplate}
+        hasMeals={meals.some((m) => (m.foods?.length ?? 0) > 0)}
+        onClose={() => setShowTemplate(false)}
+        onImport={handleTemplateImport}
+      />
     </div>
   );
 }
