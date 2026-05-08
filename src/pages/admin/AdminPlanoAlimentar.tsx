@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, FileText, Mail, MessageSquare, Zap, AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, ChevronDown, ChevronUp, ArrowLeftRight } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
+import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { type MacroGoals } from "@/lib/planningUtils";
 import {
@@ -80,12 +81,19 @@ function emptyFood(): MealFood {
 const cellNum = "h-8 w-full bg-transparent border border-border/60 rounded px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary";
 const cellTxt = "h-8 w-full bg-transparent border border-border/60 rounded px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary";
 
+// ─── Food group options ───────────────────────────────────────────────────────
+
+const FOOD_GROUPS = ["Carboidrato", "Proteína", "Gordura", "Fruta", "Vegetal", "Laticínio", "Leguminosa", "Outro"];
+
 // ─── FoodRow ──────────────────────────────────────────────────────────────────
 
 function FoodRow({ food, idx, onChange, onRemove }: {
   food: MealFood; idx: number;
   onChange: (f: MealFood) => void; onRemove: () => void;
 }) {
+  const [showDetails, setShowDetails]   = useState(false);
+  const [showSubstitute, setShowSubstitute] = useState(false);
+
   const handleSelect = (s: { name: string; kcal_per_100g: number; protein_per_100g: number; carbs_per_100g: number; fat_per_100g: number }) =>
     onChange(calcMacros({ ...food, food_name: s.name, kcal_per_100g: s.kcal_per_100g, protein_per_100g: s.protein_per_100g, carbs_per_100g: s.carbs_per_100g, fat_per_100g: s.fat_per_100g }));
 
@@ -98,55 +106,149 @@ function FoodRow({ food, idx, onChange, onRemove }: {
     </td>
   );
 
+  const hasDetails = !!(food.household_measure || food.food_group);
+
   return (
-    <tr className="group border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
-      {/* # */}
-      <td className="pl-4 pr-3 py-2 text-xs text-muted-foreground/40 tabular-nums w-8 select-none align-middle">
-        {idx + 1}
-      </td>
+    <>
+      <tr className="group border-b border-border/30 hover:bg-muted/20 transition-colors">
+        {/* # */}
+        <td className="pl-4 pr-3 py-2 text-xs text-muted-foreground/40 tabular-nums w-8 select-none align-middle">
+          {idx + 1}
+        </td>
 
-      {/* Alimento */}
-      <td className="py-1.5 pr-3 align-middle" style={{ minWidth: 220 }}>
-        <FoodSearchInput
-          value={food.food_name}
-          onSelect={handleSelect}
-          onCustomName={(name) => onChange({ ...food, food_name: name })}
-        />
-      </td>
+        {/* Alimento */}
+        <td className="py-1.5 pr-3 align-middle" style={{ minWidth: 220 }}>
+          <FoodSearchInput
+            value={food.food_name}
+            onSelect={handleSelect}
+            onCustomName={(name) => onChange({ ...food, food_name: name })}
+          />
+        </td>
 
-      {/* Quantidade */}
-      <td className="py-1.5 pr-2 w-20 align-middle">
-        <input
-          type="number" min={0} step="any" placeholder="—"
-          value={food.quantity !== undefined ? String(food.quantity) : ""}
-          onChange={(e) => handleQty(e.target.value)}
-          className={cellNum}
-        />
-      </td>
+        {/* Quantidade */}
+        <td className="py-1.5 pr-2 w-20 align-middle">
+          <input
+            type="number" min={0} step="any" placeholder="—"
+            value={food.quantity !== undefined ? String(food.quantity) : ""}
+            onChange={(e) => handleQty(e.target.value)}
+            className={cellNum}
+          />
+        </td>
 
-      {/* Unidade */}
-      <td className="py-1.5 pr-3 w-24 align-middle">
-        <input type="text" list="unit-list" value={food.unit ?? "g"}
-          onChange={(e) => onChange({ ...food, unit: e.target.value })}
-          className={cellTxt}
-        />
-        <datalist id="unit-list">{UNITS.map((u) => <option key={u} value={u} />)}</datalist>
-      </td>
+        {/* Unidade */}
+        <td className="py-1.5 pr-3 w-24 align-middle">
+          <input type="text" list="unit-list" value={food.unit ?? "g"}
+            onChange={(e) => onChange({ ...food, unit: e.target.value })}
+            className={cellTxt}
+          />
+          <datalist id="unit-list">{UNITS.map((u) => <option key={u} value={u} />)}</datalist>
+        </td>
 
-      {/* Macros — sem cores */}
-      {numCell(food.calories)}
-      {numCell(food.protein)}
-      {numCell(food.carbs)}
-      {numCell(food.fat)}
+        {/* Macros */}
+        {numCell(food.calories)}
+        {numCell(food.protein)}
+        {numCell(food.carbs)}
+        {numCell(food.fat)}
 
-      {/* Excluir */}
-      <td className="py-2 pr-3 w-9 align-middle">
-        <button type="button" onClick={onRemove}
-          className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-          <Trash2 size={13} />
-        </button>
-      </td>
-    </tr>
+        {/* Ações */}
+        <td className="py-2 pr-2 w-16 align-middle">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            {/* Toggle detalhes */}
+            <button type="button" onClick={() => setShowDetails((v) => !v)}
+              title="Medida caseira / grupo"
+              className={cn(
+                "h-7 w-7 flex items-center justify-center rounded transition-colors",
+                showDetails || hasDetails
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground/30 hover:text-primary hover:bg-primary/10"
+              )}>
+              {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+            {/* Excluir */}
+            <button type="button" onClick={onRemove}
+              className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* ── Linha de detalhes expandível ── */}
+      {showDetails && (
+        <tr className="border-b border-border/20 bg-muted/10">
+          <td colSpan={9} className="px-4 pb-3 pt-1.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+
+              {/* Medida caseira */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60 shrink-0">Medida:</span>
+                <input
+                  type="number" min={0} step="0.25" placeholder="1"
+                  value={food.measure_amount !== undefined ? String(food.measure_amount) : ""}
+                  onChange={(e) => onChange({ ...food, measure_amount: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
+                  className="h-7 w-14 rounded border border-border/60 bg-background px-2 text-xs text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <input
+                  type="text"
+                  placeholder="colher de sopa"
+                  value={food.household_measure ?? ""}
+                  onChange={(e) => onChange({ ...food, household_measure: e.target.value || undefined })}
+                  list="measure-list"
+                  className="h-7 w-36 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <datalist id="measure-list">
+                  {["colher de sopa", "colher de chá", "colher de sobremesa", "xícara", "unidade média",
+                    "unidade pequena", "unidade grande", "fatia", "porção", "copo", "escumadeira"].map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+              </div>
+
+              {/* Grupo alimentar */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60 shrink-0">Grupo:</span>
+                <select
+                  value={food.food_group ?? ""}
+                  onChange={(e) => onChange({ ...food, food_group: e.target.value || undefined })}
+                  className="h-7 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                >
+                  <option value="">— selecionar —</option>
+                  {FOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+
+              {/* Substituição inteligente */}
+              <button
+                type="button"
+                onClick={() => setShowSubstitute(true)}
+                disabled={!food.food_name.trim()}
+                className="flex items-center gap-1.5 h-7 px-3 rounded border border-border/60 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+              >
+                <ArrowLeftRight size={11} />
+                Substituição inteligente
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Modal de substituição — renderizado fora da tabela via portal (Dialog) */}
+      <SmartSubstituteModal
+        open={showSubstitute}
+        food={food}
+        onClose={() => setShowSubstitute(false)}
+        onSubstitute={(s) =>
+          onChange(calcMacros({
+            ...food,
+            food_name:        s.name,
+            kcal_per_100g:    s.kcal_per_100g,
+            protein_per_100g: s.protein_per_100g,
+            carbs_per_100g:   s.carbs_per_100g,
+            fat_per_100g:     s.fat_per_100g,
+          }))
+        }
+      />
+    </>
   );
 }
 
@@ -220,7 +322,7 @@ function MealSection({ meal, idx, onUpdate, onRemove }: {
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Gord. g</th>
-              <th className="w-9" />
+              <th className="w-16" />
             </tr>
           </thead>
           <tbody>

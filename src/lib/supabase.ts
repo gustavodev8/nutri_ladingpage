@@ -604,16 +604,23 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
 
     if (meal.foods && meal.foods.length > 0) {
       const foodRows = meal.foods.map((f, fi) => ({
-        meal_id: mealData.id,
-        food_name: f.food_name,
-        quantity: f.quantity ?? null,
-        unit: f.unit ?? "g",
-        calories: f.calories ?? null,
-        protein: f.protein ?? null,
-        carbs: f.carbs ?? null,
-        fat: f.fat ?? null,
-        notes: f.notes ?? "",
-        sort_order: fi,
+        meal_id:           mealData.id,
+        food_name:         f.food_name,
+        quantity:          f.quantity          ?? null,
+        unit:              f.unit              ?? "g",
+        calories:          f.calories          ?? null,
+        protein:           f.protein           ?? null,
+        carbs:             f.carbs             ?? null,
+        fat:               f.fat               ?? null,
+        notes:             f.notes             ?? "",
+        sort_order:        fi,
+        kcal_per_100g:     f.kcal_per_100g     ?? null,
+        protein_per_100g:  f.protein_per_100g  ?? null,
+        carbs_per_100g:    f.carbs_per_100g    ?? null,
+        fat_per_100g:      f.fat_per_100g      ?? null,
+        household_measure: f.household_measure ?? null,
+        measure_amount:    f.measure_amount    ?? null,
+        food_group:        f.food_group        ?? null,
       }));
       const { error: foodErr } = await supabaseAdmin.from("meal_foods").insert(foodRows);
       if (foodErr) { console.error("[Supabase] saveMeals insert foods:", foodErr.message); return false; }
