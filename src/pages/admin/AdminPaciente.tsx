@@ -887,27 +887,23 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 }) {
   const pid = Number(patientId);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
-  const [form, setForm] = useState<MeasurementForm>({ assessment_date: todayISO() });
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [sfMode, setSfMode]     = useState(false);
-  const [protocol, setProtocol] = useState<import("@/lib/anthropometryUtils").SkinfoldProtocol>("JP3M");
+  const [form, setForm]       = useState<MeasurementForm>({ assessment_date: todayISO() });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  // "bio" = Bioimpedância (inserção manual de % gordura)
+  // "skinfold" = Adipômetro (cálculo por dobras)
+  const [compMode, setCompMode] = useState<"bio" | "skinfold">("bio");
+  const [protocol, setProtocol] = useState<import("@/lib/anthropometryUtils").SkinfoldProtocol>(
+    patient.gender === "F" ? "JP3F" : "JP3M"
+  );
 
   useEffect(() => {
     fetchMeasurements(pid).then((data) => { setMeasurements(data); setLoading(false); });
   }, [pid]);
 
-  // Auto-seleciona protocolo compatível com gênero do paciente
-  useEffect(() => {
-    if (!sfMode) return;
-    const g = patient.gender === "F" ? "F" : "M";
-    const compatible = ["JP3M","JP3F","JP7M","JP7F","GUEDES_M","GUEDES_F"].filter(p => p.endsWith(g));
-    if (!protocol.endsWith(g)) setProtocol(compatible[0] as import("@/lib/anthropometryUtils").SkinfoldProtocol);
-  }, [sfMode, patient.gender]);
-
   const setField = (field: string, value: string) => setForm(p => ({ ...p, [field]: value }));
 
-  // Calcula % gordura em tempo real a partir das dobras
+  // ── Dobras: cálculo em tempo real ──────────────────────────────────────────
   const sfValues: import("@/lib/anthropometryUtils").SkinfoldValues = {
     sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
     sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
@@ -920,34 +916,64 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     sf_calf_sf:     form.sf_calf_sf     ? parseFloat(form.sf_calf_sf)     : undefined,
   };
 
-  const patientAge = patient.birth_date ? calcAge(patient.birth_date) : 25;
-  const calcResult = sfMode
+  const patientAge   = patient.birth_date ? calcAge(patient.birth_date) : 25;
+  const calcResult   = compMode === "skinfold"
     ? import_calcBodyFat(protocol, sfValues, patientAge)
     : null;
   const protocolInfo = PROTOCOLS.find(p => p.id === protocol);
-  const sfSum = sfMode ? sumSkinfolds(protocol, sfValues) : 0;
+  const sfSum        = compMode === "skinfold" ? sumSkinfolds(protocol, sfValues) : 0;
   const fatClassification = calcResult
     ? classifyBodyFat(calcResult.fatPct, patient.gender === "F" ? "F" : "M")
+    : null;
+
+  // ── Bioimpedância: derivados em tempo real ─────────────────────────────────
+  const bioFatPct   = compMode === "bio" && form.body_fat ? parseFloat(form.body_fat) : null;
+  const bioWeight   = form.weight ? parseFloat(form.weight) : null;
+  const bioFatKg    = bioFatPct != null && bioWeight != null
+    ? parseFloat((bioWeight * bioFatPct / 100).toFixed(2))
+    : null;
+  const bioLeanKg   = bioFatKg != null && bioWeight != null
+    ? parseFloat((bioWeight - bioFatKg).toFixed(2))
+    : null;
+  const bioFatClass = bioFatPct != null
+    ? classifyBodyFat(bioFatPct, patient.gender === "F" ? "F" : "M")
     : null;
 
   const handleInsert = async () => {
     setSaving(true);
     const payload: any = { patient_id: pid, assessment_date: form.assessment_date };
-    const skipFields = new Set(["assessment_date", "notes", "sf_protocol"]);
-    Object.entries(form).forEach(([key, val]) => {
-      if (!skipFields.has(key) && val) payload[key] = parseFloat(val as string);
+    const numFields = [
+      "weight", "height", "visceral_fat",
+      "neck", "shoulder", "chest", "waist", "abdomen", "hip",
+      "arm_relax_r", "arm_relax_l", "arm_contract_r", "arm_contract_l",
+      "forearm_r", "forearm_l", "wrist_r", "wrist_l",
+      "thigh_prox_r", "thigh_prox_l", "thigh_r", "thigh_l",
+      "calf_r", "calf_l",
+    ];
+    numFields.forEach((key) => {
+      const val = (form as any)[key];
+      if (val) payload[key] = parseFloat(val);
     });
     if (form.notes) payload.notes = form.notes;
-    // Se modo dobras: sobrescreve body_fat e density com o calculado
-    if (sfMode && calcResult) {
+
+    if (compMode === "skinfold" && calcResult) {
+      // Dobras: preenche todas as dobras medidas + resultado calculado
+      Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
       payload.body_fat     = parseFloat(calcResult.fatPct.toFixed(2));
       payload.body_density = parseFloat(calcResult.density.toFixed(6));
       payload.sf_protocol  = protocol;
-      // Calcula massa magra se tiver peso
-      if (payload.weight && payload.body_fat) {
-        payload.lean_mass = parseFloat((payload.weight * (1 - payload.body_fat / 100)).toFixed(2));
-      }
+    } else if (compMode === "bio" && form.body_fat) {
+      // Bioimpedância: % gordura inserido diretamente
+      payload.body_fat = parseFloat(form.body_fat);
     }
+
+    // Auto lean_mass a partir de peso e % gordura
+    if (payload.weight && payload.body_fat != null) {
+      payload.lean_mass = parseFloat(
+        (payload.weight * (1 - payload.body_fat / 100)).toFixed(2)
+      );
+    }
+
     const res = await insertMeasurement(payload as Measurement);
     if (res) {
       setMeasurements(p => [res, ...p]);
@@ -965,8 +991,13 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     }
   };
 
-  const latest     = measurements[0];
-  const latestBmi  = latest ? calcBMI(latest.weight, latest.height) : null;
+  const latest    = measurements[0];
+  const latestBmi = latest ? calcBMI(latest.weight, latest.height) : null;
+
+  // Section header helper (defined inline to avoid prop drilling)
+  const SH = ({ label }: { label: string }) => (
+    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{label}</p>
+  );
 
   return (
     <div className="space-y-4">
@@ -981,11 +1012,11 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
             </p>
           </div>
           {([
-            { label: "Peso",       value: latest.weight   != null ? `${latest.weight} kg` : "—", badge: null      },
-            { label: "Altura",     value: latest.height   != null ? `${latest.height} cm` : "—", badge: null      },
-            { label: "IMC",        value: latestBmi ?? "—",                                       badge: latestBmi },
-            { label: "% Gordura",  value: latest.body_fat != null ? `${latest.body_fat}%`  : "—", badge: null      },
-            { label: "Cintura",    value: latest.waist    != null ? `${latest.waist} cm`   : "—", badge: null      },
+            { label: "Peso",      value: latest.weight   != null ? `${latest.weight} kg` : "—", badge: null      },
+            { label: "Altura",    value: latest.height   != null ? `${latest.height} cm` : "—", badge: null      },
+            { label: "IMC",       value: latestBmi ?? "—",                                       badge: latestBmi },
+            { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%`  : "—", badge: null      },
+            { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`   : "—", badge: null      },
           ] as { label: string; value: string; badge: string | null }[]).map((s, i) => (
             <div key={s.label} className={`flex-1 px-4 py-3.5 bg-card flex flex-col justify-center min-w-0${i > 0 ? " border-l border-border" : ""}`}>
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{s.label}</p>
@@ -1000,26 +1031,13 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 
       {/* ── New measurement form ── */}
       <div className="border border-border rounded-md overflow-hidden bg-card">
+        {/* Header */}
         <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Scale className="h-4 w-4 text-muted-foreground" />
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nova avaliação</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nova Avaliação Antropométrica</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Toggle modo dobras */}
-            <button
-              type="button"
-              onClick={() => setSfMode(v => !v)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium border transition-all",
-                sfMode
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-border hover:border-primary/50"
-              )}
-            >
-              <Activity size={12} />
-              {sfMode ? "Modo: Dobras Cutâneas" : "Modo: Manual"}
-            </button>
+          <div className="flex items-center gap-2">
             {measurements.length > 0 && (
               <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
                 <Button variant="outline" size="sm" className="h-8 rounded-md text-sm gap-1.5 shrink-0">
@@ -1033,57 +1051,121 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
               onChange={e => setField("assessment_date", e.target.value)}
               className="h-8 rounded-md text-sm w-38"
             />
-            <Button
-              onClick={handleInsert}
-              disabled={saving || (sfMode && !calcResult)}
-              size="sm"
-              className="h-8 rounded-md text-sm gap-1.5"
-            >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-              {saving ? "Salvando..." : "Registrar"}
-            </Button>
           </div>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-6">
 
-          {/* ── MODO DOBRAS CUTÂNEAS ── */}
-          {sfMode ? (
-            <>
-              {/* Seletor de protocolo */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Protocolo de cálculo</p>
-                <div className="flex flex-wrap gap-2">
-                  {PROTOCOLS
-                    .filter(p => patient.gender ? p.gender === (patient.gender === "F" ? "F" : "M") : true)
-                    .map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setProtocol(p.id)}
-                        className={cn(
-                          "px-3 h-8 rounded-md text-xs font-medium border transition-all",
-                          protocol === p.id
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                        )}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+          {/* ── SEÇÃO 1: Dados Básicos ── */}
+          <div>
+            <SH label="Dados Básicos" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <InputField label="Peso (kg)"   field="weight"       form={form} setField={setField} placeholder="70.5" />
+              <InputField label="Altura (cm)" field="height"       form={form} setField={setField} placeholder="175"  />
+              <InputField label="G. Visceral" field="visceral_fat" form={form} setField={setField} placeholder="8"    />
+            </div>
+          </div>
+
+          {/* ── SEÇÃO 2: Composição Corporal ── */}
+          <div className="pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between mb-3">
+              <SH label="Composição Corporal" />
+              {/* Toggle Bioimpedância / Adipômetro */}
+              <div className="flex items-center bg-muted rounded-md p-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCompMode("bio")}
+                  className={cn(
+                    "px-3 h-7 rounded text-xs font-medium transition-all",
+                    compMode === "bio"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Bioimpedância
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompMode("skinfold")}
+                  className={cn(
+                    "px-3 h-7 rounded text-xs font-medium transition-all",
+                    compMode === "skinfold"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Adipômetro
+                </button>
+              </div>
+            </div>
+
+            {compMode === "bio" ? (
+              /* ── Bioimpedância ── */
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <InputField label="% Gordura" field="body_fat" form={form} setField={setField} placeholder="18.5" />
+                  {/* Derivados (read-only) */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Massa Gorda (kg)
+                    </Label>
+                    <div className={cn(
+                      "h-9 px-3 flex items-center rounded-md border text-sm tabular-nums",
+                      bioFatKg != null ? "bg-muted/50 text-foreground" : "bg-muted/30 text-muted-foreground"
+                    )}>
+                      {bioFatKg != null ? `${bioFatKg} kg` : "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Massa Magra (kg)
+                    </Label>
+                    <div className={cn(
+                      "h-9 px-3 flex items-center rounded-md border text-sm tabular-nums",
+                      bioLeanKg != null ? "bg-muted/50 text-foreground" : "bg-muted/30 text-muted-foreground"
+                    )}>
+                      {bioLeanKg != null ? `${bioLeanKg} kg` : "—"}
+                    </div>
+                  </div>
                 </div>
-                {protocolInfo && (
-                  <p className="text-xs text-muted-foreground">
-                    Dobras: <span className="font-medium text-foreground">{protocolInfo.description}</span>
+                {bioFatClass && bioFatPct != null && (
+                  <p className={cn("text-xs font-semibold", bioFatClass.color)}>
+                    {bioFatPct.toFixed(1)}% — {bioFatClass.label}
                   </p>
                 )}
               </div>
+            ) : (
+              /* ── Adipômetro ── */
+              <div className="space-y-4">
+                {/* Seletor de protocolo */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {PROTOCOLS
+                      .filter(p => patient.gender ? p.gender === (patient.gender === "F" ? "F" : "M") : true)
+                      .map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setProtocol(p.id)}
+                          className={cn(
+                            "px-3 h-8 rounded-md text-xs font-medium border transition-all",
+                            protocol === p.id
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                  </div>
+                  {protocolInfo && (
+                    <p className="text-xs text-muted-foreground">
+                      Dobras: <span className="font-medium text-foreground">{protocolInfo.description}</span>
+                    </p>
+                  )}
+                </div>
 
-              {/* Inputs das dobras do protocolo selecionado */}
-              <div className="pt-3 border-t border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-                  Dobras cutâneas (mm)
-                </p>
+                {/* Inputs das dobras */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {protocolInfo?.skinfolds.map(key => (
                     <div key={key} className="space-y-1.5">
@@ -1105,115 +1187,104 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Resultado em tempo real */}
-              <div className={cn(
-                "rounded-xl border p-4 transition-all",
-                calcResult
-                  ? "border-primary/30 bg-primary/5"
-                  : "border-border bg-muted/30"
-              )}>
-                {calcResult ? (
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-                        Resultado calculado
-                      </p>
-                      <div className="flex items-end gap-3 flex-wrap">
-                        <div>
-                          <p className={cn("text-3xl font-bold tabular-nums", fatClassification?.color)}>
-                            {calcResult.fatPct.toFixed(1)}<span className="text-lg">%</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">Gordura corporal</p>
-                        </div>
-                        <div className="pb-1">
-                          <p className={cn("text-sm font-semibold", fatClassification?.color)}>
-                            {fatClassification?.label}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            DC: {calcResult.density.toFixed(4)} g/mL &nbsp;·&nbsp; Σ: {sfSum.toFixed(1)} mm
-                          </p>
+                {/* Resultado em tempo real */}
+                <div className={cn(
+                  "rounded-lg border p-4 transition-all",
+                  calcResult ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30"
+                )}>
+                  {calcResult ? (
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                          Resultado calculado
+                        </p>
+                        <div className="flex items-end gap-3 flex-wrap">
+                          <div>
+                            <p className={cn("text-3xl font-bold tabular-nums", fatClassification?.color)}>
+                              {calcResult.fatPct.toFixed(1)}<span className="text-lg">%</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">Gordura corporal</p>
+                          </div>
+                          <div className="pb-1">
+                            <p className={cn("text-sm font-semibold", fatClassification?.color)}>
+                              {fatClassification?.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              DC: {calcResult.density.toFixed(4)} g/mL &nbsp;·&nbsp; Σ: {sfSum.toFixed(1)} mm
+                            </p>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground text-right self-end">
+                        {protocol} · Siri (1961)
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground text-right self-end">
-                      {protocol} · Siri (1961)
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Preencha todas as dobras do protocolo para calcular automaticamente.
                     </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Preencha todas as dobras do protocolo para calcular automaticamente.
-                  </p>
-                )}
-              </div>
-
-              {/* Peso e cintura sempre presentes */}
-              <div className="pt-3 border-t border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-                  Biometria
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <InputField label="Peso (kg)"   field="weight"       form={form} setField={setField} placeholder="70.5" />
-                  <InputField label="Altura (cm)" field="height"       form={form} setField={setField} placeholder="175"  />
-                  <InputField label="Cintura (cm)" field="waist"       form={form} setField={setField} placeholder="82"   />
-                  <InputField label="G. Visceral" field="visceral_fat" form={form} setField={setField} placeholder="8"    />
+                  )}
                 </div>
               </div>
-            </>
-          ) : (
-            <>
-              {/* MODO MANUAL (original) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                <InputField label="Peso (kg)"   field="weight"       form={form} setField={setField} placeholder="70.5" />
-                <InputField label="Altura (cm)" field="height"       form={form} setField={setField} placeholder="175"  />
-                <InputField label="% Gordura"   field="body_fat"     form={form} setField={setField} placeholder="18"   />
-                <InputField label="Massa Magra" field="lean_mass"    form={form} setField={setField} placeholder="58"   />
-                <InputField label="G. Visceral" field="visceral_fat" form={form} setField={setField} placeholder="8"    />
-              </div>
+            )}
+          </div>
 
-              <div className="pt-3 border-t border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Tronco</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <InputField label="Pescoço"  field="neck"     form={form} setField={setField} />
-                  <InputField label="Ombro"    field="shoulder" form={form} setField={setField} />
-                  <InputField label="Peitoral" field="chest"    form={form} setField={setField} />
-                  <InputField label="Cintura"  field="waist"    form={form} setField={setField} />
-                  <InputField label="Abdômen"  field="abdomen"  form={form} setField={setField} />
-                  <InputField label="Quadril"  field="hip"      form={form} setField={setField} />
-                </div>
-              </div>
+          {/* ── SEÇÃO 3: Circunferências — Tronco ── */}
+          <div className="pt-4 border-t border-border/60">
+            <SH label="Circunferências — Tronco (cm)" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <InputField label="Pescoço"  field="neck"     form={form} setField={setField} />
+              <InputField label="Ombro"    field="shoulder" form={form} setField={setField} />
+              <InputField label="Peitoral" field="chest"    form={form} setField={setField} />
+              <InputField label="Cintura"  field="waist"    form={form} setField={setField} />
+              <InputField label="Abdômen"  field="abdomen"  form={form} setField={setField} />
+              <InputField label="Quadril"  field="hip"      form={form} setField={setField} />
+            </div>
+          </div>
 
-              <div className="pt-3 border-t border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Superiores (D / E)</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                  <BilateralField label="Braço Rel."  fieldR="arm_relax_r"    fieldL="arm_relax_l"    form={form} setField={setField} />
-                  <BilateralField label="Braço Con."  fieldR="arm_contract_r" fieldL="arm_contract_l" form={form} setField={setField} />
-                  <BilateralField label="Antebraço"   fieldR="forearm_r"      fieldL="forearm_l"      form={form} setField={setField} />
-                  <BilateralField label="Punho"       fieldR="wrist_r"        fieldL="wrist_l"        form={form} setField={setField} />
-                </div>
-              </div>
+          {/* ── SEÇÃO 4: Membros Superiores ── */}
+          <div className="pt-4 border-t border-border/60">
+            <SH label="Membros Superiores D / E (cm)" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              <BilateralField label="Braço Rel."  fieldR="arm_relax_r"    fieldL="arm_relax_l"    form={form} setField={setField} />
+              <BilateralField label="Braço Con."  fieldR="arm_contract_r" fieldL="arm_contract_l" form={form} setField={setField} />
+              <BilateralField label="Antebraço"   fieldR="forearm_r"      fieldL="forearm_l"      form={form} setField={setField} />
+              <BilateralField label="Punho"       fieldR="wrist_r"        fieldL="wrist_l"        form={form} setField={setField} />
+            </div>
+          </div>
 
-              <div className="pt-3 border-t border-border/60">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Membros Inferiores (D / E)</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <BilateralField label="Coxa Prox." fieldR="thigh_prox_r" fieldL="thigh_prox_l" form={form} setField={setField} />
-                  <BilateralField label="Coxa Med."  fieldR="thigh_r"      fieldL="thigh_l"      form={form} setField={setField} />
-                  <BilateralField label="Panturr."   fieldR="calf_r"       fieldL="calf_l"       form={form} setField={setField} />
-                </div>
-              </div>
-            </>
-          )}
+          {/* ── SEÇÃO 5: Membros Inferiores ── */}
+          <div className="pt-4 border-t border-border/60">
+            <SH label="Membros Inferiores D / E (cm)" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <BilateralField label="Coxa Prox." fieldR="thigh_prox_r" fieldL="thigh_prox_l" form={form} setField={setField} />
+              <BilateralField label="Coxa Med."  fieldR="thigh_r"      fieldL="thigh_l"      form={form} setField={setField} />
+              <BilateralField label="Panturr."   fieldR="calf_r"       fieldL="calf_l"       form={form} setField={setField} />
+            </div>
+          </div>
 
-          {/* Notas — sempre visível */}
-          <div className="pt-3 border-t border-border/60">
-            <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Notas técnicas</Label>
+          {/* ── SEÇÃO 6: Notas técnicas ── */}
+          <div className="pt-4 border-t border-border/60">
+            <SH label="Notas Técnicas" />
             <Input
               value={form.notes || ""}
               onChange={e => setField("notes", e.target.value)}
               placeholder="Observações sobre esta avaliação…"
-              className="mt-1.5 h-9 rounded-md text-sm"
+              className="h-9 rounded-md text-sm"
             />
+          </div>
+
+          {/* ── Botão de registro ── */}
+          <div className="pt-2 flex justify-end">
+            <Button
+              onClick={handleInsert}
+              disabled={saving || (compMode === "skinfold" && !calcResult)}
+              className="h-9 rounded-md text-sm gap-1.5 px-6"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              {saving ? "Salvando..." : "Registrar Avaliação"}
+            </Button>
           </div>
         </div>
       </div>
