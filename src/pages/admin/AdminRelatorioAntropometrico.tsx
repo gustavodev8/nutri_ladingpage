@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Activity, FileDown } from "lucide-react";
+import { ArrowLeft, Loader2, Activity, FileDown, CalendarDays, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -40,6 +40,15 @@ const formatDate = (dateStr?: string) =>
         day: "2-digit",
         month: "short",
         year: "numeric",
+      })
+    : "—";
+
+const formatDateShort = (dateStr?: string) =>
+  dateStr
+    ? new Date(dateStr + "T12:00:00").toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
       })
     : "—";
 
@@ -203,6 +212,99 @@ function StringRow({ label, values }: { label: string; values: (string | null)[]
   );
 }
 
+// ─── Date Selector ────────────────────────────────────────────────────────────
+
+const PRINT_MAX = 5;
+
+function DateSelector({
+  measurements,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  onClear,
+}: {
+  measurements: Measurement[];
+  selectedIds: number[];
+  onToggle: (id: number) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div className="print:hidden rounded border border-border bg-card overflow-hidden">
+      {/* Header */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <CalendarDays size={14} className="text-muted-foreground" />
+          <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+            Avaliações exibidas
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
+            {selectedIds.length} de {measurements.length}
+          </span>
+          {selectedIds.length > PRINT_MAX && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[11px] font-bold border border-amber-200">
+              PDF: recomendado até {PRINT_MAX} colunas
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {/* Body */}
+      {open && (
+        <div className="px-5 py-4">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {/* newest first for the UI list */}
+            {measurements.map((m) => {
+              const mid = m.id!;
+              const checked = selectedIds.includes(mid);
+              return (
+                <button
+                  key={mid}
+                  type="button"
+                  onClick={() => onToggle(mid)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all",
+                    checked
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                  )}
+                >
+                  {checked ? <CheckSquare size={12} /> : <Square size={12} />}
+                  {formatDateShort(m.assessment_date)}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onSelectAll}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              Selecionar todas
+            </button>
+            <span className="text-muted-foreground/40">·</span>
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Limpar seleção
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const ALL_SF_KEYS: SkinfoldKey[] = [
@@ -212,17 +314,46 @@ const ALL_SF_KEYS: SkinfoldKey[] = [
 
 export default function AdminRelatorioAntropometrico() {
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading]       = useState(true);
-  const [patient, setPatient]       = useState<Patient | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [patient, setPatient]           = useState<Patient | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [selectedIds, setSelectedIds]   = useState<number[]>([]);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([fetchPatient(Number(id)), fetchMeasurements(Number(id))])
-      .then(([p, ms]) => { setPatient(p); setMeasurements(ms); })
+      .then(([p, ms]) => {
+        setPatient(p);
+        setMeasurements(ms);
+        // Default: 2 most recent
+        const defaults = ms.slice(0, 2).map((m) => m.id!).filter(Boolean);
+        setSelectedIds(defaults);
+      })
       .catch(() => toast.error("Erro ao carregar dados."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // ── Selection handlers ──────────────────────────────────────────────────────
+  const toggleId = (mid: number) =>
+    setSelectedIds((prev) =>
+      prev.includes(mid) ? prev.filter((x) => x !== mid) : [...prev, mid]
+    );
+
+  const selectAll = () =>
+    setSelectedIds(measurements.map((m) => m.id!).filter(Boolean));
+
+  const clearAll = () => setSelectedIds([]);
+
+  // ── Derive columns: filter + sort oldest → newest ──────────────────────────
+  const cols = useMemo(() => {
+    return measurements
+      .filter((m) => m.id != null && selectedIds.includes(m.id))
+      .sort((a, b) =>
+        (a.assessment_date ?? "").localeCompare(b.assessment_date ?? "")
+      );
+  }, [measurements, selectedIds]);
+
+  // ── Early returns ───────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -258,13 +389,10 @@ export default function AdminRelatorioAntropometrico() {
 
   const gender: "M" | "F" = patient.gender === "F" ? "F" : "M";
   const age = patient.birth_date ? calcAge(patient.birth_date) : 30;
-
-  // 3 most recent, displayed oldest → newest (left → right)
-  const cols = measurements.slice(0, 3).reverse();
   const N = cols.length;
   const colSpan = N + 1;
 
-  // Pre-compute derived values per column
+  // ── Pre-compute derived values per selected column ──────────────────────────
   const derived = cols.map((m) => ({
     bmi: calcBMI(m),
     fatMass:
@@ -277,7 +405,6 @@ export default function AdminRelatorioAntropometrico() {
         : null,
   }));
 
-  // Σ dobras per column (only for keys that belong to the saved protocol)
   const sfSums = cols.map((m) => {
     if (!m.sf_protocol) return null;
     const info = PROTOCOLS.find((p) => p.id === m.sf_protocol);
@@ -365,272 +492,288 @@ export default function AdminRelatorioAntropometrico() {
             )}
           </div>
         </div>
-        {measurements.length > 3 && (
-          <p className="text-xs text-muted-foreground shrink-0 print:text-[8px]">
-            Exibindo {N} de {measurements.length} avaliações
-          </p>
-        )}
+        {/* Print: show which dates are being compared */}
+        <p className="hidden print:block text-[8px] text-gray-500 text-right shrink-0 max-w-[160px]">
+          {cols.map((m) => formatDateShort(m.assessment_date)).join(" · ")}
+        </p>
+        {/* Screen: total count */}
+        <p className="text-xs text-muted-foreground shrink-0 print:hidden">
+          {measurements.length} avaliação{measurements.length !== 1 ? "ões" : ""}
+        </p>
       </div>
 
+      {/* ── Date selector ─────────────────────────────────────────────────── */}
+      <DateSelector
+        measurements={measurements}
+        selectedIds={selectedIds}
+        onToggle={toggleId}
+        onSelectAll={selectAll}
+        onClear={clearAll}
+      />
+
+      {/* ── Empty state when nothing is selected ──────────────────────────── */}
+      {cols.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-14 gap-2 border border-border rounded bg-card text-muted-foreground print:hidden">
+          <CalendarDays size={28} className="opacity-30" />
+          <p className="text-sm">Selecione ao menos uma avaliação para exibir o relatório.</p>
+        </div>
+      )}
+
       {/* ── Comparison table ──────────────────────────────────────────────── */}
-      <div className="rounded border border-border overflow-hidden print:break-inside-avoid">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px]">
+      {cols.length > 0 && (
+        <div className="rounded border border-border overflow-hidden print:break-inside-avoid">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px]">
 
-            {/* Table header */}
-            <thead>
-              <tr className="border-b border-border bg-muted">
-                <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground w-52 print:text-[8px] print:py-2 print:px-3 print:w-40">
-                  Métrica
-                </th>
-                {cols.map((m, i) => (
-                  <th
-                    key={i}
-                    className={cn(
-                      "px-4 py-3 text-right text-xs font-black uppercase tracking-widest min-w-[148px] print:text-[8px] print:py-2 print:px-3 print:min-w-0",
-                      i === cols.length - 1
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    <div>{formatDate(m.assessment_date)}</div>
-                    {cols.length > 1 && (
-                      <div className="text-[9px] font-medium normal-case mt-0.5 opacity-60 print:hidden">
-                        {i === 0
-                          ? "Mais antiga"
-                          : i === cols.length - 1
-                          ? "Mais recente"
-                          : `Avaliação ${i + 1}`}
-                      </div>
-                    )}
+              {/* Table header */}
+              <thead>
+                <tr className="border-b border-border bg-muted">
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground w-52 print:text-[8px] print:py-2 print:px-3 print:w-40">
+                    Métrica
                   </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {/* ── Medidas Gerais ─────────────────────────────────────── */}
-              <SectionRow label="Medidas Gerais" colSpan={colSpan} />
-
-              <MetricRow
-                label="Peso"
-                values={cols.map((m) => m.weight ?? null)}
-                unit="kg"
-              />
-              <MetricRow
-                label="Altura"
-                values={cols.map((m) => m.height ?? null)}
-                unit="cm"
-                decimals={0}
-              />
-              <MetricRow
-                label="IMC"
-                values={derived.map((d) => d.bmi)}
-                unit="kg/m²"
-                suffix={(val) => {
-                  const lb = bmiLabel(val);
-                  return (
-                    <span className="ml-1.5 text-[10px] text-muted-foreground print:hidden">
-                      ({lb})
-                    </span>
-                  );
-                }}
-              />
-
-              {/* ── Composição Corporal ────────────────────────────────── */}
-              <SectionRow label="Composição Corporal" colSpan={colSpan} />
-
-              <MetricRow
-                label="Gordura Corporal"
-                values={cols.map((m) => m.body_fat ?? null)}
-                unit="%"
-                suffix={(val) => {
-                  const cl = classifyBodyFat(val, gender);
-                  return (
-                    <span
+                  {cols.map((m, i) => (
+                    <th
+                      key={m.id ?? i}
                       className={cn(
-                        "ml-1.5 text-[10px] font-semibold print:hidden",
-                        cl.color
+                        "px-4 py-3 text-right text-xs font-black uppercase tracking-widest min-w-[148px] print:text-[8px] print:py-2 print:px-3 print:min-w-0",
+                        i === cols.length - 1
+                          ? "text-primary"
+                          : "text-muted-foreground"
                       )}
                     >
-                      ({cl.label})
+                      <div>{formatDate(m.assessment_date)}</div>
+                      {cols.length > 1 && (
+                        <div className="text-[9px] font-medium normal-case mt-0.5 opacity-60 print:hidden">
+                          {i === 0
+                            ? "Mais antiga"
+                            : i === cols.length - 1
+                            ? "Mais recente"
+                            : `Avaliação ${i + 1}`}
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {/* ── Medidas Gerais ──────────────────────────────────── */}
+                <SectionRow label="Medidas Gerais" colSpan={colSpan} />
+
+                <MetricRow
+                  label="Peso"
+                  values={cols.map((m) => m.weight ?? null)}
+                  unit="kg"
+                />
+                <MetricRow
+                  label="Altura"
+                  values={cols.map((m) => m.height ?? null)}
+                  unit="cm"
+                  decimals={0}
+                />
+                <MetricRow
+                  label="IMC"
+                  values={derived.map((d) => d.bmi)}
+                  unit="kg/m²"
+                  suffix={(val) => (
+                    <span className="ml-1.5 text-[10px] text-muted-foreground print:hidden">
+                      ({bmiLabel(val)})
                     </span>
-                  );
-                }}
-              />
-              <MetricRow
-                label="Massa Gorda"
-                values={derived.map((d) => d.fatMass)}
-                unit="kg"
-              />
-              <MetricRow
-                label="Massa Magra"
-                values={cols.map((m) => m.lean_mass ?? null)}
-                unit="kg"
-              />
-              <MetricRow
-                label="Gordura Visceral"
-                values={cols.map((m) => m.visceral_fat ?? null)}
-                decimals={0}
-              />
+                  )}
+                />
 
-              {/* ── Índices do Braço (AMB / AGB) ──────────────────────── */}
-              {hasArmData && (
-                <>
-                  <SectionRow label="Índices do Braço — AMB / AGB" colSpan={colSpan} />
-                  <MetricRow
-                    label="Circ. Muscular do Braço (CMB)"
-                    values={derived.map((d) => d.arm?.cmb ?? null)}
-                    unit="cm"
-                  />
-                  <MetricRow
-                    label="Área do Braço (AB)"
-                    values={derived.map((d) => d.arm?.ab ?? null)}
-                    unit="cm²"
-                  />
-                  <MetricRow
-                    label="Área Muscular do Braço (AMB)"
-                    values={derived.map((d) => d.arm?.amb ?? null)}
-                    unit="cm²"
-                  />
-                  <MetricRow
-                    label="AMB Corrigida — Heymsfield (AMBc)"
-                    values={derived.map((d) => d.arm?.ambc ?? null)}
-                    unit="cm²"
-                  />
-                  <MetricRow
-                    label="Área Gordurosa do Braço (AGB)"
-                    values={derived.map((d) => d.arm?.agb ?? null)}
-                    unit="cm²"
-                  />
-                  <StringRow
-                    label="Adequação AMBc (Frisancho, 1990)"
-                    values={derived.map((d) => {
-                      if (!d.arm) return null;
-                      const cl = classifyAmbc(d.arm.ambc, gender, age);
-                      return `${cl.pct}% — ${cl.label}`;
-                    })}
-                  />
-                </>
-              )}
+                {/* ── Composição Corporal ─────────────────────────────── */}
+                <SectionRow label="Composição Corporal" colSpan={colSpan} />
 
-              {/* ── Circunferências — Tronco ───────────────────────────── */}
-              {hasTronco && (
-                <>
-                  <SectionRow label="Circunferências — Tronco" colSpan={colSpan} />
-                  <MetricRow label="Pescoço"  values={cols.map((m) => m.neck     ?? null)} unit="cm" />
-                  <MetricRow label="Ombro"    values={cols.map((m) => m.shoulder ?? null)} unit="cm" />
-                  <MetricRow label="Peitoral" values={cols.map((m) => m.chest    ?? null)} unit="cm" />
-                  <MetricRow label="Cintura"  values={cols.map((m) => m.waist    ?? null)} unit="cm" />
-                  <MetricRow label="Abdômen"  values={cols.map((m) => m.abdomen  ?? null)} unit="cm" />
-                  <MetricRow label="Quadril"  values={cols.map((m) => m.hip      ?? null)} unit="cm" />
-                </>
-              )}
+                <MetricRow
+                  label="Gordura Corporal"
+                  values={cols.map((m) => m.body_fat ?? null)}
+                  unit="%"
+                  suffix={(val) => {
+                    const cl = classifyBodyFat(val, gender);
+                    return (
+                      <span className={cn("ml-1.5 text-[10px] font-semibold print:hidden", cl.color)}>
+                        ({cl.label})
+                      </span>
+                    );
+                  }}
+                />
+                <MetricRow
+                  label="Massa Gorda"
+                  values={derived.map((d) => d.fatMass)}
+                  unit="kg"
+                />
+                <MetricRow
+                  label="Massa Magra"
+                  values={cols.map((m) => m.lean_mass ?? null)}
+                  unit="kg"
+                />
+                <MetricRow
+                  label="Gordura Visceral"
+                  values={cols.map((m) => m.visceral_fat ?? null)}
+                  decimals={0}
+                />
 
-              {/* ── Circunferências — Membros Superiores ──────────────── */}
-              {hasSup && (
-                <>
-                  <SectionRow label="Circunferências — Membros Superiores (D · E)" colSpan={colSpan} />
-                  <BilateralRow
-                    label="Braço Relaxado"
-                    rights={cols.map((m) => m.arm_relax_r    ?? null)}
-                    lefts={cols.map((m)  => m.arm_relax_l    ?? null)}
-                  />
-                  <BilateralRow
-                    label="Braço Contraído"
-                    rights={cols.map((m) => m.arm_contract_r ?? null)}
-                    lefts={cols.map((m)  => m.arm_contract_l ?? null)}
-                  />
-                  <BilateralRow
-                    label="Antebraço"
-                    rights={cols.map((m) => m.forearm_r      ?? null)}
-                    lefts={cols.map((m)  => m.forearm_l      ?? null)}
-                  />
-                  <BilateralRow
-                    label="Punho"
-                    rights={cols.map((m) => m.wrist_r        ?? null)}
-                    lefts={cols.map((m)  => m.wrist_l        ?? null)}
-                  />
-                </>
-              )}
-
-              {/* ── Circunferências — Membros Inferiores ──────────────── */}
-              {hasInf && (
-                <>
-                  <SectionRow label="Circunferências — Membros Inferiores (D · E)" colSpan={colSpan} />
-                  <BilateralRow
-                    label="Coxa Proximal"
-                    rights={cols.map((m) => m.thigh_prox_r ?? null)}
-                    lefts={cols.map((m)  => m.thigh_prox_l ?? null)}
-                  />
-                  <BilateralRow
-                    label="Coxa Medial"
-                    rights={cols.map((m) => m.thigh_r      ?? null)}
-                    lefts={cols.map((m)  => m.thigh_l      ?? null)}
-                  />
-                  <BilateralRow
-                    label="Panturrilha"
-                    rights={cols.map((m) => m.calf_r       ?? null)}
-                    lefts={cols.map((m)  => m.calf_l       ?? null)}
-                  />
-                </>
-              )}
-
-              {/* ── Dobras Cutâneas ────────────────────────────────────── */}
-              {hasDobras && (
-                <>
-                  <SectionRow label="Dobras Cutâneas" colSpan={colSpan} />
-                  {ALL_SF_KEYS.map((key) => (
+                {/* ── Índices do Braço (AMB / AGB) ─────────────────────── */}
+                {hasArmData && (
+                  <>
+                    <SectionRow label="Índices do Braço — AMB / AGB" colSpan={colSpan} />
                     <MetricRow
-                      key={key}
-                      label={SKINFOLD_LABELS[key]}
-                      values={cols.map((m) => (m as any)[key] ?? null)}
+                      label="Circ. Muscular do Braço (CMB)"
+                      values={derived.map((d) => d.arm?.cmb ?? null)}
+                      unit="cm"
+                    />
+                    <MetricRow
+                      label="Área do Braço (AB)"
+                      values={derived.map((d) => d.arm?.ab ?? null)}
+                      unit="cm²"
+                    />
+                    <MetricRow
+                      label="Área Muscular do Braço (AMB)"
+                      values={derived.map((d) => d.arm?.amb ?? null)}
+                      unit="cm²"
+                    />
+                    <MetricRow
+                      label="AMB Corrigida — Heymsfield (AMBc)"
+                      values={derived.map((d) => d.arm?.ambc ?? null)}
+                      unit="cm²"
+                    />
+                    <MetricRow
+                      label="Área Gordurosa do Braço (AGB)"
+                      values={derived.map((d) => d.arm?.agb ?? null)}
+                      unit="cm²"
+                    />
+                    <StringRow
+                      label="Adequação AMBc (Frisancho, 1990)"
+                      values={derived.map((d) => {
+                        if (!d.arm) return null;
+                        const cl = classifyAmbc(d.arm.ambc, gender, age);
+                        return `${cl.pct}% — ${cl.label}`;
+                      })}
+                    />
+                  </>
+                )}
+
+                {/* ── Circunferências — Tronco ──────────────────────────── */}
+                {hasTronco && (
+                  <>
+                    <SectionRow label="Circunferências — Tronco" colSpan={colSpan} />
+                    <MetricRow label="Pescoço"  values={cols.map((m) => m.neck     ?? null)} unit="cm" />
+                    <MetricRow label="Ombro"    values={cols.map((m) => m.shoulder ?? null)} unit="cm" />
+                    <MetricRow label="Peitoral" values={cols.map((m) => m.chest    ?? null)} unit="cm" />
+                    <MetricRow label="Cintura"  values={cols.map((m) => m.waist    ?? null)} unit="cm" />
+                    <MetricRow label="Abdômen"  values={cols.map((m) => m.abdomen  ?? null)} unit="cm" />
+                    <MetricRow label="Quadril"  values={cols.map((m) => m.hip      ?? null)} unit="cm" />
+                  </>
+                )}
+
+                {/* ── Circunferências — Membros Superiores ─────────────── */}
+                {hasSup && (
+                  <>
+                    <SectionRow label="Circunferências — Membros Superiores (D · E)" colSpan={colSpan} />
+                    <BilateralRow
+                      label="Braço Relaxado"
+                      rights={cols.map((m) => m.arm_relax_r    ?? null)}
+                      lefts={cols.map((m)  => m.arm_relax_l    ?? null)}
+                    />
+                    <BilateralRow
+                      label="Braço Contraído"
+                      rights={cols.map((m) => m.arm_contract_r ?? null)}
+                      lefts={cols.map((m)  => m.arm_contract_l ?? null)}
+                    />
+                    <BilateralRow
+                      label="Antebraço"
+                      rights={cols.map((m) => m.forearm_r      ?? null)}
+                      lefts={cols.map((m)  => m.forearm_l      ?? null)}
+                    />
+                    <BilateralRow
+                      label="Punho"
+                      rights={cols.map((m) => m.wrist_r        ?? null)}
+                      lefts={cols.map((m)  => m.wrist_l        ?? null)}
+                    />
+                  </>
+                )}
+
+                {/* ── Circunferências — Membros Inferiores ─────────────── */}
+                {hasInf && (
+                  <>
+                    <SectionRow label="Circunferências — Membros Inferiores (D · E)" colSpan={colSpan} />
+                    <BilateralRow
+                      label="Coxa Proximal"
+                      rights={cols.map((m) => m.thigh_prox_r ?? null)}
+                      lefts={cols.map((m)  => m.thigh_prox_l ?? null)}
+                    />
+                    <BilateralRow
+                      label="Coxa Medial"
+                      rights={cols.map((m) => m.thigh_r      ?? null)}
+                      lefts={cols.map((m)  => m.thigh_l      ?? null)}
+                    />
+                    <BilateralRow
+                      label="Panturrilha"
+                      rights={cols.map((m) => m.calf_r       ?? null)}
+                      lefts={cols.map((m)  => m.calf_l       ?? null)}
+                    />
+                  </>
+                )}
+
+                {/* ── Dobras Cutâneas ───────────────────────────────────── */}
+                {hasDobras && (
+                  <>
+                    <SectionRow label="Dobras Cutâneas" colSpan={colSpan} />
+                    {ALL_SF_KEYS.map((key) => (
+                      <MetricRow
+                        key={key}
+                        label={SKINFOLD_LABELS[key]}
+                        values={cols.map((m) => (m as any)[key] ?? null)}
+                        unit="mm"
+                        decimals={1}
+                      />
+                    ))}
+                    <MetricRow
+                      label="Σ Dobras do protocolo"
+                      values={sfSums}
                       unit="mm"
                       decimals={1}
                     />
-                  ))}
-                  <MetricRow
-                    label="Σ Dobras do protocolo"
-                    values={sfSums}
-                    unit="mm"
-                    decimals={1}
-                  />
-                  <MetricRow
-                    label="Densidade Corporal"
-                    values={cols.map((m) => m.body_density ?? null)}
-                    unit="g/mL"
-                    decimals={4}
-                  />
-                  <StringRow
-                    label="Protocolo"
-                    values={cols.map((m) => {
-                      if (!m.sf_protocol) return null;
-                      return PROTOCOLS.find((p) => p.id === m.sf_protocol)?.label ?? m.sf_protocol;
-                    })}
-                  />
-                </>
-              )}
-            </tbody>
-          </table>
+                    <MetricRow
+                      label="Densidade Corporal"
+                      values={cols.map((m) => m.body_density ?? null)}
+                      unit="g/mL"
+                      decimals={4}
+                    />
+                    <StringRow
+                      label="Protocolo"
+                      values={cols.map((m) => {
+                        if (!m.sf_protocol) return null;
+                        return PROTOCOLS.find((p) => p.id === m.sf_protocol)?.label ?? m.sf_protocol;
+                      })}
+                    />
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Legend ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-5 text-xs text-muted-foreground print:text-[8px]">
-        <span className="flex items-center gap-1.5">
-          <span className="font-bold text-green-600">(+X)</span>
-          Aumento em relação à coluna anterior
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="font-bold text-red-500">(−X)</span>
-          Redução em relação à coluna anterior
-        </span>
-        <span className="text-muted-foreground/60">
-          Bilateral: delta calculado pelo lado Direito · AMBc: Heymsfield et al. (1982) · Adequação: Frisancho (1990)
-        </span>
-      </div>
+      {cols.length > 0 && (
+        <div className="flex flex-wrap items-center gap-5 text-xs text-muted-foreground print:text-[8px]">
+          <span className="flex items-center gap-1.5">
+            <span className="font-bold text-green-600">(+X)</span>
+            Aumento em relação à coluna anterior
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-bold text-red-500">(−X)</span>
+            Redução em relação à coluna anterior
+          </span>
+          <span className="text-muted-foreground/60">
+            Bilateral: delta pelo lado D · AMBc: Heymsfield (1982) · Adequação: Frisancho (1990)
+          </span>
+        </div>
+      )}
 
-      {/* ── Notes ────────────────────────────────────────────────────────── */}
+      {/* ── Notes (most recent selected) ─────────────────────────────────── */}
       {mostRecent?.notes && (
         <div className="rounded border border-border bg-card px-5 py-4 print:px-3 print:py-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5 print:text-[7px]">
