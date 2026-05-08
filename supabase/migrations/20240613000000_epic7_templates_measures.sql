@@ -83,13 +83,7 @@ ALTER TABLE meal_foods
   ADD COLUMN IF NOT EXISTS household_measure TEXT,
   ADD COLUMN IF NOT EXISTS measure_amount    NUMERIC(5,2);
 
--- ── 5. Medidas caseiras na tabela de alimentos (TACO) ─────────────────────────
-ALTER TABLE foods
-  ADD COLUMN IF NOT EXISTS household_measure TEXT,
-  ADD COLUMN IF NOT EXISTS measure_amount    NUMERIC(5,2),
-  ADD COLUMN IF NOT EXISTS food_group        TEXT;   -- Carboidrato | Proteína | Gordura | Fruta | Vegetal | Laticínio | etc.
-
--- ── 6. Coluna food_group em meal_foods (para substituições inteligentes) ───────
+-- ── 5. Coluna food_group em meal_foods (para substituições inteligentes) ───────
 ALTER TABLE meal_foods
   ADD COLUMN IF NOT EXISTS food_group TEXT;
 
