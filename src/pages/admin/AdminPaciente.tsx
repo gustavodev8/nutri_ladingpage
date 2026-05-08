@@ -22,6 +22,8 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { ExamesTab } from "@/components/admin/ExamesTab";
+import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
+import { useConsultation } from "@/contexts/ConsultationContext";
 import { StrategyModal } from "@/components/admin/StrategyModal";
 import { calcMacros, type StrategyType, type MacroResult } from "@/lib/strategyUtils";
 import { type EnergyInput } from "@/lib/energyUtils";
@@ -41,8 +43,6 @@ import {
 import {
   fetchPatient,
   upsertPatient,
-  fetchAnamnesis,
-  upsertAnamnesis,
   fetchMeasurements,
   insertMeasurement,
   deleteMeasurement,
@@ -54,7 +54,6 @@ import {
   deletePatientPhoto,
   uploadPatientPhoto,
   type Patient,
-  type Anamnesis,
   type Measurement,
   type MealPlan,
   type PatientPhoto,
@@ -153,9 +152,12 @@ export default function AdminPaciente() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as TabKey) || "perfil";
 
+  // ── ConsultationContext — atualizado quando salvamos medições/anamnese ───
+  const { setMeasurement: ctxSetMeasurement, setAnamnesis: ctxSetAnamnesis } = useConsultation();
+
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
-  
+
   // ─── FULL PAGE DETAIL VIEW STATE ───
   const [selectedMeasurement, setSelectedMeasurement] = useState<Measurement | null>(null);
 
@@ -476,7 +478,7 @@ export default function AdminPaciente() {
             <PerfilTab patient={patient} onSaved={setPatient} />
           )}
           {activeTab === "anamnese" && (
-            <AnamneseTab patientId={id!} />
+            <AnamnesisForm patientId={id!} onSaved={ctxSetAnamnesis} />
           )}
           {activeTab === "antropometria" && (
             <AntropometriaTab
@@ -713,102 +715,7 @@ function PerfilTab({
 // Field auxiliar da Anamnese — fora do componente para não perder foco
 // ─────────────────────────────────────────────────────────────────────────────
 
-function AnamneseField({
-  label,
-  field,
-  type = "textarea",
-  placeholder,
-  form,
-  onChange,
-}: {
-  label: string;
-  field: string;
-  type?: "textarea" | "input";
-  placeholder?: string;
-  form: Record<string, any>;
-  onChange: (field: string, value: any) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="font-bold text-foreground/80">{label}</Label>
-      {type === "textarea" ? (
-        <Textarea
-          value={form[field] || ""}
-          onChange={(e) => onChange(field, e.target.value)}
-          placeholder={placeholder}
-          minRows={3}
-        />
-      ) : (
-        <Input
-          value={form[field] || ""}
-          onChange={(e) => onChange(field, e.target.value)}
-          placeholder={placeholder}
-        />
-      )}
-    </div>
-  );
-}
 
-function AnamneseTab({ patientId }: { patientId: string }) {
-  const pid = Number(patientId);
-  const [form, setForm] = useState<AnamnesisForm>({ patient_id: pid });
-  const [anamnesisId, setAnamnesisId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    fetchAnamnesis(pid).then((data) => {
-      if (data) {
-        setAnamnesisId(data.id ?? null);
-        const { id: _i, created_at: _c, updated_at: _u, ...rest } = data as any;
-        setForm({ ...rest, patient_id: pid });
-      }
-      setLoading(false);
-    });
-  }, [pid]);
-
-  const set = (field: string, value: any) =>
-    setForm((p) => ({ ...p, [field]: value }));
-
-  const handleSave = async () => {
-    setSaving(true);
-    const ok = await upsertAnamnesis(anamnesisId ? { ...form, id: anamnesisId } : form);
-    if (ok === true) toast.success("Anamnese salva!"); else toast.error("Falha ao salvar.");
-    setSaving(false);
-  };
-
-  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
-
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-6">
-        <AnamneseField label="Queixa Principal"        field="main_complaint"  form={form} onChange={set} />
-        <AnamneseField label="Histórico Médico"        field="medical_history" form={form} onChange={set} />
-        <AnamneseField label="Medicamentos em Uso"     field="medications"     form={form} onChange={set} />
-        <AnamneseField label="Alergias / Intolerâncias" field="allergies"      form={form} onChange={set} />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-border/40">
-          <AnamneseField label="Aversões"      field="food_aversions"  type="input" form={form} onChange={set} />
-          <AnamneseField label="Preferências"  field="food_preferences" type="input" form={form} onChange={set} />
-          <AnamneseField label="Refeições/dia" field="meals_per_day"   type="input" form={form} onChange={set} />
-          <AnamneseField label="Água (L/dia)"  field="water_intake"    type="input" form={form} onChange={set} />
-          <AnamneseField label="Sono (Horas)"  field="sleep_hours"     type="input" form={form} onChange={set} />
-          <AnamneseField label="Intestino"     field="bowel_function"  type="input" form={form} onChange={set} />
-        </div>
-
-        <AnamneseField label="Atividade Física"        field="physical_activity" form={form} onChange={set} />
-        <AnamneseField label="Objetivos do Paciente"   field="goals"             form={form} onChange={set} />
-      </div>
-
-      <div className="flex justify-end pt-4">
-        <Button onClick={handleSave} disabled={saving} className="h-11 px-8 rounded-xl font-bold gap-2">
-          {saving ? <Loader2 className="animate-spin" /> : <Save size={16} />}
-          Salvar Anamnese
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -977,6 +884,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     const res = await insertMeasurement(payload as Measurement);
     if (res) {
       setMeasurements(p => [res, ...p]);
+      ctxSetMeasurement(res);   // propaga imediatamente ao contexto global
       setForm({ assessment_date: todayISO() });
       toast.success("Avaliação registrada!");
     }
