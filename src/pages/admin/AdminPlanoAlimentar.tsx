@@ -14,7 +14,9 @@ import {
 } from "@/lib/supabase";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
+import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
+import { type MacroGoals } from "@/lib/planningUtils";
 import {
   calcEnergy, applyAdjustment, auditDiet,
   ACTIVITY_OPTIONS,
@@ -315,7 +317,8 @@ export default function AdminPlanoAlimentar() {
   const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
+  const [showEmail, setShowEmail]   = useState(false);
+  const [macroGoals, setMacroGoals] = useState<MacroGoals | null>(null);
 
   // ── Energy panel state ────────────────────────────────────────────────────
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
@@ -585,6 +588,14 @@ export default function AdminPlanoAlimentar() {
           )}
         </section>
 
+        {/* ── Planejamento Dietético (travamento de macros) ───────────────── */}
+        <DietaryPlanningPanel
+          weightKg={latestMeasurement?.weight}
+          totalKcal={plan.daily_calories}
+          actual={grand}
+          onGoalsChange={setMacroGoals}
+        />
+
         {/* ── Resumo nutricional ──────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
@@ -634,28 +645,56 @@ export default function AdminPlanoAlimentar() {
             </div>
           )}
 
-          {/* Barras de macros */}
+          {/* Barras de macros — com metas do DietaryPlanningPanel quando disponíveis */}
           <div className="space-y-2 mb-4">
-            {(() => {
-              const totalCal = grand.cal || 1;
-              const macros = [
-                { label: "Proteínas",    pct: Math.round((grand.prot  * 4 / totalCal) * 100) },
-                { label: "Carboidratos", pct: Math.round((grand.carbs * 4 / totalCal) * 100) },
-                { label: "Gorduras",     pct: Math.round((grand.fat   * 9 / totalCal) * 100) },
-              ];
-              return macros.map(({ label, pct }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
-                    <div className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${grand.cal > 0 ? pct : 0}%` }} />
+            {macroGoals ? (
+              // Metas travadas: mostra progresso g vs meta g
+              [
+                { label: "Proteínas",    actual: grand.prot,  goal: macroGoals.protein_g, color: "bg-blue-500"   },
+                { label: "Carboidratos", actual: grand.carbs, goal: macroGoals.carbs_g,   color: "bg-amber-400"  },
+                { label: "Gorduras",     actual: grand.fat,   goal: macroGoals.fat_g,     color: "bg-rose-400"   },
+              ].map(({ label, actual, goal, color }) => {
+                const pct    = goal > 0 ? Math.min((actual / goal) * 100, 100) : 0;
+                const over   = goal > 0 && actual > goal * 1.08;
+                const onTgt  = goal > 0 && actual >= goal * 0.92 && actual <= goal * 1.08;
+                return (
+                  <div key={label} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500",
+                          over ? "bg-red-500" : onTgt ? "bg-emerald-500" : color)}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground w-28 text-right">
+                      {actual.toFixed(1)}g / {goal.toFixed(0)}g
+                    </span>
                   </div>
-                  <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
-                    {grand.cal > 0 ? `${pct}%` : "0%"}
-                  </span>
-                </div>
-              ));
-            })()}
+                );
+              })
+            ) : (
+              // Sem metas: modo percentual do VET (comportamento original)
+              (() => {
+                const totalCal = grand.cal || 1;
+                return [
+                  { label: "Proteínas",    pct: Math.round((grand.prot  * 4 / totalCal) * 100) },
+                  { label: "Carboidratos", pct: Math.round((grand.carbs * 4 / totalCal) * 100) },
+                  { label: "Gorduras",     pct: Math.round((grand.fat   * 9 / totalCal) * 100) },
+                ].map(({ label, pct }) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${grand.cal > 0 ? pct : 0}%` }} />
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
+                      {grand.cal > 0 ? `${pct}%` : "0%"}
+                    </span>
+                  </div>
+                ));
+              })()
+            )}
           </div>
 
           {/* Barra de progresso calórico */}

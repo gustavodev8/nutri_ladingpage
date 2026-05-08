@@ -398,6 +398,10 @@ export interface MealFood {
   protein_per_100g?: number;
   carbs_per_100g?: number;
   fat_per_100g?: number;
+  // Epic 7: medidas caseiras
+  household_measure?: string;   // ex: "colher de sopa", "unidade média"
+  measure_amount?: number;      // ex: 1, 2, 0.5
+  food_group?: string;          // ex: "Carboidrato", "Proteína" — para substituições
 }
 
 // ─── Clínica – CRUD ───────────────────────────────────────────────────────────
