@@ -68,6 +68,31 @@ const calcBMI = (weight?: number, height?: number): string | null => {
   return (weight / Math.pow(height / 100, 2)).toFixed(1);
 };
 
+// ─── CPF helpers ──────────────────────────────────────────────────────────────
+
+function formatCPF(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function validateCPF(cpf: string): boolean {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
+  let r = (sum * 10) % 11;
+  if (r >= 10) r = 0;
+  if (r !== parseInt(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
+  r = (sum * 10) % 11;
+  if (r >= 10) r = 0;
+  return r === parseInt(d[10]);
+}
+
 const bmiClass = (bmi: number) => {
   if (bmi < 18.5)
     return { label: "Abaixo do peso", cls: "bg-blue-100 text-blue-700" };
@@ -506,6 +531,7 @@ function PerfilTab({
 }) {
   const [form, setForm] = useState<Patient>({ ...patient });
   const [saving, setSaving] = useState(false);
+  const [cpfError, setCpfError] = useState<string | null>(null);
 
   // Photos Evolution
   const [photos, setPhotos] = useState<PatientPhoto[]>([]);
@@ -525,9 +551,19 @@ function PerfilTab({
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
+    // Valida CPF se preenchido
+    const rawCpf = (form.cpf ?? "").replace(/\D/g, "");
+    if (rawCpf && !validateCPF(rawCpf)) {
+      setCpfError("CPF inválido — verifique os dígitos.");
+      return;
+    }
+    setCpfError(null);
+
     setSaving(true);
     try {
-      const updated = await upsertPatient(form);
+      // Persiste apenas dígitos (sem máscara)
+      const payload: Patient = { ...form, cpf: rawCpf || undefined };
+      const updated = await upsertPatient(payload);
       if (updated) {
         onSaved(updated);
         toast.success("Perfil salvo com sucesso!");
@@ -567,6 +603,8 @@ function PerfilTab({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* Nome */}
         <div className="space-y-1.5">
           <Label htmlFor="name">Nome Completo</Label>
           <Input
@@ -575,6 +613,28 @@ function PerfilTab({
             onChange={(e) => set("name", e.target.value)}
           />
         </div>
+
+        {/* CPF */}
+        <div className="space-y-1.5">
+          <Label htmlFor="cpf">CPF</Label>
+          <Input
+            id="cpf"
+            inputMode="numeric"
+            placeholder="000.000.000-00"
+            value={formatCPF(form.cpf ?? "")}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
+              set("cpf", raw);
+              if (cpfError) setCpfError(null);
+            }}
+            className={cpfError ? "border-destructive focus-visible:ring-destructive" : ""}
+          />
+          {cpfError && (
+            <p className="text-xs text-destructive font-medium">{cpfError}</p>
+          )}
+        </div>
+
+        {/* Email */}
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -584,6 +644,8 @@ function PerfilTab({
             onChange={(e) => set("email", e.target.value)}
           />
         </div>
+
+        {/* Telefone */}
         <div className="space-y-1.5">
           <Label htmlFor="phone">Telefone</Label>
           <Input
@@ -592,6 +654,8 @@ function PerfilTab({
             onChange={(e) => set("phone", e.target.value)}
           />
         </div>
+
+        {/* Cidade */}
         <div className="space-y-1.5">
           <Label htmlFor="city">Cidade</Label>
           <Input
@@ -600,6 +664,8 @@ function PerfilTab({
             onChange={(e) => set("city", e.target.value)}
           />
         </div>
+
+        {/* Data de nascimento */}
         <div className="space-y-1.5">
           <Label htmlFor="birth_date">Data de nascimento</Label>
           <Input
@@ -609,6 +675,8 @@ function PerfilTab({
             onChange={(e) => set("birth_date", e.target.value)}
           />
         </div>
+
+        {/* Gênero */}
         <div className="space-y-1.5">
           <Label htmlFor="gender">Gênero</Label>
           <select
@@ -623,7 +691,9 @@ function PerfilTab({
             <option value="outro">Outro</option>
           </select>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+
+        {/* Ocupação */}
+        <div className="space-y-1.5">
           <Label htmlFor="occupation">Ocupação</Label>
           <Input
             id="occupation"
@@ -631,6 +701,8 @@ function PerfilTab({
             onChange={(e) => set("occupation", e.target.value)}
           />
         </div>
+
+        {/* Observações */}
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="notes">Observações Gerais</Label>
           <Textarea
