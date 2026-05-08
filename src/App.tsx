@@ -58,6 +58,8 @@ import AdminLoja from "./pages/admin/AdminLoja";
 import AdminDesconto from "./pages/admin/AdminDesconto";
 import AdminDisparo from "./pages/admin/AdminDisparo";
 import AdminLeads from "./pages/admin/AdminLeads";
+import AdminTemplates from "./pages/admin/AdminTemplates";
+import AdminTemplateEditor from "./pages/admin/AdminTemplateEditor";
 const AdminFerramentas = lazy(() => import("./pages/admin/AdminFerramentas"));
 
 const queryClient = new QueryClient();
@@ -139,6 +141,8 @@ const App = () => (
                   <Route path="relatorio-antropometrico" element={<AdminRelatorioAntropometrico />} />
                 </Route>
                 <Route path="alimentos" element={<AdminAlimentos />} />
+                <Route path="modelos" element={<AdminTemplates />} />
+                <Route path="modelos/:templateId" element={<AdminTemplateEditor />} />
                 <Route path="loja" element={<AdminLoja />} />
                 <Route path="desconto" element={<AdminDesconto />} />
                 <Route path="disparo" element={<AdminDisparo />} />
