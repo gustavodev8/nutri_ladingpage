@@ -37,14 +37,6 @@ export type MeasurementForm = {
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
-function FL({ children }: { children: React.ReactNode }) {
-  return (
-    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-      {children}
-    </Label>
-  );
-}
-
 function NI({
   label, field, form, setField, placeholder, highlight,
 }: {
@@ -53,64 +45,48 @@ function NI({
 }) {
   const val = (form as Record<string, string>)[field] ?? "";
   return (
-    <div className="space-y-1">
-      <FL>{label}</FL>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       <Input
         type="number" step="0.1" placeholder={placeholder ?? "—"}
         value={val}
         onChange={(e) => setField(field, e.target.value)}
         className={cn(
-          "h-8 rounded-lg text-sm",
-          highlight && val ? "border-primary/60 bg-primary/5" : ""
+          "h-9 text-sm",
+          highlight && val ? "border-primary/50 bg-primary/5" : ""
         )}
       />
     </div>
   );
 }
 
-function BI({
-  label, fieldR, fieldL, form, setField,
+function Section({
+  title, subtitle, children, className,
 }: {
-  label: string; fieldR: string; fieldL: string;
-  form: MeasurementForm; setField: (f: string, v: string) => void;
-}) {
-  const v = (f: string) => (form as Record<string, string>)[f] ?? "";
-  return (
-    <>
-      <div className="space-y-1">
-        <FL>{label} D</FL>
-        <Input type="number" step="0.1" value={v(fieldR)}
-          onChange={(e) => setField(fieldR, e.target.value)} className="h-8 rounded-lg text-sm" />
-      </div>
-      <div className="space-y-1">
-        <FL>{label} E</FL>
-        <Input type="number" step="0.1" value={v(fieldL)}
-          onChange={(e) => setField(fieldL, e.target.value)} className="h-8 rounded-lg text-sm" />
-      </div>
-    </>
-  );
-}
-
-function SectionCard({ title, children, className }: {
-  title: string; children: React.ReactNode; className?: string;
+  title: string; subtitle?: string; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={cn("bg-card border border-border/70 rounded-xl p-4 space-y-3", className)}>
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/50 pb-2 border-b border-border/40">
-        {title}
-      </p>
-      {children}
+    <div className={cn("bg-card border border-border/70 rounded-2xl overflow-hidden", className)}>
+      <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="px-6 py-5">{children}</div>
     </div>
   );
 }
 
-function ReadOnly({ label, value }: { label: string; value: string | null }) {
+function ReadOnly({ label, value, accent }: { label: string; value: string | null; accent?: boolean }) {
   return (
-    <div className="space-y-1">
-      <FL>{label}</FL>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       <div className={cn(
-        "h-8 px-2.5 flex items-center rounded-lg border text-sm tabular-nums",
-        value ? "bg-muted/60 text-foreground font-semibold" : "bg-muted/30 text-muted-foreground"
+        "h-9 px-3 flex items-center rounded-md border text-sm tabular-nums font-semibold",
+        accent && value
+          ? "bg-primary/10 border-primary/30 text-primary"
+          : value
+            ? "bg-muted/50 text-foreground border-border"
+            : "bg-muted/20 text-muted-foreground border-border/50"
       )}>
         {value ?? "—"}
       </div>
@@ -203,8 +179,7 @@ export function AnthropometryWizard({
 
   const handleClone = () => {
     if (!latestMeasurement) return;
-    const cloned = measurementToForm(latestMeasurement);
-    setFormState({ ...cloned, assessment_date: todayISO() });
+    setFormState({ ...measurementToForm(latestMeasurement), assessment_date: todayISO() });
     if (latestMeasurement.sf_protocol) {
       setProtocol(latestMeasurement.sf_protocol as SkinfoldProtocol);
       setCompMode("skinfold");
@@ -228,19 +203,18 @@ export function AnthropometryWizard({
   const patientAge = patient.birth_date
     ? Math.floor((Date.now() - new Date(patient.birth_date).getTime()) / 31_557_600_000)
     : 25;
-  const genderKey = patient.gender === "F" ? "F" : "M";
-  const calcResult = compMode === "skinfold"
-    ? calcBodyFat(protocol, sfValues, patientAge, genderKey)
-    : null;
+  const genderKey   = patient.gender === "F" ? "F" : "M";
+  const calcResult  = compMode === "skinfold"
+    ? calcBodyFat(protocol, sfValues, patientAge, genderKey) : null;
   const protocolInfo = PROTOCOLS.find((p) => p.id === protocol);
-  const sfSum = compMode === "skinfold" ? sumSkinfolds(protocol, sfValues) : 0;
-  const fatClass = calcResult ? classifyBodyFat(calcResult.fatPct, genderKey) : null;
+  const sfSum        = compMode === "skinfold" ? sumSkinfolds(protocol, sfValues) : 0;
+  const fatClass     = calcResult ? classifyBodyFat(calcResult.fatPct, genderKey) : null;
 
-  const bioFatPct  = compMode === "bio" && form.body_fat ? parseFloat(form.body_fat) : null;
-  const bioWeight  = form.weight ? parseFloat(form.weight) : null;
-  const bioFatKg   = bioFatPct != null && bioWeight != null
+  const bioFatPct   = compMode === "bio" && form.body_fat ? parseFloat(form.body_fat) : null;
+  const bioWeight   = form.weight ? parseFloat(form.weight) : null;
+  const bioFatKg    = bioFatPct != null && bioWeight != null
     ? parseFloat((bioWeight * bioFatPct / 100).toFixed(2)) : null;
-  const bioLeanKg  = bioFatKg != null && bioWeight != null
+  const bioLeanKg   = bioFatKg != null && bioWeight != null
     ? parseFloat((bioWeight - bioFatKg).toFixed(2)) : null;
   const bioFatClass = bioFatPct != null ? classifyBodyFat(bioFatPct, genderKey) : null;
 
@@ -256,243 +230,279 @@ export function AnthropometryWizard({
   const isEditing = !!editingMeasurement;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full max-w-7xl mx-auto px-4 space-y-3">
 
-      {/* ── Sticky header bar ── */}
+      {/* ── Sticky action bar ── */}
       <div className={cn(
-        "sticky top-0 z-20 border-b px-1 py-3 flex items-center justify-between gap-3 flex-wrap backdrop-blur-md",
+        "sticky top-0 z-20 -mx-4 px-4 py-3 flex items-center justify-between gap-3 flex-wrap border-b backdrop-blur-md",
         isEditing
-          ? "bg-amber-50/90 border-amber-200"
-          : "bg-background/90 border-border/60"
+          ? "bg-amber-50/95 border-amber-200"
+          : "bg-background/95 border-border/60"
       )}>
-        {/* Left: title / edit banner */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {isEditing ? (
-            <span className="flex items-center gap-2 text-sm font-bold text-amber-700">
-              <Pencil size={15} />
+            <span className="flex items-center gap-2 text-sm font-bold text-amber-700 truncate">
+              <Pencil size={14} />
               Editando — {fmtDate(editingMeasurement!.assessment_date)}
             </span>
           ) : (
-            <h2 className="text-sm font-bold text-foreground tracking-tight">
-              Nova Avaliação Antropométrica
-            </h2>
+            <h2 className="text-sm font-bold text-foreground">Nova Avaliação Antropométrica</h2>
           )}
         </div>
-
-        {/* Right: actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {!isEditing && latestMeasurement && (
             <Button type="button" variant="outline" size="sm" onClick={handleClone}
-              className="gap-1.5 h-8 text-xs font-medium rounded-lg">
-              <Copy size={12} />
-              Copiar última avaliação
+              className="gap-1.5 h-8 text-xs font-medium">
+              <Copy size={12} /> Copiar última avaliação
             </Button>
           )}
-
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="date"
-              value={form.assessment_date}
-              onChange={(e) => setField("assessment_date", e.target.value)}
-              className="h-8 rounded-lg text-sm w-36"
-            />
-            {isEditing && onCancelEdit && (
-              <Button type="button" variant="ghost" size="sm" onClick={onCancelEdit}
-                className="h-8 gap-1 text-xs rounded-lg">
-                <X size={12} /> Cancelar
-              </Button>
-            )}
-            <Button
-              type="button" size="sm" onClick={handleSave} disabled={saving}
-              className={cn(
-                "h-8 gap-1.5 px-5 rounded-lg font-semibold",
-                isEditing ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
-              )}
-            >
-              {saving
-                ? <><Loader2 size={12} className="animate-spin" /> Salvando…</>
-                : <><Save size={12} /> {isEditing ? "Atualizar" : "Salvar Avaliação"}</>
-              }
+          <Input
+            type="date" value={form.assessment_date}
+            onChange={(e) => setField("assessment_date", e.target.value)}
+            className="h-8 text-sm w-36"
+          />
+          {isEditing && onCancelEdit && (
+            <Button type="button" variant="ghost" size="sm" onClick={onCancelEdit}
+              className="h-8 gap-1 text-xs">
+              <X size={12} /> Cancelar
             </Button>
-          </div>
+          )}
+          <Button
+            type="button" size="sm" onClick={handleSave} disabled={saving}
+            className={cn(
+              "h-8 px-5 gap-1.5 font-semibold",
+              isEditing ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+            )}
+          >
+            {saving
+              ? <><Loader2 size={12} className="animate-spin" /> Salvando…</>
+              : <><Save size={12} /> {isEditing ? "Atualizar" : "Salvar Avaliação"}</>
+            }
+          </Button>
         </div>
       </div>
 
-      {/* ── 3-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+      {/* ══════════════════════════════════════════════════════════
+          Seções empilhadas verticalmente, inputs em grid interno
+         ══════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col gap-6 pb-10">
 
-        {/* ════ COL 1: Dados Básicos + Tronco ════ */}
-        <div className="space-y-4">
+        {/* ── 1. Dados Básicos ── */}
+        <Section title="Dados Básicos" subtitle="Medidas gerais do paciente">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <NI label="Peso (kg)"    field="weight"       form={form} setField={setField} placeholder="70.5" />
+            <NI label="Altura (cm)"  field="height"       form={form} setField={setField} placeholder="175"  />
+            <NI label="Gordura Visc." field="visceral_fat" form={form} setField={setField} placeholder="8"   />
+          </div>
+        </Section>
 
-          <SectionCard title="Dados Básicos">
-            <div className="grid grid-cols-3 gap-3">
-              <NI label="Peso (kg)"   field="weight"       form={form} setField={setField} placeholder="70.5" />
-              <NI label="Altura (cm)" field="height"       form={form} setField={setField} placeholder="175"  />
-              <NI label="G. Visceral" field="visceral_fat" form={form} setField={setField} placeholder="8"    />
-            </div>
-          </SectionCard>
+        {/* ── 2. Composição Corporal ── */}
+        <Section title="Composição Corporal" subtitle="Bioimpedância ou adipômetro">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          <SectionCard title="Tronco (cm)">
-            <div className="grid grid-cols-2 gap-3">
-              <NI label="Pescoço"  field="neck"     form={form} setField={setField} />
-              <NI label="Ombro"    field="shoulder" form={form} setField={setField} />
-              <NI label="Peitoral" field="chest"    form={form} setField={setField} />
-              <NI label="Cintura"  field="waist"    form={form} setField={setField} />
-              <NI label="Abdômen"  field="abdomen"  form={form} setField={setField} />
-              <NI label="Quadril"  field="hip"      form={form} setField={setField} />
-            </div>
-          </SectionCard>
+            {/* Left: método + protocolo + dobras */}
+            <div className="space-y-5">
+              {/* Toggle */}
+              <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg w-fit">
+                {(["bio", "skinfold"] as const).map((mode) => (
+                  <button key={mode} type="button" onClick={() => setCompMode(mode)}
+                    className={cn(
+                      "px-4 h-8 rounded-md text-sm font-semibold transition-all",
+                      compMode === mode
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}>
+                    {mode === "bio" ? "Bioimpedância" : "Adipômetro"}
+                  </button>
+                ))}
+              </div>
 
-        </div>
-
-        {/* ════ COL 2: Membros Superiores + Inferiores + Notas ════ */}
-        <div className="space-y-4">
-
-          <SectionCard title="Membros Superiores D / E (cm)">
-            <div className="grid grid-cols-2 gap-3">
-              <BI label="Braço Rel."  fieldR="arm_relax_r"    fieldL="arm_relax_l"    form={form} setField={setField} />
-              <BI label="Braço Con."  fieldR="arm_contract_r" fieldL="arm_contract_l" form={form} setField={setField} />
-              <BI label="Antebraço"   fieldR="forearm_r"      fieldL="forearm_l"      form={form} setField={setField} />
-              <BI label="Punho"       fieldR="wrist_r"        fieldL="wrist_l"        form={form} setField={setField} />
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Membros Inferiores D / E (cm)">
-            <div className="grid grid-cols-2 gap-3">
-              <BI label="Coxa Prox." fieldR="thigh_prox_r" fieldL="thigh_prox_l" form={form} setField={setField} />
-              <BI label="Coxa Med."  fieldR="thigh_r"      fieldL="thigh_l"      form={form} setField={setField} />
-              <BI label="Panturr."   fieldR="calf_r"       fieldL="calf_l"       form={form} setField={setField} />
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Observações">
-            <Input
-              value={(form as Record<string, string>).notes ?? ""}
-              onChange={(e) => setField("notes", e.target.value)}
-              placeholder="Observações sobre esta avaliação…"
-              className="h-8 rounded-lg text-sm"
-            />
-          </SectionCard>
-
-        </div>
-
-        {/* ════ COL 3: Composição Corporal ════ */}
-        <div className="space-y-4">
-
-          <SectionCard title="Composição Corporal">
-            {/* Mode toggle */}
-            <div className="flex items-center bg-muted rounded-lg p-0.5 w-fit">
-              {(["bio", "skinfold"] as const).map((mode) => (
-                <button key={mode} type="button" onClick={() => setCompMode(mode)}
-                  className={cn(
-                    "px-3 h-7 rounded-md text-xs font-semibold transition-all",
-                    compMode === mode
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}>
-                  {mode === "bio" ? "Bioimpedância" : "Adipômetro"}
-                </button>
-              ))}
-            </div>
-
-            {compMode === "bio" ? (
-              <div className="space-y-3 pt-1">
-                <div className="grid grid-cols-1 gap-3">
+              {compMode === "bio" ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <NI label="% Gordura" field="body_fat" form={form} setField={setField} placeholder="18.5" />
-                  <ReadOnly label="Massa Gorda (kg)" value={bioFatKg != null ? `${bioFatKg} kg` : null} />
-                  <ReadOnly label="Massa Magra (kg)" value={bioLeanKg != null ? `${bioLeanKg} kg` : null} />
                 </div>
-                {bioFatClass && bioFatPct != null && (
-                  <div className={cn(
-                    "rounded-lg px-3 py-2 border text-xs font-semibold",
-                    bioFatClass.color,
-                    "bg-muted/40 border-border/60"
-                  )}>
-                    {bioFatPct.toFixed(1)}% — {bioFatClass.label}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4 pt-1">
-                {/* Protocol chips */}
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {PROTOCOLS.map((p) => (
-                      <button key={p.id} type="button" onClick={() => setProtocol(p.id)}
-                        className={cn(
-                          "px-2.5 h-7 rounded-lg text-xs font-semibold border transition-all",
-                          protocol === p.id
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                            : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                        )}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  {protocolInfo && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">{protocolInfo.description}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Skinfold inputs */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {protocolInfo?.skinfolds.map((key) => (
-                    <NI
-                      key={key}
-                      label={SKINFOLD_LABELS[key]}
-                      field={key}
-                      form={form}
-                      setField={setField}
-                      placeholder="mm"
-                      highlight
-                    />
-                  ))}
-                </div>
-
-                {/* Live result panel */}
-                <div className={cn(
-                  "rounded-xl border p-4 transition-all duration-300",
-                  calcResult
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border/60 bg-muted/30"
-                )}>
-                  {calcResult ? (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-                        Resultado calculado
-                      </p>
-                      <div className="flex items-end gap-3">
-                        <div>
-                          <p className={cn("text-4xl font-black tabular-nums leading-none", fatClass?.color)}>
-                            {calcResult.fatPct.toFixed(1)}
-                            <span className="text-xl font-bold">%</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">Gordura corporal</p>
-                        </div>
-                        <div className="pb-0.5">
-                          <p className={cn("text-sm font-bold", fatClass?.color)}>{fatClass?.label}</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground pt-1 border-t border-border/40">
-                        {calcResult.density > 0 && (
-                          <>DC: {calcResult.density.toFixed(4)} g/mL &nbsp;·&nbsp;</>
-                        )}
-                        Σ {sfSum.toFixed(1)} mm &nbsp;·&nbsp; {protocol}
-                      </p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Protocol chips */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Protocolo</p>
+                    <div className="flex flex-wrap gap-2">
+                      {PROTOCOLS.map((p) => (
+                        <button key={p.id} type="button" onClick={() => setProtocol(p.id)}
+                          className={cn(
+                            "px-3 h-8 rounded-lg text-xs font-semibold border transition-all",
+                            protocol === p.id
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                          )}>
+                          {p.label}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Preencha todas as dobras do protocolo para calcular automaticamente.
-                    </p>
+                    {protocolInfo && (
+                      <p className="text-xs text-muted-foreground">
+                        Dobras: <span className="font-semibold text-foreground">{protocolInfo.description}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Skinfold inputs */}
+                  {protocolInfo && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {protocolInfo.skinfolds.map((key) => (
+                        <NI
+                          key={key}
+                          label={SKINFOLD_LABELS[key]}
+                          field={key}
+                          form={form}
+                          setField={setField}
+                          placeholder="mm"
+                          highlight
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </SectionCard>
+              )}
+            </div>
 
-        </div>
+            {/* Right: resultado em destaque */}
+            <div className={cn(
+              "rounded-2xl border p-6 flex flex-col justify-center transition-all duration-300",
+              (calcResult || (bioFatPct != null))
+                ? "border-primary/30 bg-primary/5"
+                : "border-dashed border-border/60 bg-muted/20"
+            )}>
+              {compMode === "bio" && bioFatPct != null ? (
+                <div className="space-y-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Composição calculada
+                  </p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className={cn("text-4xl font-black tabular-nums leading-none", bioFatClass?.color)}>
+                        {bioFatPct.toFixed(1)}<span className="text-xl">%</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Gordura</p>
+                    </div>
+                    <div>
+                      <p className="text-4xl font-black tabular-nums leading-none text-foreground">
+                        {bioFatKg ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Massa gorda (kg)</p>
+                    </div>
+                    <div>
+                      <p className="text-4xl font-black tabular-nums leading-none text-foreground">
+                        {bioLeanKg ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Massa magra (kg)</p>
+                    </div>
+                  </div>
+                  {bioFatClass && (
+                    <span className={cn(
+                      "inline-block text-xs font-bold px-3 py-1 rounded-full border",
+                      bioFatClass.color, "bg-background border-current/20"
+                    )}>
+                      {bioFatClass.label}
+                    </span>
+                  )}
+                </div>
+              ) : compMode === "skinfold" && calcResult ? (
+                <div className="space-y-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Resultado calculado
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className={cn("text-4xl font-black tabular-nums leading-none", fatClass?.color)}>
+                        {calcResult.fatPct.toFixed(1)}<span className="text-xl">%</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Gordura corporal</p>
+                    </div>
+                    {bioWeight && (
+                      <div>
+                        <p className="text-4xl font-black tabular-nums leading-none text-foreground">
+                          {(bioWeight * (1 - calcResult.fatPct / 100)).toFixed(1)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Massa magra (kg)</p>
+                      </div>
+                    )}
+                  </div>
+                  {fatClass && (
+                    <span className={cn(
+                      "inline-block text-xs font-bold px-3 py-1 rounded-full border",
+                      fatClass.color, "bg-background border-current/20"
+                    )}>
+                      {fatClass.label}
+                    </span>
+                  )}
+                  <p className="text-xs text-muted-foreground pt-2 border-t border-border/40">
+                    {calcResult.density > 0 && <>DC: {calcResult.density.toFixed(4)} g/mL &nbsp;·&nbsp;</>}
+                    Σ {sfSum.toFixed(1)} mm &nbsp;·&nbsp; {protocol}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm font-medium text-muted-foreground/60">
+                    {compMode === "bio"
+                      ? "Informe o % de gordura para calcular a composição"
+                      : "Preencha as dobras do protocolo para ver o resultado"
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        {/* ── 3. Tronco ── */}
+        <Section title="Circunferências — Tronco" subtitle="Em centímetros (cm)">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <NI label="Pescoço"  field="neck"     form={form} setField={setField} />
+            <NI label="Ombro"    field="shoulder" form={form} setField={setField} />
+            <NI label="Peitoral" field="chest"    form={form} setField={setField} />
+            <NI label="Cintura"  field="waist"    form={form} setField={setField} />
+            <NI label="Abdômen"  field="abdomen"  form={form} setField={setField} />
+            <NI label="Quadril"  field="hip"      form={form} setField={setField} />
+          </div>
+        </Section>
+
+        {/* ── 4. Membros Superiores ── */}
+        <Section title="Circunferências — Membros Superiores" subtitle="Direito (D) e Esquerdo (E), em centímetros">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <NI label="Braço Rel. D"  field="arm_relax_r"    form={form} setField={setField} />
+            <NI label="Braço Rel. E"  field="arm_relax_l"    form={form} setField={setField} />
+            <NI label="Braço Con. D"  field="arm_contract_r" form={form} setField={setField} />
+            <NI label="Braço Con. E"  field="arm_contract_l" form={form} setField={setField} />
+            <NI label="Antebraço D"   field="forearm_r"      form={form} setField={setField} />
+            <NI label="Antebraço E"   field="forearm_l"      form={form} setField={setField} />
+            <NI label="Punho D"       field="wrist_r"        form={form} setField={setField} />
+            <NI label="Punho E"       field="wrist_l"        form={form} setField={setField} />
+          </div>
+        </Section>
+
+        {/* ── 5. Membros Inferiores ── */}
+        <Section title="Circunferências — Membros Inferiores" subtitle="Direito (D) e Esquerdo (E), em centímetros">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <NI label="Coxa Prox. D" field="thigh_prox_r" form={form} setField={setField} />
+            <NI label="Coxa Prox. E" field="thigh_prox_l" form={form} setField={setField} />
+            <NI label="Coxa Med. D"  field="thigh_r"      form={form} setField={setField} />
+            <NI label="Coxa Med. E"  field="thigh_l"      form={form} setField={setField} />
+            <NI label="Panturrilha D" field="calf_r"      form={form} setField={setField} />
+            <NI label="Panturrilha E" field="calf_l"      form={form} setField={setField} />
+          </div>
+        </Section>
+
+        {/* ── 6. Observações ── */}
+        <Section title="Observações" subtitle="Parecer técnico ou anotações da avaliação">
+          <Input
+            value={(form as Record<string, string>).notes ?? ""}
+            onChange={(e) => setField("notes", e.target.value)}
+            placeholder="Ex: Paciente em processo de emagrecimento, boa hidratação…"
+            className="h-10 text-sm"
+          />
+        </Section>
+
       </div>
     </div>
   );
