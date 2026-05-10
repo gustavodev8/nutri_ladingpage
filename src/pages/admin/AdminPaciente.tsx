@@ -492,30 +492,34 @@ export default function AdminPaciente() {
         })}
       </div>
 
-      {/* Main Tab Content Card */}
-      <div className="bg-card border border-border shadow-sm rounded-[24px] overflow-hidden">
-        <div className="p-6 sm:p-8">
-          {activeTab === "perfil" && (
-            <PerfilTab patient={patient} onSaved={setPatient} />
-          )}
-          {activeTab === "anamnese" && (
-            <AnamnesisForm patientId={id!} onSaved={ctxSetAnamnesis} />
-          )}
-          {activeTab === "antropometria" && (
-            <AntropometriaTab
-              patientId={id!}
-              patient={patient}
-              onViewDetail={setSelectedMeasurement}
-            />
-          )}
-          {activeTab === "planos" && (
-            <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} patient={patient} />
-          )}
-          {activeTab === "exames" && (
-            <ExamesTab patientId={Number(id)} />
-          )}
+      {/* Antropometria: full-width dashboard (sem card wrapper) */}
+      {activeTab === "antropometria" && (
+        <AntropometriaTab
+          patientId={id!}
+          patient={patient}
+          onViewDetail={setSelectedMeasurement}
+        />
+      )}
+
+      {/* Demais abas: card centralizado com padding */}
+      {activeTab !== "antropometria" && (
+        <div className="bg-card border border-border shadow-sm rounded-[24px] overflow-hidden">
+          <div className="p-6 sm:p-8">
+            {activeTab === "perfil" && (
+              <PerfilTab patient={patient} onSaved={setPatient} />
+            )}
+            {activeTab === "anamnese" && (
+              <AnamnesisForm patientId={id!} onSaved={ctxSetAnamnesis} />
+            )}
+            {activeTab === "planos" && (
+              <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} patient={patient} />
+            )}
+            {activeTab === "exames" && (
+              <ExamesTab patientId={Number(id)} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
