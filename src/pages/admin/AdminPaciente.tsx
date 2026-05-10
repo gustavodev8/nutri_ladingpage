@@ -173,8 +173,8 @@ export default function AdminPaciente() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as TabKey) || "perfil";
 
-  // ── ConsultationContext — atualizado quando salvamos medições/anamnese ───
-  const { setMeasurement: ctxSetMeasurement, setAnamnesis: ctxSetAnamnesis } = useConsultation();
+  // ── ConsultationContext — ctxSetAnamnesis passado para AnamnesisForm ───
+  const { setAnamnesis: ctxSetAnamnesis } = useConsultation();
 
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -797,6 +797,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   onViewDetail: (m: Measurement) => void;
 }) {
   const pid = Number(patientId);
+  const { setMeasurement: ctxSetMeasurement } = useConsultation();
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
