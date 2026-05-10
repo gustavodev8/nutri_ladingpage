@@ -895,8 +895,9 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         }
       }
     } catch (err) {
-      console.error("[handleSave]", err);
-      toast.error("Erro inesperado ao salvar avaliação.");
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[handleSave] exceção:", err);
+      toast.error(`Erro ao salvar: ${msg}`);
     } finally {
       setSaving(false);
     }

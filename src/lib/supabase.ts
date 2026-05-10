@@ -546,15 +546,20 @@ export async function insertMeasurement(m: Measurement): Promise<Measurement | n
 }
 
 export async function updateMeasurement(id: number, m: Partial<Measurement>): Promise<Measurement | null> {
-  const { id: _id, ...fields } = m;
-  const { data, error } = await supabaseAdmin
-    .from("measurements")
-    .update(fields)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) { console.error("[Supabase] updateMeasurement:", error.message); return null; }
-  return data;
+  try {
+    const { id: _id, ...fields } = m;
+    const { data, error } = await supabaseAdmin
+      .from("measurements")
+      .update(fields)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) { console.error("[Supabase] updateMeasurement:", error.message); return null; }
+    return data;
+  } catch (err) {
+    console.error("[Supabase] updateMeasurement exception:", err);
+    return null;
+  }
 }
 
 export async function deleteMeasurement(id: number): Promise<boolean> {
