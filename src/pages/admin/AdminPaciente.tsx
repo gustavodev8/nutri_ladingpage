@@ -20,6 +20,7 @@ import {
   MapPin,
   MessageSquareQuote,
   FlaskConical,
+  Pencil,
 } from "lucide-react";
 import { ExamesTab } from "@/components/admin/ExamesTab";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
@@ -39,6 +40,7 @@ import {
   upsertPatient,
   fetchMeasurements,
   insertMeasurement,
+  updateMeasurement,
   deleteMeasurement,
   fetchMealPlans,
   upsertMealPlan,
@@ -794,18 +796,17 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
 
   useEffect(() => {
     fetchMeasurements(pid).then((data) => { setMeasurements(data); setLoading(false); });
   }, [pid]);
 
-  const handleSave = async (
+  const buildPayload = async (
     form: MeasurementForm,
     compMode: "bio" | "skinfold",
     protocol: SkinfoldProtocol,
-  ) => {
-    setSaving(true);
-
+  ): Promise<Record<string, unknown>> => {
     const sfValues = {
       sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
       sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
@@ -819,7 +820,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     };
     const patientAge = patient.birth_date ? calcAge(patient.birth_date) : 25;
 
-    const payload: any = { patient_id: pid, assessment_date: form.assessment_date };
+    const payload: Record<string, unknown> = { patient_id: pid, assessment_date: form.assessment_date };
     const numFields = [
       "weight", "height", "visceral_fat",
       "neck", "shoulder", "chest", "waist", "abdomen", "hip",
@@ -829,35 +830,64 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       "calf_r", "calf_l",
     ];
     numFields.forEach((key) => {
-      const val = (form as any)[key];
+      const val = (form as Record<string, string>)[key];
       if (val) payload[key] = parseFloat(val);
     });
     if (form.notes) payload.notes = form.notes;
 
     if (compMode === "skinfold") {
       const { calcBodyFat } = await import("@/lib/anthropometryUtils");
-      const result = calcBodyFat(protocol, sfValues, patientAge);
+      const genderKey = patient.gender === "F" ? "F" : "M";
+      const result = calcBodyFat(protocol, sfValues, patientAge, genderKey);
       if (result) {
         Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
         payload.body_fat     = parseFloat(result.fatPct.toFixed(2));
-        payload.body_density = parseFloat(result.density.toFixed(6));
+        payload.body_density = parseFloat(result.density > 0 ? result.density.toFixed(6) : "0");
         payload.sf_protocol  = protocol;
       }
     } else if (compMode === "bio" && form.body_fat) {
       payload.body_fat = parseFloat(form.body_fat);
+      // Clear skinfold fields when switching to bio
+      payload.sf_protocol = null;
     }
 
     if (payload.weight && payload.body_fat != null) {
       payload.lean_mass = parseFloat(
-        (payload.weight * (1 - payload.body_fat / 100)).toFixed(2)
+        ((payload.weight as number) * (1 - (payload.body_fat as number) / 100)).toFixed(2)
       );
     }
 
-    const res = await insertMeasurement(payload as Measurement);
-    if (res) {
-      setMeasurements(p => [res, ...p]);
-      ctxSetMeasurement(res);
-      toast.success("Avaliação registrada!");
+    return payload;
+  };
+
+  const handleSave = async (
+    form: MeasurementForm,
+    compMode: "bio" | "skinfold",
+    protocol: SkinfoldProtocol,
+    editingId?: number,
+  ) => {
+    setSaving(true);
+    const payload = await buildPayload(form, compMode, protocol);
+
+    if (editingId) {
+      const res = await updateMeasurement(editingId, payload as Measurement);
+      if (res) {
+        setMeasurements((p) => p.map((m) => m.id === editingId ? res : m));
+        ctxSetMeasurement(res);
+        toast.success("Avaliação atualizada!");
+        setEditingMeasurement(null);
+      } else {
+        toast.error("Erro ao atualizar avaliação.");
+      }
+    } else {
+      const res = await insertMeasurement(payload as Measurement);
+      if (res) {
+        setMeasurements((p) => [res, ...p]);
+        ctxSetMeasurement(res);
+        toast.success("Avaliação registrada!");
+      } else {
+        toast.error("Erro ao salvar avaliação.");
+      }
     }
     setSaving(false);
   };
@@ -914,8 +944,15 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         </div>
       )}
 
-      {/* ── Wizard de nova avaliação ── */}
-      <AnthropometryWizard patient={patient} onSave={handleSave} saving={saving} />
+      {/* ── Form de avaliação (nova ou edição) ── */}
+      <AnthropometryWizard
+        patient={patient}
+        latestMeasurement={measurements[0] ?? null}
+        editingMeasurement={editingMeasurement}
+        onSave={handleSave}
+        onCancelEdit={() => setEditingMeasurement(null)}
+        saving={saving}
+      />
 
 
       {/* ── History table ── */}
@@ -941,7 +978,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
               <thead>
                 <tr className="border-b border-border">
                   {["Data", "Peso", "Altura", "IMC", "% Gordura", "Protocolo", "Cintura", ""].map((col, i) => (
-                    <th key={i} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50${i === 0 ? " text-left" : " text-right"}${i === 7 ? " w-20" : ""}`}>
+                    <th key={i} className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50${i === 0 ? " text-left" : " text-right"}${i === 7 ? " w-28" : ""}`}>
                       {col}
                     </th>
                   ))}
@@ -976,6 +1013,13 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                           <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                             <Eye size={14} />
                           </Link>
+                          <button
+                            onClick={() => { setEditingMeasurement(m); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                            title="Editar avaliação"
+                          >
+                            <Pencil size={14} />
+                          </button>
                           <button onClick={() => handleDelete(m.id!)} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                             <Trash2 size={14} />
                           </button>

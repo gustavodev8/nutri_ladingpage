@@ -545,6 +545,18 @@ export async function insertMeasurement(m: Measurement): Promise<Measurement | n
   return data;
 }
 
+export async function updateMeasurement(id: number, m: Partial<Measurement>): Promise<Measurement | null> {
+  const { id: _id, ...fields } = m;
+  const { data, error } = await supabaseAdmin
+    .from("measurements")
+    .update(fields)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) { console.error("[Supabase] updateMeasurement:", error.message); return null; }
+  return data;
+}
+
 export async function deleteMeasurement(id: number): Promise<boolean> {
   const { error } = await supabaseAdmin.from("measurements").delete().eq("id", id);
   if (error) { console.error("[Supabase] deleteMeasurement:", error.message); return false; }
