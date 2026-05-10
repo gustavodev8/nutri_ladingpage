@@ -871,29 +871,35 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     editingId?: number,
   ) => {
     setSaving(true);
-    const payload = await buildPayload(form, compMode, protocol);
+    try {
+      const payload = await buildPayload(form, compMode, protocol);
 
-    if (editingId) {
-      const res = await updateMeasurement(editingId, payload as Measurement);
-      if (res) {
-        setMeasurements((p) => p.map((m) => m.id === editingId ? res : m));
-        ctxSetMeasurement(res);
-        toast.success("Avaliação atualizada!");
-        setEditingMeasurement(null);
+      if (editingId) {
+        const res = await updateMeasurement(editingId, payload as Measurement);
+        if (res) {
+          setMeasurements((p) => p.map((m) => m.id === editingId ? res : m));
+          ctxSetMeasurement(res);
+          toast.success("Avaliação atualizada!");
+          setEditingMeasurement(null);
+        } else {
+          toast.error("Erro ao atualizar avaliação.");
+        }
       } else {
-        toast.error("Erro ao atualizar avaliação.");
+        const res = await insertMeasurement(payload as Measurement);
+        if (res) {
+          setMeasurements((p) => [res, ...p]);
+          ctxSetMeasurement(res);
+          toast.success("Avaliação registrada!");
+        } else {
+          toast.error("Erro ao salvar avaliação.");
+        }
       }
-    } else {
-      const res = await insertMeasurement(payload as Measurement);
-      if (res) {
-        setMeasurements((p) => [res, ...p]);
-        ctxSetMeasurement(res);
-        toast.success("Avaliação registrada!");
-      } else {
-        toast.error("Erro ao salvar avaliação.");
-      }
+    } catch (err) {
+      console.error("[handleSave]", err);
+      toast.error("Erro inesperado ao salvar avaliação.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (mid: number) => {
