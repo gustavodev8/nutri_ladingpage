@@ -234,10 +234,10 @@ export function AnthropometryWizard({
 
       {/* ── Sticky action bar ── */}
       <div className={cn(
-        "sticky top-0 z-20 -mx-4 px-4 py-3 flex items-center justify-between gap-3 flex-wrap border-b backdrop-blur-md",
+        "sticky top-0 z-30 -mx-4 px-4 py-3 flex items-center justify-between gap-3 flex-wrap border-b shadow-sm",
         isEditing
-          ? "bg-amber-50/95 border-amber-200"
-          : "bg-background/95 border-border/60"
+          ? "bg-amber-50 border-amber-200"
+          : "bg-background border-border/60"
       )}>
         <div className="flex items-center gap-3 min-w-0">
           {isEditing ? (
