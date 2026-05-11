@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Loader2, Pencil, Save, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, Crosshair, Loader2, Pencil, Save, Scale, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -459,127 +459,174 @@ export function AnthropometryWizard({
             subtitle="Compare os métodos e defina qual será o resultado oficial para o planejamento"
           >
             <div className={cn(
-              "grid gap-4",
-              bioAvailable && sfAvailable ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+              "grid gap-6",
+              bioAvailable && sfAvailable ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-sm"
             )}>
               {/* Bio card */}
-              {bioAvailable && (
-                <label className={cn(
-                  "flex flex-col gap-4 p-5 rounded-xl border-2 cursor-pointer transition-all",
-                  effectiveOfficial === "bio"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/40"
-                )}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">
-                        Bioimpedância (Balança)
-                      </p>
-                      <div className="flex items-end gap-3 flex-wrap">
+              {bioAvailable && (() => {
+                const isOfficial = effectiveOfficial === "bio";
+                return (
+                  <div className="relative pt-5">
+                    {isOfficial && (
+                      <div className="absolute -top-0 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                        <CheckCircle2 size={12} strokeWidth={3} />
+                        Resultado Oficial
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setOfficialSource(isOfficial ? null : "bio")}
+                      className={cn(
+                        "w-full text-left flex flex-col gap-0 rounded-2xl border-2 transition-all duration-200 overflow-hidden",
+                        isOfficial
+                          ? "ring-2 ring-primary border-transparent bg-primary/5 shadow-lg"
+                          : "border-border bg-card hover:border-primary/30 hover:shadow-md"
+                      )}
+                    >
+                      {/* Card header */}
+                      <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                          isOfficial ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Scale size={20} />
+                        </div>
                         <div>
-                          <p className={cn("text-4xl font-black tabular-nums leading-none", bioFatClass?.color)}>
-                            {bioFatPct!.toFixed(1)}<span className="text-xl">%</span>
+                          <p className="text-sm font-black text-foreground leading-tight">Bioimpedância</p>
+                          <p className="text-xs text-muted-foreground leading-tight">Balança de composição</p>
+                        </div>
+                      </div>
+
+                      {/* Big numbers */}
+                      <div className="flex items-end gap-6 px-5 pb-4">
+                        <div>
+                          <p className={cn("text-5xl font-black tabular-nums leading-none", bioFatClass?.color ?? "text-foreground")}>
+                            {bioFatPct!.toFixed(1)}<span className="text-2xl font-bold">%</span>
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Gordura corporal</p>
+                          <p className="text-xs text-muted-foreground mt-1.5">Gordura corporal</p>
                         </div>
                         {bioLeanKg != null && (
                           <div>
-                            <p className="text-2xl font-black tabular-nums leading-none text-foreground">
-                              {bioLeanKg} kg
+                            <p className="text-3xl font-black tabular-nums leading-none text-foreground">
+                              {bioLeanKg}<span className="text-lg font-bold"> kg</span>
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">Massa magra</p>
+                            <p className="text-xs text-muted-foreground mt-1.5">Massa magra</p>
                           </div>
                         )}
                       </div>
-                      {bioFatClass && (
-                        <span className={cn(
-                          "inline-block mt-2 text-xs font-bold px-2.5 py-0.5 rounded-full",
-                          bioFatClass.color, "bg-current/10"
-                        )}>
-                          {bioFatClass.label}
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="radio"
-                      name="officialSource"
-                      checked={effectiveOfficial === "bio"}
-                      onChange={() => setOfficialSource("bio")}
-                      className="mt-1 h-4 w-4 accent-primary"
-                    />
+
+                      {/* Footer */}
+                      <div className={cn(
+                        "flex items-center justify-between px-5 py-3 border-t",
+                        isOfficial ? "border-primary/20 bg-primary/5" : "border-border bg-muted/30"
+                      )}>
+                        {bioFatClass ? (
+                          <span className={cn(
+                            "text-xs font-bold px-2.5 py-1 rounded-full",
+                            bioFatClass.color, "bg-current/10"
+                          )}>
+                            {bioFatClass.label}
+                          </span>
+                        ) : <span />}
+                        {!isOfficial && (
+                          <span className="text-xs text-muted-foreground">Clique para tornar oficial</span>
+                        )}
+                      </div>
+                    </button>
                   </div>
-                  {effectiveOfficial === "bio" && (
-                    <p className="text-xs font-bold text-primary border-t border-primary/20 pt-3">
-                      ✓ Resultado oficial para o planejamento alimentar
-                    </p>
-                  )}
-                </label>
-              )}
+                );
+              })()}
 
               {/* Skinfold card */}
-              {sfAvailable && (
-                <label className={cn(
-                  "flex flex-col gap-4 p-5 rounded-xl border-2 cursor-pointer transition-all",
-                  effectiveOfficial === "skinfold"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/40"
-                )}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">
-                        Adipômetro — {protocol}
-                      </p>
-                      <div className="flex items-end gap-3 flex-wrap">
+              {sfAvailable && (() => {
+                const isOfficial = effectiveOfficial === "skinfold";
+                return (
+                  <div className="relative pt-5">
+                    {isOfficial && (
+                      <div className="absolute -top-0 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                        <CheckCircle2 size={12} strokeWidth={3} />
+                        Resultado Oficial
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setOfficialSource(isOfficial ? null : "skinfold")}
+                      className={cn(
+                        "w-full text-left flex flex-col gap-0 rounded-2xl border-2 transition-all duration-200 overflow-hidden",
+                        isOfficial
+                          ? "ring-2 ring-primary border-transparent bg-primary/5 shadow-lg"
+                          : "border-border bg-card hover:border-primary/30 hover:shadow-md"
+                      )}
+                    >
+                      {/* Card header */}
+                      <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                          isOfficial ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Crosshair size={20} />
+                        </div>
                         <div>
-                          <p className={cn("text-4xl font-black tabular-nums leading-none", sfFatClass?.color)}>
-                            {sfResult!.fatPct.toFixed(1)}<span className="text-xl">%</span>
+                          <p className="text-sm font-black text-foreground leading-tight">Adipômetro</p>
+                          <p className="text-xs text-muted-foreground leading-tight">Protocolo {protocol}</p>
+                        </div>
+                      </div>
+
+                      {/* Big numbers */}
+                      <div className="flex items-end gap-6 px-5 pb-4">
+                        <div>
+                          <p className={cn("text-5xl font-black tabular-nums leading-none", sfFatClass?.color ?? "text-foreground")}>
+                            {sfResult!.fatPct.toFixed(1)}<span className="text-2xl font-bold">%</span>
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Gordura corporal</p>
+                          <p className="text-xs text-muted-foreground mt-1.5">Gordura corporal</p>
                         </div>
                         {sfLeanKg != null && (
                           <div>
-                            <p className="text-2xl font-black tabular-nums leading-none text-foreground">
-                              {sfLeanKg} kg
+                            <p className="text-3xl font-black tabular-nums leading-none text-foreground">
+                              {sfLeanKg}<span className="text-lg font-bold"> kg</span>
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">Massa magra est.</p>
+                            <p className="text-xs text-muted-foreground mt-1.5">Massa magra est.</p>
                           </div>
                         )}
                       </div>
-                      {sfFatClass && (
-                        <span className={cn(
-                          "inline-block mt-2 text-xs font-bold px-2.5 py-0.5 rounded-full",
-                          sfFatClass.color, "bg-current/10"
-                        )}>
-                          {sfFatClass.label}
-                        </span>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Σ {sfSum.toFixed(1)} mm
-                        {sfResult!.density > 0 && <> · DC {sfResult!.density.toFixed(4)}</>}
-                      </p>
-                    </div>
-                    <input
-                      type="radio"
-                      name="officialSource"
-                      checked={effectiveOfficial === "skinfold"}
-                      onChange={() => setOfficialSource("skinfold")}
-                      className="mt-1 h-4 w-4 accent-primary"
-                    />
+
+                      {/* Footer */}
+                      <div className={cn(
+                        "flex items-center justify-between px-5 py-3 border-t",
+                        isOfficial ? "border-primary/20 bg-primary/5" : "border-border bg-muted/30"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          {sfFatClass && (
+                            <span className={cn(
+                              "text-xs font-bold px-2.5 py-1 rounded-full",
+                              sfFatClass.color, "bg-current/10"
+                            )}>
+                              {sfFatClass.label}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Σ {sfSum.toFixed(1)} mm
+                            {sfResult!.density > 0 && <> · DC {sfResult!.density.toFixed(4)}</>}
+                          </span>
+                        </div>
+                        {!isOfficial && (
+                          <span className="text-xs text-muted-foreground">Clique para tornar oficial</span>
+                        )}
+                      </div>
+                    </button>
                   </div>
-                  {effectiveOfficial === "skinfold" && (
-                    <p className="text-xs font-bold text-primary border-t border-primary/20 pt-3">
-                      ✓ Resultado oficial para o planejamento alimentar
-                    </p>
-                  )}
-                </label>
-              )}
+                );
+              })()}
             </div>
 
             {/* Conflict warning */}
             {bioAvailable && sfAvailable && effectiveOfficial === null && (
-              <p className="mt-3 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-                Dois métodos preenchidos — selecione qual será o resultado oficial para o planejamento.
-              </p>
+              <div className="mt-4 flex items-start gap-2.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                <p className="text-xs font-semibold leading-relaxed">
+                  Dois métodos preenchidos — selecione qual será o resultado oficial para o planejamento alimentar.
+                </p>
+              </div>
             )}
           </Section>
         )}
