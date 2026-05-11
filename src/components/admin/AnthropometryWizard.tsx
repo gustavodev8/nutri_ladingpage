@@ -75,32 +75,33 @@ function SkinfoldNI({
   const val = (form as Record<string, string>)[sfKey] ?? "";
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className={cn(
-          "text-xs font-semibold transition-colors",
-          inProtocol ? "text-primary" : "text-muted-foreground"
+      <Label className={cn(
+        "text-xs font-semibold transition-colors block",
+        inProtocol ? "text-primary" : "text-muted-foreground"
+      )}>
+        {SKINFOLD_LABELS[sfKey]}
+      </Label>
+      <div className="relative">
+        <Input
+          type="number" step="0.1" min="0" placeholder="mm"
+          value={val}
+          onChange={(e) => setField(sfKey, e.target.value)}
+          className={cn(
+            "h-10 text-sm transition-all pr-9",
+            inProtocol
+              ? val
+                ? "border-primary bg-primary/5 font-semibold text-primary"
+                : "border-primary/40 focus:border-primary"
+              : "opacity-60"
+          )}
+        />
+        <span className={cn(
+          "absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold pointer-events-none transition-colors",
+          val ? "text-muted-foreground" : "text-muted-foreground/40"
         )}>
-          {SKINFOLD_LABELS[sfKey]}
-        </Label>
-        {inProtocol && (
-          <span className="text-[8px] font-black uppercase tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded-full leading-none">
-            ativo
-          </span>
-        )}
+          mm
+        </span>
       </div>
-      <Input
-        type="number" step="0.1" min="0" placeholder="mm"
-        value={val}
-        onChange={(e) => setField(sfKey, e.target.value)}
-        className={cn(
-          "h-9 text-sm transition-all",
-          inProtocol && val
-            ? "border-primary bg-primary/5 font-medium"
-            : inProtocol
-              ? "border-primary/40"
-              : ""
-        )}
-      />
     </div>
   );
 }
@@ -135,6 +136,19 @@ const ALL_SF_KEYS: SkinfoldKey[] = [
   "sf_triceps", "sf_biceps", "sf_subscapular",
   "sf_pectoral", "sf_midaxillary", "sf_suprailiac",
   "sf_abdominal", "sf_thigh_sf", "sf_calf_sf",
+];
+
+const PROTOCOL_SHORT: Record<string, string> = {
+  JP3M: "3P Masculino", JP3F: "3P Feminino",
+  JP7M: "7P Masculino", JP7F: "7P Feminino",
+  GUEDES_M: "Masculino",  GUEDES_F: "Feminino",
+  DURNIN: "Durnin 4P", FAULKNER: "Faulkner 4P", YUHASZ: "Yuhász 6P",
+};
+
+const PROTOCOL_GROUPS = [
+  { label: "Jackson & Pollock", ids: ["JP3M", "JP3F", "JP7M", "JP7F"] },
+  { label: "Guedes", ids: ["GUEDES_M", "GUEDES_F"] },
+  { label: "Outros", ids: ["DURNIN", "FAULKNER", "YUHASZ"] },
 ];
 
 function measurementToForm(m: Measurement): MeasurementForm {
@@ -265,6 +279,8 @@ export function AnthropometryWizard({
 
   const protocolInfo = PROTOCOLS.find((p) => p.id === protocol);
   const inProtocol = (key: SkinfoldKey) => protocolInfo?.skinfolds.includes(key) ?? false;
+  const protocolKeys = ALL_SF_KEYS.filter(inProtocol);
+  const extraKeys = ALL_SF_KEYS.filter((k) => !inProtocol(k));
 
   // Auto-select official source when only one is available
   const effectiveOfficial: "bio" | "skinfold" | null =
@@ -360,57 +376,99 @@ export function AnthropometryWizard({
         {/* ── 3. Dobras Cutâneas ── */}
         <Section
           title="Dobras Cutâneas"
-          subtitle="Todos os campos disponíveis — campos do protocolo selecionado ficam destacados"
+          subtitle="Selecione o protocolo — as dobras necessárias ficam em destaque"
         >
           <div className="space-y-5">
-            {/* Protocol selector */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Protocolo de cálculo</p>
-              <div className="flex flex-wrap gap-2">
-                {PROTOCOLS.map((p) => (
-                  <button key={p.id} type="button" onClick={() => setProtocol(p.id)}
-                    className={cn(
-                      "px-3 h-8 rounded-lg text-xs font-semibold border transition-all",
-                      protocol === p.id
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                        : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                    )}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              {protocolInfo && (
-                <p className="text-xs text-muted-foreground">
-                  Dobras do protocolo:{" "}
-                  <span className="font-semibold text-foreground">{protocolInfo.description}</span>
-                </p>
-              )}
-            </div>
 
-            {/* All 9 skinfold inputs */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3">
-              {ALL_SF_KEYS.map((key) => (
-                <SkinfoldNI
-                  key={key}
-                  sfKey={key}
-                  form={form}
-                  setField={setField}
-                  inProtocol={inProtocol(key)}
-                />
+            {/* ── Protocol selector agrupado ── */}
+            <div className="rounded-xl border border-border/60 bg-muted/20 divide-y divide-border/40 overflow-hidden">
+              {PROTOCOL_GROUPS.map((group) => (
+                <div key={group.label} className="flex items-center gap-0 px-4 py-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground w-32 flex-shrink-0">
+                    {group.label}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.ids.map((id) => {
+                      const active = protocol === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setProtocol(id as typeof protocol)}
+                          className={cn(
+                            "px-3 h-7 rounded-lg text-xs font-semibold border transition-all",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          {PROTOCOL_SHORT[id] ?? id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
 
-            {/* Partial result (real-time) */}
-            {sfResult && (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground bg-muted/30 border border-border/50 rounded-xl px-4 py-2.5">
-                <span className="font-bold text-foreground tabular-nums">{sfResult.fatPct.toFixed(1)}%</span>
-                <span>gordura calculada pelo protocolo {protocol}</span>
-                {sfResult.density > 0 && (
-                  <span className="ml-auto text-xs">DC {sfResult.density.toFixed(4)}</span>
-                )}
-                <span className="text-xs">Σ {sfSum.toFixed(1)} mm</span>
+            {/* ── Dobras do protocolo (zona destacada) ── */}
+            {protocolKeys.length > 0 && (
+              <div className="rounded-xl border-2 border-primary/25 bg-primary/5 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-primary/15">
+                  <div>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">
+                      Dobras do Protocolo
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
+                      {protocolInfo?.description}
+                    </p>
+                  </div>
+                  {sfResult && (
+                    <div className="text-right shrink-0 ml-4">
+                      <p className="text-2xl font-black text-primary tabular-nums leading-none">
+                        {sfResult.fatPct.toFixed(1)}<span className="text-sm font-bold">%</span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
+                        Σ {sfSum.toFixed(1)} mm
+                        {sfResult.density > 0 && <> · DC {sfResult.density.toFixed(4)}</>}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className={cn(
+                  "px-4 py-4 grid gap-3",
+                  protocolKeys.length <= 3 ? "grid-cols-3" :
+                  protocolKeys.length === 4 ? "grid-cols-2 sm:grid-cols-4" :
+                  protocolKeys.length === 6 ? "grid-cols-3 sm:grid-cols-6" :
+                  "grid-cols-3 sm:grid-cols-4 md:grid-cols-7"
+                )}>
+                  {protocolKeys.map((key) => (
+                    <SkinfoldNI key={key} sfKey={key} form={form} setField={setField} inProtocol={true} />
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* ── Dobras complementares (muted) ── */}
+            {extraKeys.length > 0 && (
+              <div className="space-y-2.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Dobras Complementares{" "}
+                  <span className="normal-case font-medium text-muted-foreground/70">— opcionais, salvas mas não usadas no cálculo</span>
+                </p>
+                <div className={cn(
+                  "grid gap-3",
+                  extraKeys.length <= 4 ? "grid-cols-2 sm:grid-cols-4" :
+                  extraKeys.length <= 6 ? "grid-cols-3 sm:grid-cols-6" :
+                  "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
+                )}>
+                  {extraKeys.map((key) => (
+                    <SkinfoldNI key={key} sfKey={key} form={form} setField={setField} inProtocol={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         </Section>
 
