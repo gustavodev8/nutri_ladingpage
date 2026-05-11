@@ -809,25 +809,17 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 
   const buildPayload = async (
     form: MeasurementForm,
-    compMode: "bio" | "skinfold",
     protocol: SkinfoldProtocol,
+    officialSource: "bio" | "skinfold" | null,
   ): Promise<Record<string, unknown>> => {
-    const sfValues = {
-      sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
-      sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
-      sf_triceps:     form.sf_triceps     ? parseFloat(form.sf_triceps)     : undefined,
-      sf_biceps:      form.sf_biceps      ? parseFloat(form.sf_biceps)      : undefined,
-      sf_subscapular: form.sf_subscapular ? parseFloat(form.sf_subscapular) : undefined,
-      sf_suprailiac:  form.sf_suprailiac  ? parseFloat(form.sf_suprailiac)  : undefined,
-      sf_abdominal:   form.sf_abdominal   ? parseFloat(form.sf_abdominal)   : undefined,
-      sf_thigh_sf:    form.sf_thigh_sf    ? parseFloat(form.sf_thigh_sf)    : undefined,
-      sf_calf_sf:     form.sf_calf_sf     ? parseFloat(form.sf_calf_sf)     : undefined,
-    };
     const patientAge = patient.birth_date ? calcAge(patient.birth_date) : 25;
+    const genderKey  = patient.gender === "F" ? "F" : "M";
 
     const payload: Record<string, unknown> = { patient_id: pid, assessment_date: form.assessment_date };
+
+    // Medidas básicas e circunferências
     const numFields = [
-      "weight", "height", "visceral_fat",
+      "weight", "height",
       "neck", "shoulder", "chest", "waist", "abdomen", "hip",
       "arm_relax_r", "arm_relax_l", "arm_contract_r", "arm_contract_l",
       "forearm_r", "forearm_l", "wrist_r", "wrist_l",
@@ -840,26 +832,61 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     });
     if (form.notes) payload.notes = form.notes;
 
-    if (compMode === "skinfold") {
-      const { calcBodyFat } = await import("@/lib/anthropometryUtils");
-      const genderKey = patient.gender === "F" ? "F" : "M";
-      const result = calcBodyFat(protocol, sfValues, patientAge, genderKey);
-      if (result) {
-        Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
-        payload.body_fat     = parseFloat(result.fatPct.toFixed(2));
-        payload.body_density = parseFloat(result.density > 0 ? result.density.toFixed(6) : "0");
-        payload.sf_protocol  = protocol;
-      }
-    } else if (compMode === "bio" && form.body_fat) {
-      payload.body_fat = parseFloat(form.body_fat);
-      // Clear skinfold fields when switching to bio
-      payload.sf_protocol = null;
+    // Gordura visceral (sempre salva se preenchida, vem da bio)
+    if (form.visceral_fat) payload.visceral_fat = parseFloat(form.visceral_fat);
+
+    // Dobras cutâneas — salvar todos os campos preenchidos independente do protocolo
+    const sfValues = {
+      sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
+      sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
+      sf_triceps:     form.sf_triceps     ? parseFloat(form.sf_triceps)     : undefined,
+      sf_biceps:      form.sf_biceps      ? parseFloat(form.sf_biceps)      : undefined,
+      sf_subscapular: form.sf_subscapular ? parseFloat(form.sf_subscapular) : undefined,
+      sf_suprailiac:  form.sf_suprailiac  ? parseFloat(form.sf_suprailiac)  : undefined,
+      sf_abdominal:   form.sf_abdominal   ? parseFloat(form.sf_abdominal)   : undefined,
+      sf_thigh_sf:    form.sf_thigh_sf    ? parseFloat(form.sf_thigh_sf)    : undefined,
+      sf_calf_sf:     form.sf_calf_sf     ? parseFloat(form.sf_calf_sf)     : undefined,
+    };
+    Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
+
+    // Calcular resultado do adipômetro (independe de ser oficial)
+    const { calcBodyFat } = await import("@/lib/anthropometryUtils");
+    const sfResult = calcBodyFat(protocol, sfValues, patientAge, genderKey);
+    if (sfResult) {
+      payload.sf_protocol  = protocol;
+      payload.body_density = sfResult.density > 0
+        ? parseFloat(sfResult.density.toFixed(6)) : 0;
     }
 
-    if (payload.weight && payload.body_fat != null) {
-      payload.lean_mass = parseFloat(
-        ((payload.weight as number) * (1 - (payload.body_fat as number) / 100)).toFixed(2)
-      );
+    // Resultado oficial — determina body_fat e lean_mass salvos
+    const weight = form.weight ? parseFloat(form.weight) : null;
+    if (officialSource === "bio" && form.bio_fat_pct) {
+      payload.body_fat = parseFloat(form.bio_fat_pct);
+      payload.lean_mass = form.bio_lean_kg
+        ? parseFloat(form.bio_lean_kg)
+        : weight != null
+          ? parseFloat((weight * (1 - parseFloat(form.bio_fat_pct) / 100)).toFixed(2))
+          : undefined;
+    } else if (officialSource === "skinfold" && sfResult) {
+      payload.body_fat  = parseFloat(sfResult.fatPct.toFixed(2));
+      payload.lean_mass = weight != null
+        ? parseFloat((weight * (1 - sfResult.fatPct / 100)).toFixed(2))
+        : undefined;
+    } else if (officialSource === null) {
+      // Auto-detect: usa adipômetro se disponível, senão bio
+      if (sfResult) {
+        payload.body_fat  = parseFloat(sfResult.fatPct.toFixed(2));
+        payload.lean_mass = weight != null
+          ? parseFloat((weight * (1 - sfResult.fatPct / 100)).toFixed(2))
+          : undefined;
+      } else if (form.bio_fat_pct) {
+        payload.body_fat = parseFloat(form.bio_fat_pct);
+        payload.lean_mass = form.bio_lean_kg
+          ? parseFloat(form.bio_lean_kg)
+          : weight != null
+            ? parseFloat((weight * (1 - parseFloat(form.bio_fat_pct) / 100)).toFixed(2))
+            : undefined;
+      }
     }
 
     return payload;
@@ -867,13 +894,13 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 
   const handleSave = async (
     form: MeasurementForm,
-    compMode: "bio" | "skinfold",
     protocol: SkinfoldProtocol,
+    officialSource: "bio" | "skinfold" | null,
     editingId?: number,
   ) => {
     setSaving(true);
     try {
-      const payload = await buildPayload(form, compMode, protocol);
+      const payload = await buildPayload(form, protocol, officialSource);
 
       if (editingId) {
         const res = await updateMeasurement(editingId, payload as Measurement);
