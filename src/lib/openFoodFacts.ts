@@ -3,6 +3,7 @@ import type { FoodItem } from "./foodDatabase";
 interface OFFProduct {
   product_name?: string;
   product_name_pt?: string;
+  product_name_en?: string;
   categories_tags?: string[];
   nutriments?: {
     "energy-kcal_100g"?: number;
@@ -48,13 +49,10 @@ export async function searchOpenFoodFacts(
   query: string,
   signal?: AbortSignal
 ): Promise<FoodItem[]> {
-  // Use v2 API — more reliable, supports CORS
   const params = new URLSearchParams({
     search_terms: query,
-    fields: "product_name,product_name_pt,nutriments,categories_tags",
-    page_size: "20",
-    lc: "pt",
-    cc: "br",
+    fields: "product_name,product_name_pt,product_name_en,nutriments,categories_tags",
+    page_size: "50",
     sort_by: "unique_scans_n",
   });
 
@@ -74,7 +72,7 @@ export async function searchOpenFoodFacts(
       const kcal = kcalFromNutriments(n);
       if (kcal == null) return null;
 
-      const name = (p.product_name_pt || p.product_name || "").trim();
+      const name = (p.product_name_pt || p.product_name || p.product_name_en || "").trim();
       if (name.length < 2) return null;
 
       return {
@@ -89,5 +87,5 @@ export async function searchOpenFoodFacts(
       };
     })
     .filter((f): f is FoodItem => f !== null)
-    .slice(0, 12);
+    .slice(0, 20);
 }
