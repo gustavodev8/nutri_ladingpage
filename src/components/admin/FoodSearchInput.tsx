@@ -89,7 +89,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<FoodItem[]>([]);
   const [apiResults, setApiResults] = useState<FoodItem[]>([]);
-  const [apiLoading, setApiLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<CustomFoodForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<CustomFoodForm>>({});
@@ -111,6 +111,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     if (q.trim().length < 2) {
       setResults([]);
       setApiResults([]);
+      setApiStatus("idle");
       setIsOpen(false);
       return;
     }
@@ -131,7 +132,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     // Debounced API search
     if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
     if (apiAbortRef.current) apiAbortRef.current.abort();
-    setApiLoading(true);
+    setApiStatus("loading");
     setApiResults([]);
     apiTimerRef.current = setTimeout(async () => {
       const controller = new AbortController();
@@ -139,10 +140,9 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
       try {
         const offResults = await searchOpenFoodFacts(q, controller.signal);
         setApiResults(offResults);
-      } catch {
-        // silent fail — local results are still shown
-      } finally {
-        setApiLoading(false);
+        setApiStatus("done");
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") setApiStatus("error");
       }
     }, 600);
   }, []);
@@ -212,7 +212,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     setIsOpen(false);
     setResults([]);
     setApiResults([]);
-    setApiLoading(false);
+    setApiStatus("idle");
     if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
     if (apiAbortRef.current) apiAbortRef.current.abort();
     onCustomName("");
@@ -339,17 +339,32 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
               )}
 
               {/* ── API results section ───────────────────────────────────── */}
-              {(apiLoading || apiResults.length > 0) && (
+              {apiStatus !== "idle" && (
                 <>
-                  <li className="px-4 py-1.5 flex items-center gap-1.5 bg-muted/40 sticky top-0">
+                  <li className="px-4 py-1.5 flex items-center gap-1.5 bg-muted/40">
                     <Globe className="h-3 w-3 text-primary/70" />
                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
                       Open Food Facts
                     </span>
-                    {apiLoading && (
+                    {apiStatus === "loading" && (
                       <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />
                     )}
                   </li>
+                  {apiStatus === "loading" && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Buscando na base global…
+                    </li>
+                  )}
+                  {apiStatus === "error" && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Sem conexão com a API — usando base local
+                    </li>
+                  )}
+                  {apiStatus === "done" && apiResults.length === 0 && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Nenhum resultado externo para "{query}"
+                    </li>
+                  )}
                   {apiResults.map((food) => (
                     <FoodRow key={food.id} food={food} onSelect={handleSelect} isApi />
                   ))}
