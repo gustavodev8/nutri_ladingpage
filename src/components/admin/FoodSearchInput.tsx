@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, X, ChevronRight, Sparkles, Globe, Loader2 } from "lucide-react";
+import { Search, Plus, X, ChevronRight, Sparkles } from "lucide-react";
 import { searchFoods, type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
-import { searchOpenFoodFacts } from "@/lib/openFoodFacts";
 import { cn } from "@/lib/utils";
 
 // ─── Temporary localStorage stubs ────────────────────────────────────────────
-// Store custom foods in localStorage until the Supabase table is created.
 
 const getCustomFoods = (): FoodItem[] => {
   try {
@@ -22,8 +20,6 @@ const saveCustomFoodLocal = (food: FoodItem): void => {
   localStorage.setItem("custom_foods", JSON.stringify(foods));
 };
 
-// These are the functions the component imports from @/lib/supabase in the
-// future — for now they delegate to localStorage.
 export async function fetchCustomFoods(): Promise<FoodItem[]> {
   return getCustomFoods();
 }
@@ -88,8 +84,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const [query, setQuery] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<FoodItem[]>([]);
-  const [apiResults, setApiResults] = useState<FoodItem[]>([]);
-  const [apiStatus, setApiStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<CustomFoodForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<CustomFoodForm>>({});
@@ -98,8 +92,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
-  const apiAbortRef = useRef<AbortController | null>(null);
-  const apiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Sync external value ──────────────────────────────────────────────────
   useEffect(() => {
@@ -110,8 +102,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const runSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
       setResults([]);
-      setApiResults([]);
-      setApiStatus("idle");
       setIsOpen(false);
       return;
     }
@@ -128,23 +118,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     setResults(merged.slice(0, 30));
     updatePos();
     setIsOpen(true);
-
-    // Debounced API search
-    if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
-    if (apiAbortRef.current) apiAbortRef.current.abort();
-    setApiStatus("loading");
-    setApiResults([]);
-    apiTimerRef.current = setTimeout(async () => {
-      const controller = new AbortController();
-      apiAbortRef.current = controller;
-      try {
-        const offResults = await searchOpenFoodFacts(q, controller.signal);
-        setApiResults(offResults);
-        setApiStatus("done");
-      } catch (err) {
-        if ((err as Error)?.name !== "AbortError") setApiStatus("error");
-      }
-    }, 600);
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,14 +127,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     updatePos();
     runSearch(q);
   };
-
-  // ── Cleanup API requests on unmount ─────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
-      if (apiAbortRef.current) apiAbortRef.current.abort();
-    };
-  }, []);
 
   // ── Compute dropdown position (portal needs fixed coords) ───────────────
   const updatePos = useCallback(() => {
@@ -211,10 +176,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     setQuery("");
     setIsOpen(false);
     setResults([]);
-    setApiResults([]);
-    setApiStatus("idle");
-    if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
-    if (apiAbortRef.current) apiAbortRef.current.abort();
     onCustomName("");
     inputRef.current?.focus();
   };
@@ -326,49 +287,33 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
             style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 380), zIndex: 9999 }}
             className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
           >
-            <ul className="max-h-[26rem] overflow-y-auto divide-y divide-border/50">
-              {/* ── Local results ─────────────────────────────────────────── */}
+            <ul className="max-h-80 overflow-y-auto divide-y divide-border/50">
               {results.length === 0 ? (
                 <li className="px-4 py-3 text-sm text-muted-foreground text-center">
-                  Nenhum alimento local para "{query}"
+                  Nenhum alimento encontrado para "{query}"
                 </li>
               ) : (
                 results.map((food) => (
-                  <FoodRow key={food.id} food={food} onSelect={handleSelect} />
-                ))
-              )}
-
-              {/* ── API results section ───────────────────────────────────── */}
-              {apiStatus !== "idle" && (
-                <>
-                  <li className="px-4 py-1.5 flex items-center gap-1.5 bg-muted/40">
-                    <Globe className="h-3 w-3 text-primary/70" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
-                      Open Food Facts
-                    </span>
-                    {apiStatus === "loading" && (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />
-                    )}
+                  <li key={food.id}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); handleSelect(food); }}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/60 cursor-pointer transition-colors gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground">{food.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{food.category}</p>
+                        </div>
+                        <div className="text-right text-xs tabular-nums shrink-0">
+                          <p className="font-semibold text-foreground/80">{food.kcal} kcal</p>
+                          <p className="text-muted-foreground mt-0.5">P {food.protein}g · C {food.carbs}g · G {food.fat}g</p>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                      </div>
+                    </button>
                   </li>
-                  {apiStatus === "loading" && (
-                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
-                      Buscando na base global…
-                    </li>
-                  )}
-                  {apiStatus === "error" && (
-                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
-                      Sem conexão com a API — usando base local
-                    </li>
-                  )}
-                  {apiStatus === "done" && apiResults.length === 0 && (
-                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
-                      Nenhum resultado externo para "{query}"
-                    </li>
-                  )}
-                  {apiResults.map((food) => (
-                    <FoodRow key={food.id} food={food} onSelect={handleSelect} isApi />
-                  ))}
-                </>
+                ))
               )}
             </ul>
 
@@ -397,7 +342,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
           <div className="bg-background border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Modal header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -415,9 +359,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
               </button>
             </div>
 
-            {/* Modal body */}
             <div className="px-6 py-5 space-y-5">
-              {/* Name + Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-foreground">
@@ -452,69 +394,26 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
                     )}
                   >
                     {FOOD_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
+                      <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Macros section */}
               <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground">
-                  Por 100g / 100ml
-                </p>
-
-                {/* Required macros */}
+                <p className="text-sm font-medium text-foreground">Por 100g / 100ml</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <MacroField
-                    label="Calorias (kcal)"
-                    required
-                    value={form.kcal_per_100g}
-                    onChange={(v) => setField("kcal_per_100g", v)}
-                    error={formErrors.kcal_per_100g}
-                    placeholder="Ex: 250"
-                  />
-                  <MacroField
-                    label="Proteína (g)"
-                    required
-                    value={form.protein_per_100g}
-                    onChange={(v) => setField("protein_per_100g", v)}
-                    error={formErrors.protein_per_100g}
-                    placeholder="Ex: 12"
-                  />
-                  <MacroField
-                    label="Carboidrato (g)"
-                    required
-                    value={form.carbs_per_100g}
-                    onChange={(v) => setField("carbs_per_100g", v)}
-                    error={formErrors.carbs_per_100g}
-                    placeholder="Ex: 35"
-                  />
-                  <MacroField
-                    label="Gordura (g)"
-                    required
-                    value={form.fat_per_100g}
-                    onChange={(v) => setField("fat_per_100g", v)}
-                    error={formErrors.fat_per_100g}
-                    placeholder="Ex: 8"
-                  />
+                  <MacroField label="Calorias (kcal)" required value={form.kcal_per_100g} onChange={(v) => setField("kcal_per_100g", v)} error={formErrors.kcal_per_100g} placeholder="Ex: 250" />
+                  <MacroField label="Proteína (g)" required value={form.protein_per_100g} onChange={(v) => setField("protein_per_100g", v)} error={formErrors.protein_per_100g} placeholder="Ex: 12" />
+                  <MacroField label="Carboidrato (g)" required value={form.carbs_per_100g} onChange={(v) => setField("carbs_per_100g", v)} error={formErrors.carbs_per_100g} placeholder="Ex: 35" />
+                  <MacroField label="Gordura (g)" required value={form.fat_per_100g} onChange={(v) => setField("fat_per_100g", v)} error={formErrors.fat_per_100g} placeholder="Ex: 8" />
                 </div>
-
-                {/* Optional fiber */}
                 <div className="w-full sm:w-1/2 pr-0 sm:pr-1.5">
-                  <MacroField
-                    label="Fibras (g)"
-                    value={form.fiber_per_100g}
-                    onChange={(v) => setField("fiber_per_100g", v)}
-                    placeholder="Opcional"
-                  />
+                  <MacroField label="Fibras (g)" value={form.fiber_per_100g} onChange={(v) => setField("fiber_per_100g", v)} placeholder="Opcional" />
                 </div>
               </div>
             </div>
 
-            {/* Modal footer */}
             <div className="flex items-center justify-end gap-3 px-6 pb-6 pt-2">
               <button
                 type="button"
@@ -553,47 +452,6 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
         </div>
       )}
     </>
-  );
-}
-
-// ─── FoodRow ──────────────────────────────────────────────────────────────────
-
-function FoodRow({
-  food,
-  onSelect,
-  isApi,
-}: {
-  food: FoodItem;
-  onSelect: (food: FoodItem) => void;
-  isApi?: boolean;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        onMouseDown={(e) => { e.preventDefault(); onSelect(food); }}
-        className="w-full text-left"
-      >
-        <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/60 cursor-pointer transition-colors gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium text-foreground truncate">{food.name}</p>
-              {isApi && (
-                <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1 py-px rounded bg-primary/10 text-primary/70">
-                  OFF
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{food.category}</p>
-          </div>
-          <div className="text-right text-xs tabular-nums shrink-0">
-            <p className="font-semibold text-foreground/80">{food.kcal} kcal</p>
-            <p className="text-muted-foreground mt-0.5">P {food.protein}g · C {food.carbs}g · G {food.fat}g</p>
-          </div>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-        </div>
-      </button>
-    </li>
   );
 }
 
