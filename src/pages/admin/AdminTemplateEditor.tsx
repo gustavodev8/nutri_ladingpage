@@ -81,6 +81,7 @@ function templateMealToEditor(tm: import("@/lib/supabase").DietTemplateMeal): Ed
         fat:              calc(tf.fat_per_100g),
         household_measure: tf.household_measure ?? undefined,
         measure_amount:    tf.measure_amount    ?? undefined,
+        food_group:        tf.food_group        ?? undefined,
       };
     }),
   };
@@ -139,47 +140,53 @@ export default function AdminTemplateEditor() {
   const handleSave = async () => {
     if (!name.trim()) { toast.error("Informe um nome para o modelo."); return; }
     setSaving(true);
+    try {
+      const saved = await upsertDietTemplate({
+        id:          numId ?? undefined,
+        name:        name.trim(),
+        description: description.trim() || undefined,
+        strategy:    strategy || undefined,
+        total_kcal:  grand.cal   > 0 ? parseFloat(grand.cal.toFixed(1))   : undefined,
+        protein_g:   grand.prot  > 0 ? parseFloat(grand.prot.toFixed(1))  : undefined,
+        carbs_g:     grand.carbs > 0 ? parseFloat(grand.carbs.toFixed(1)) : undefined,
+        fat_g:       grand.fat   > 0 ? parseFloat(grand.fat.toFixed(1))   : undefined,
+        is_active:   true,
+      } as any);
 
-    const saved = await upsertDietTemplate({
-      id:          numId ?? undefined,
-      name:        name.trim(),
-      description: description.trim() || undefined,
-      strategy:    strategy || undefined,
-      total_kcal:  grand.cal  > 0 ? parseFloat(grand.cal.toFixed(1))   : undefined,
-      protein_g:   grand.prot > 0 ? parseFloat(grand.prot.toFixed(1))  : undefined,
-      carbs_g:     grand.carbs > 0 ? parseFloat(grand.carbs.toFixed(1)) : undefined,
-      fat_g:       grand.fat  > 0 ? parseFloat(grand.fat.toFixed(1))   : undefined,
-      is_active:   true,
-    } as any);
+      if (!saved?.id) { toast.error("Erro ao salvar o modelo."); return; }
 
-    if (!saved?.id) { toast.error("Erro ao salvar o modelo."); setSaving(false); return; }
+      const ok = await saveDietTemplateMeals(
+        saved.id,
+        meals.map((m, idx) => ({
+          meal_name:       m.meal_name,
+          time_suggestion: m.time_suggestion,
+          order_index:     idx,
+          foods:           m.foods.map((f, fi) => ({
+            food_name:         f.food_name,
+            quantity:          f.quantity,
+            unit:              f.unit,
+            kcal_per_100g:     f.kcal_per_100g,
+            protein_per_100g:  f.protein_per_100g,
+            carbs_per_100g:    f.carbs_per_100g,
+            fat_per_100g:      f.fat_per_100g,
+            household_measure: f.household_measure,
+            measure_amount:    f.measure_amount,
+            food_group:        f.food_group,
+            order_index:       fi,
+          })),
+        }))
+      );
 
-    const ok = await saveDietTemplateMeals(
-      saved.id,
-      meals.map((m, idx) => ({
-        meal_name:       m.meal_name,
-        time_suggestion: m.time_suggestion,
-        order_index:     idx,
-        foods:           m.foods.map((f, fi) => ({
-          food_name:         f.food_name,
-          quantity:          f.quantity,
-          unit:              f.unit,
-          kcal_per_100g:     f.kcal_per_100g,
-          protein_per_100g:  f.protein_per_100g,
-          carbs_per_100g:    f.carbs_per_100g,
-          fat_per_100g:      f.fat_per_100g,
-          household_measure: f.household_measure,
-          measure_amount:    f.measure_amount,
-          food_group:        f.food_group,
-          order_index:       fi,
-        })),
-      }))
-    );
-
-    setSaving(false);
-    if (!ok) { toast.error("Erro ao salvar as refeições do modelo."); return; }
-    toast.success("Modelo salvo com sucesso.");
-    if (isNew) navigate(`/admin/modelos/${saved.id}`, { replace: true });
+      if (!ok) { toast.error("Erro ao salvar as refeições do modelo."); return; }
+      toast.success("Modelo salvo com sucesso.");
+      if (isNew) navigate(`/admin/modelos/${saved.id}`, { replace: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[AdminTemplateEditor] handleSave:", err);
+      toast.error(`Erro inesperado: ${msg}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── Meal helpers ───────────────────────────────────────────────────────────

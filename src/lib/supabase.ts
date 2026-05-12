@@ -982,6 +982,7 @@ export interface DietTemplateFood {
   protein_per_100g?:  number;
   carbs_per_100g?:    number;
   fat_per_100g?:      number;
+  food_group?:        string;
   order_index?:       number;
 }
 
@@ -1054,64 +1055,71 @@ export async function deleteDietTemplate(id: number): Promise<boolean> {
 export async function saveDietTemplateMeals(
   templateId: number,
   meals: Array<{
-    meal_name:       string;
+    meal_name:        string;
     time_suggestion?: string;
-    order_index:     number;
+    order_index:      number;
     foods: Array<{
-      food_name:        string;
-      quantity?:        number;
-      unit?:            string;
-      kcal_per_100g?:   number;
+      food_name:         string;
+      quantity?:         number;
+      unit?:             string;
+      kcal_per_100g?:    number;
       protein_per_100g?: number;
-      carbs_per_100g?:  number;
-      fat_per_100g?:    number;
+      carbs_per_100g?:   number;
+      fat_per_100g?:     number;
       household_measure?: string;
-      measure_amount?:  number;
-      food_group?:      string;
-      order_index:      number;
+      measure_amount?:   number;
+      food_group?:       string;
+      order_index:       number;
     }>;
   }>
 ): Promise<boolean> {
-  // Apaga as refeições antigas (cascade apaga os alimentos via FK)
-  const { error: delErr } = await supabaseAdmin
-    .from("diet_template_meals")
-    .delete()
-    .eq("template_id", templateId);
-  if (delErr) { console.error("[Supabase] saveDietTemplateMeals delete:", delErr.message); return false; }
-
-  for (const meal of meals) {
-    const { data: mealData, error: mealErr } = await supabaseAdmin
+  try {
+    // Apaga as refeições antigas (cascade apaga os alimentos via FK)
+    const { error: delErr } = await supabaseAdmin
       .from("diet_template_meals")
-      .insert({
-        template_id:     templateId,
-        meal_name:       meal.meal_name,
-        time_suggestion: meal.time_suggestion ?? "",
-        order_index:     meal.order_index,
-      })
-      .select()
-      .single();
-    if (mealErr || !mealData) { console.error("[Supabase] saveDietTemplateMeals insert meal:", mealErr?.message); return false; }
+      .delete()
+      .eq("template_id", templateId);
+    if (delErr) { console.error("[Supabase] saveDietTemplateMeals delete:", delErr.message); return false; }
 
-    if (meal.foods.length > 0) {
-      const foodRows = meal.foods.map((f) => ({
-        template_meal_id:  mealData.id,
-        food_name:         f.food_name,
-        quantity:          f.quantity          ?? null,
-        unit:              f.unit              ?? "g",
-        kcal_per_100g:     f.kcal_per_100g     ?? null,
-        protein_per_100g:  f.protein_per_100g  ?? null,
-        carbs_per_100g:    f.carbs_per_100g    ?? null,
-        fat_per_100g:      f.fat_per_100g      ?? null,
-        household_measure: f.household_measure ?? null,
-        measure_amount:    f.measure_amount    ?? null,
-        food_group:        f.food_group        ?? null,
-        order_index:       f.order_index,
-      }));
-      const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
-      if (foodErr) { console.error("[Supabase] saveDietTemplateMeals insert foods:", foodErr.message); return false; }
+    for (const meal of meals) {
+      const { data: mealData, error: mealErr } = await supabaseAdmin
+        .from("diet_template_meals")
+        .insert({
+          template_id:     templateId,
+          meal_name:       meal.meal_name,
+          time_suggestion: meal.time_suggestion ?? "",
+          order_index:     meal.order_index,
+        })
+        .select()
+        .single();
+      if (mealErr || !mealData) { console.error("[Supabase] saveDietTemplateMeals insert meal:", mealErr?.message); return false; }
+
+      // Filtra alimentos sem nome antes de inserir
+      const validFoods = meal.foods.filter((f) => f.food_name.trim() !== "");
+      if (validFoods.length > 0) {
+        const foodRows = validFoods.map((f) => ({
+          template_meal_id:  mealData.id,
+          food_name:         f.food_name,
+          quantity:          f.quantity          ?? null,
+          unit:              f.unit              ?? "g",
+          kcal_per_100g:     f.kcal_per_100g     ?? null,
+          protein_per_100g:  f.protein_per_100g  ?? null,
+          carbs_per_100g:    f.carbs_per_100g    ?? null,
+          fat_per_100g:      f.fat_per_100g      ?? null,
+          household_measure: f.household_measure ?? null,
+          measure_amount:    f.measure_amount    ?? null,
+          food_group:        f.food_group        ?? null,
+          order_index:       f.order_index,
+        }));
+        const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
+        if (foodErr) { console.error("[Supabase] saveDietTemplateMeals insert foods:", foodErr.message); return false; }
+      }
     }
+    return true;
+  } catch (err) {
+    console.error("[Supabase] saveDietTemplateMeals exception:", err);
+    return false;
   }
-  return true;
 }
 
 // ─── Lab Exams ────────────────────────────────────────────────────────────────
