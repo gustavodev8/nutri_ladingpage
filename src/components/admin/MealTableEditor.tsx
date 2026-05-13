@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Plus, Trash2, MessageSquare, ChevronDown, ChevronUp, ArrowLeftRight } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ChevronDown, ChevronUp, ArrowLeftRight, NotebookPen } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
@@ -86,18 +86,15 @@ export const cellTxt =
 // ─── FoodRow ──────────────────────────────────────────────────────────────────
 
 export function FoodRow({
-  food,
-  idx,
-  onChange,
-  onRemove,
+  food, idx, onChange, onRemove,
 }: {
-  food:     MealFood;
-  idx:      number;
+  food: MealFood; idx: number;
   onChange: (f: MealFood) => void;
   onRemove: () => void;
 }) {
-  const [showDetails,   setShowDetails]   = useState(false);
+  const [showDetails,    setShowDetails]   = useState(false);
   const [showSubstitute, setShowSubstitute] = useState(false);
+  const [showNotes,      setShowNotes]     = useState(!!food.notes);
 
   const handleSelect = (s: {
     name: string;
@@ -143,20 +140,17 @@ export function FoodRow({
 
         {/* Quantidade */}
         <td className="py-1.5 pr-2 w-20 align-middle">
-          <input
-            type="number" min={0} step="any" placeholder="—"
+          <input type="number" min={0} step="any" placeholder="—"
             value={food.quantity !== undefined ? String(food.quantity) : ""}
             onChange={(e) => handleQty(e.target.value)}
-            className={cellNum}
-          />
+            className={cellNum} />
         </td>
 
         {/* Unidade */}
         <td className="py-1.5 pr-3 w-24 align-middle">
           <input type="text" list="unit-list-shared" value={food.unit ?? "g"}
             onChange={(e) => onChange({ ...food, unit: e.target.value })}
-            className={cellTxt}
-          />
+            className={cellTxt} />
           <datalist id="unit-list-shared">
             {UNITS.map((u) => <option key={u} value={u} />)}
           </datalist>
@@ -169,8 +163,18 @@ export function FoodRow({
         {numCell(food.fat)}
 
         {/* Ações */}
-        <td className="py-2 pr-2 w-16 align-middle">
+        <td className="py-2 pr-2 w-20 align-middle">
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <button type="button" onClick={() => setShowNotes((v) => !v)}
+              title="Nota / modo de preparo"
+              className={cn(
+                "h-7 w-7 flex items-center justify-center rounded transition-colors",
+                showNotes || food.notes
+                  ? "text-amber-600 bg-amber-50"
+                  : "text-muted-foreground/30 hover:text-amber-600 hover:bg-amber-50"
+              )}>
+              <NotebookPen size={12} />
+            </button>
             <button type="button" onClick={() => setShowDetails((v) => !v)}
               title="Medida caseira / grupo"
               className={cn(
@@ -189,55 +193,58 @@ export function FoodRow({
         </td>
       </tr>
 
-      {/* Linha expandível de detalhes */}
+      {/* Nota / modo de preparo por alimento */}
+      {showNotes && (
+        <tr className="border-b border-border/20 bg-amber-50/40">
+          <td colSpan={9} className="px-4 pb-2.5 pt-1.5">
+            <div className="flex items-start gap-2">
+              <NotebookPen size={13} className="text-amber-600/70 mt-2 shrink-0" />
+              <textarea
+                rows={2}
+                value={food.notes ?? ""}
+                onChange={(e) => onChange({ ...food, notes: e.target.value || undefined })}
+                placeholder="Modo de preparo, substituições ou observações para este alimento…"
+                className="flex-1 text-xs bg-white/70 border border-amber-200 rounded-md px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400 placeholder:text-muted-foreground/40 text-foreground/80"
+              />
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Detalhes: medida caseira + grupo alimentar */}
       {showDetails && (
         <tr className="border-b border-border/20 bg-muted/10">
           <td colSpan={9} className="px-4 pb-3 pt-1.5">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              {/* Medida caseira */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60 shrink-0">Medida:</span>
-                <input
-                  type="number" min={0} step="0.25" placeholder="1"
+                <input type="number" min={0} step="0.25" placeholder="1"
                   value={food.measure_amount !== undefined ? String(food.measure_amount) : ""}
                   onChange={(e) => onChange({ ...food, measure_amount: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
-                  className="h-7 w-14 rounded border border-border/60 bg-background px-2 text-xs text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <input
-                  type="text"
-                  placeholder="colher de sopa"
+                  className="h-7 w-14 rounded border border-border/60 bg-background px-2 text-xs text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring" />
+                <input type="text" placeholder="colher de sopa"
                   value={food.household_measure ?? ""}
                   onChange={(e) => onChange({ ...food, household_measure: e.target.value || undefined })}
                   list="measure-list-shared"
-                  className="h-7 w-36 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                />
+                  className="h-7 w-36 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
                 <datalist id="measure-list-shared">
                   {["colher de sopa", "colher de chá", "colher de sobremesa", "xícara", "unidade média",
                     "unidade pequena", "unidade grande", "fatia", "porção", "copo", "escumadeira"]
                     .map((m) => <option key={m} value={m} />)}
                 </datalist>
               </div>
-
-              {/* Grupo alimentar */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60 shrink-0">Grupo:</span>
-                <select
-                  value={food.food_group ?? ""}
+                <select value={food.food_group ?? ""}
                   onChange={(e) => onChange({ ...food, food_group: e.target.value || undefined })}
-                  className="h-7 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-                >
+                  className="h-7 rounded border border-border/60 bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground">
                   <option value="">— selecionar —</option>
                   {FOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
-
-              {/* Substituição inteligente */}
-              <button
-                type="button"
-                onClick={() => setShowSubstitute(true)}
+              <button type="button" onClick={() => setShowSubstitute(true)}
                 disabled={!food.food_name.trim()}
-                className="flex items-center gap-1.5 h-7 px-3 rounded border border-border/60 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
-              >
+                className="flex items-center gap-1.5 h-7 px-3 rounded border border-border/60 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
                 <ArrowLeftRight size={11} />
                 Substituição inteligente
               </button>
@@ -268,13 +275,9 @@ export function FoodRow({
 // ─── MealSection ──────────────────────────────────────────────────────────────
 
 export function MealSection({
-  meal,
-  idx,
-  onUpdate,
-  onRemove,
+  meal, idx, onUpdate, onRemove,
 }: {
-  meal:     EditorMeal;
-  idx:      number;
+  meal: EditorMeal; idx: number;
   onUpdate: (m: EditorMeal) => void;
   onRemove: () => void;
 }) {
@@ -283,9 +286,7 @@ export function MealSection({
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
   const [showNotes, setShowNotes] = useState(!!meal.notes);
 
-  const updateFood = (i: number, f: MealFood) => {
-    const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n });
-  };
+  const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
   const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
   const addFood    = () => onUpdate({ ...meal, foods: [...foods, emptyFood()] });
 
@@ -297,20 +298,14 @@ export function MealSection({
         <span className="text-xs font-bold text-muted-foreground/60 w-5 flex-shrink-0 select-none tabular-nums">
           {String(idx + 1).padStart(2, "0")}
         </span>
-        <input
-          type="text"
-          value={meal.meal_name}
+        <input type="text" value={meal.meal_name}
           onChange={(e) => onUpdate({ ...meal, meal_name: e.target.value })}
           className="text-base font-bold bg-transparent border-0 focus:outline-none text-foreground flex-1 min-w-0 placeholder:text-muted-foreground"
-          placeholder="Nome da refeição"
-        />
-        <input
-          type="text"
-          value={meal.time_suggestion ?? ""}
+          placeholder="Nome da refeição" />
+        <input type="text" value={meal.time_suggestion ?? ""}
           onChange={(e) => onUpdate({ ...meal, time_suggestion: e.target.value })}
           className="hidden sm:block text-xs bg-transparent border-0 focus:outline-none w-28 text-muted-foreground text-right flex-shrink-0"
-          placeholder="00:00 – 00:00"
-        />
+          placeholder="00:00 – 00:00" />
         {totals.cal > 0 && (
           <span className="text-xs tabular-nums text-muted-foreground font-medium flex-shrink-0 ml-2 border-l border-border pl-3">
             {n0(totals.cal)} kcal
@@ -335,7 +330,7 @@ export function MealSection({
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Gord. g</th>
-              <th className="w-16" />
+              <th className="w-20" />
             </tr>
           </thead>
           <tbody>
@@ -354,7 +349,6 @@ export function MealSection({
               ))
             )}
           </tbody>
-
           {foods.length > 0 && (
             <tfoot>
               <tr className="border-t border-border/50 bg-muted/20">
@@ -381,30 +375,24 @@ export function MealSection({
             <Plus size={12} />
             Adicionar alimento
           </button>
-          <button
-            type="button"
+          <button type="button"
             onClick={() => { setShowNotes(v => !v); if (showNotes) onUpdate({ ...meal, notes: "" }); }}
             className={cn(
               "flex items-center gap-1 text-xs font-medium transition-colors",
               showNotes || meal.notes
                 ? "text-primary hover:text-primary/80"
                 : "text-muted-foreground/50 hover:text-muted-foreground"
-            )}
-          >
+            )}>
             <MessageSquare size={12} />
             {showNotes ? "Remover observação" : "Adicionar observação"}
           </button>
         </div>
-
         {showNotes && (
           <div className="px-4 pb-3">
-            <textarea
-              rows={2}
-              value={meal.notes ?? ""}
+            <textarea rows={2} value={meal.notes ?? ""}
               onChange={e => onUpdate({ ...meal, notes: e.target.value })}
               placeholder="Observações para esta refeição (substituições, preparo, orientações…)"
-              className="w-full text-sm bg-muted/30 border border-border/50 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary placeholder:text-muted-foreground/30 text-foreground/80"
-            />
+              className="w-full text-sm bg-muted/30 border border-border/50 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary placeholder:text-muted-foreground/30 text-foreground/80" />
           </div>
         )}
       </div>
