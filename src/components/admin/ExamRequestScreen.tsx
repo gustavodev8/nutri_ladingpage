@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, Check, FileText, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Check, FileText, Loader2, ChevronDown, ChevronRight, Zap, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,15 +21,15 @@ interface Props {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
-  const [protocols, setProtocols]               = useState<ExamProtocol[]>([]);
-  const [catalog,   setCatalog]                 = useState<ExamCatalogItem[]>([]);
-  const [loading,   setLoading]                 = useState(true);
-  const [saving,    setSaving]                  = useState(false);
-  const [selectedProtocolId, setSelectedProtocolId] = useState<number | null>(null);
-  const [selectedExamIds, setSelectedExamIds]   = useState<Set<number>>(new Set());
-  const [search,    setSearch]                  = useState("");
-  const [notes,     setNotes]                   = useState("");
-  const [collapsed, setCollapsed]               = useState<Set<string>>(new Set());
+  const [protocols, setProtocols]             = useState<ExamProtocol[]>([]);
+  const [catalog,   setCatalog]               = useState<ExamCatalogItem[]>([]);
+  const [loading,   setLoading]               = useState(true);
+  const [saving,    setSaving]                = useState(false);
+  const [selectedExamIds, setSelectedExamIds] = useState<Set<number>>(new Set());
+  const [search,    setSearch]                = useState("");
+  const [notes,     setNotes]                 = useState("");
+  const [collapsed, setCollapsed]             = useState<Set<string>>(new Set());
+  const [appliedProtocols, setAppliedProtocols] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,14 +40,42 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
     });
   }, []);
 
-  const handleProtocolChange = (protocolId: number | null) => {
-    setSelectedProtocolId(protocolId);
-    if (protocolId) {
-      const proto = protocols.find((p) => p.id === protocolId);
-      setSelectedExamIds(new Set((proto?.exams ?? []).map((e) => e.id)));
-    } else {
-      setSelectedExamIds(new Set());
-    }
+  // ── Aplica protocolo de forma CUMULATIVA (não substitui seleção atual) ──
+  const handleApplyProtocol = (protocolId: string) => {
+    if (!protocolId) return;
+    const proto = protocols.find((p) => String(p.id) === protocolId);
+    if (!proto) return;
+
+    const examIds = (proto.exams ?? []).map((e) => e.id);
+    let added = 0;
+
+    setSelectedExamIds((prev) => {
+      const next = new Set(prev);
+      examIds.forEach((id) => {
+        if (!next.has(id)) { next.add(id); added++; }
+      });
+      return next;
+    });
+
+    setAppliedProtocols((prev) =>
+      prev.includes(proto.name) ? prev : [...prev, proto.name]
+    );
+
+    // toast fora do setState — usa setTimeout p/ garantir que o state já atualizou
+    setTimeout(() => {
+      const newCount = examIds.filter((id) => !selectedExamIds.has(id)).length;
+      if (newCount > 0) {
+        toast.success(`Protocolo "${proto.name}" aplicado: ${newCount} exame(s) adicionado(s).`);
+      } else {
+        toast.info(`Protocolo "${proto.name}": todos os exames já estavam selecionados.`);
+      }
+    }, 0);
+  };
+
+  const handleClearAll = () => {
+    setSelectedExamIds(new Set());
+    setAppliedProtocols([]);
+    toast.info("Seleção limpa.");
   };
 
   const toggleExam = (examId: number) => {
@@ -89,7 +117,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
   const handleSubmit = async () => {
     if (selectedExamIds.size === 0) { toast.error("Selecione pelo menos um exame."); return; }
     setSaving(true);
-    const requestId = await createExamRequest(patientId, selectedProtocolId ?? undefined, [...selectedExamIds], notes);
+    const requestId = await createExamRequest(patientId, undefined, [...selectedExamIds], notes);
     setSaving(false);
     if (!requestId) { toast.error("Erro ao gerar o pedido. Tente novamente."); return; }
     toast.success(`Pedido gerado com ${selectedExamIds.size} exame(s).`);
@@ -107,61 +135,66 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* ── Protocolos ── */}
-      <div className="space-y-2">
-        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Protocolo
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => handleProtocolChange(null)}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-              selectedProtocolId === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:bg-muted"
-            )}
-          >
-            Seleção manual
-          </button>
-          {protocols.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => handleProtocolChange(p.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                selectedProtocolId === p.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {p.name}
-            </button>
-          ))}
+      {/* ── Protocolos Rápidos ── */}
+      <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-primary shrink-0" />
+          <Label className="text-[11px] font-black uppercase tracking-widest text-primary">
+            Protocolos Rápidos
+          </Label>
         </div>
-        {selectedProtocolId != null && (
-          <p className="text-xs text-muted-foreground pl-0.5">
-            {protocols.find((p) => p.id === selectedProtocolId)?.description}
-          </p>
+
+        <p className="text-xs text-muted-foreground">
+          Selecione um protocolo para adicionar os exames automaticamente.
+          A seleção é <span className="font-semibold">cumulativa</span> — você pode aplicar vários.
+        </p>
+
+        <div className="flex items-center gap-2">
+          <select
+            defaultValue=""
+            onChange={(e) => { handleApplyProtocol(e.target.value); e.currentTarget.value = ""; }}
+            className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+          >
+            <option value="" disabled>Selecionar protocolo…</option>
+            {protocols.map((p) => (
+              <option key={p.id} value={String(p.id)}>
+                {p.name}{p.description ? ` — ${p.description}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Tags dos protocolos aplicados */}
+        {appliedProtocols.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {appliedProtocols.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold border border-primary/20"
+              >
+                <Zap size={9} /> {name}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* ── Search + counter ── */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
+      {/* ── Contador + busca + limpar ── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-foreground">
             {selectedExamIds.size} exame(s) selecionado(s)
           </span>
           {selectedExamIds.size > 0 && (
-            <button
+            <Button
               type="button"
-              onClick={() => setSelectedExamIds(new Set())}
-              className="text-[11px] text-muted-foreground hover:text-destructive underline transition-colors"
+              variant="outline"
+              size="sm"
+              onClick={handleClearAll}
+              className="h-7 px-2.5 text-[11px] gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
             >
-              limpar
-            </button>
+              <Trash2 size={11} /> Limpar Seleção
+            </Button>
           )}
         </div>
         <div className="relative w-52">
