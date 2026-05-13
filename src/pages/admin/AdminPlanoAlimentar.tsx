@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap,
-  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList,
+  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
+import { DietPlanPrintView } from "@/components/admin/DietPlanPrintView";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { type MacroGoals } from "@/lib/planningUtils";
@@ -30,7 +31,7 @@ import {
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
 
-// ─── Constants ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_MEALS = [
   { meal_name: "Café da manhã",   time_suggestion: "07:00 – 08:00" },
@@ -41,7 +42,7 @@ const DEFAULT_MEALS = [
   { meal_name: "Ceia",            time_suggestion: "21:30 – 22:00" },
 ];
 
-// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────────────
+// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────
 
 const mealToEditor = (m: Meal): EditorMeal => ({
   _dbId:           m.id,
@@ -60,7 +61,7 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   foods:           m.foods,
 });
 
-// ─── Main ──────────────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AdminPlanoAlimentar() {
   const { id, planId } = useParams<{ id: string; planId: string }>();
@@ -87,6 +88,7 @@ export default function AdminPlanoAlimentar() {
   const [saving, setSaving]   = useState(false);
   const [showEmail, setShowEmail]       = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [showPrint, setShowPrint]       = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
 
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
@@ -202,7 +204,7 @@ export default function AdminPlanoAlimentar() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Header ────────────────────────────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-5xl mx-auto px-3 sm:px-6 flex items-center gap-2 sm:gap-3 py-3">
           <Link to={`/admin/pacientes/${id}?tab=planos`}
@@ -225,6 +227,16 @@ export default function AdminPlanoAlimentar() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
+              onClick={() => setShowPrint(true)}
+              disabled={isNew}
+              title={isNew ? "Salve o plano primeiro" : "Imprimir / Salvar PDF"}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Printer size={13} />
+              <span className="hidden sm:inline">Imprimir</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setShowEmail(true)}
               disabled={isNew}
               title={isNew ? "Salve o plano primeiro" : "Enviar por e-mail"}
@@ -243,7 +255,7 @@ export default function AdminPlanoAlimentar() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* ── Metadados ──────────────────────────────────────────────────────────────────── */}
+        {/* ── Metadados ───────────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Dados do Plano</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -271,10 +283,10 @@ export default function AdminPlanoAlimentar() {
           </div>
         </section>
 
-        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────────────────── */}
+        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────── */}
         <ClinicalInsightsPanel alerts={clinicalAlerts} />
 
-        {/* ── Painel de Metas Energéticas ─────────────────────────────────────────────── */}
+        {/* ── Painel de Metas Energéticas ─────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border/60 bg-muted/30">
             <Zap size={14} className="text-primary" />
@@ -383,7 +395,7 @@ export default function AdminPlanoAlimentar() {
           )}
         </section>
 
-        {/* ── Planejamento Dietético (travamento de macros) ───────────────────────── */}
+        {/* ── Planejamento Dietético (travamento de macros) ───────────────── */}
         <DietaryPlanningPanel
           weightKg={latestMeasurement?.weight}
           totalKcal={plan.daily_calories}
@@ -391,7 +403,7 @@ export default function AdminPlanoAlimentar() {
           onGoalsChange={setMacroGoals}
         />
 
-        {/* ── Resumo nutricional ───────────────────────────────────────────────────────────── */}
+        {/* ── Resumo nutricional ──────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
@@ -503,7 +515,7 @@ export default function AdminPlanoAlimentar() {
           </div>
         </section>
 
-        {/* ── Refeições ───────────────────────────────────────────────────────────────────── */}
+        {/* ── Refeições ───────────────────────────────────────────────────── */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -534,7 +546,7 @@ export default function AdminPlanoAlimentar() {
           </div>
         </div>
 
-        {/* ── Salvar ──────────────────────────────────────────────────────────────────────── */}
+        {/* ── Salvar ──────────────────────────────────────────────────────── */}
         <div className="flex justify-end pb-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-6">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -558,6 +570,15 @@ export default function AdminPlanoAlimentar() {
         onClose={() => setShowTemplate(false)}
         onImport={handleTemplateImport}
       />
+
+      {showPrint && (
+        <DietPlanPrintView
+          plan={plan}
+          meals={meals.map((m) => editorToMeal(m, plan.id ?? 0))}
+          patient={patient}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
     </div>
   );
 }
