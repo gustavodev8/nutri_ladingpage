@@ -57,7 +57,7 @@ export async function saveContent(content: StoredContent): Promise<boolean> {
   return true;
 }
 
-// ─── Image Storage ────────────────────────────────────────────────────────────
+// ─── Image Storage ────────────────────────────────────────────────────────────────
 
 const BUCKET = "images";
 
@@ -202,7 +202,7 @@ export async function uploadVideo(file: File): Promise<string | null> {
   return urlData.publicUrl;
 }
 
-// ─── Clínica – Types ──────────────────────────────────────────────────────────
+// ─── Clínica – Types ──────────────────────────────────────────────────────────────
 
 export interface Patient {
   id?: number;
@@ -226,7 +226,7 @@ export interface PatientPhoto {
   created_at?: string;
 }
 
-// ─── Epic 6: Triagem Clínica Estruturada ─────────────────────────────────────
+// ─── Epic 6: Triagem Clínica Estruturada ───────────────────────────────────────────
 export interface AnamnesisStructured {
   // OBJETIVO
   goal_primary?: "emagrecimento" | "hipertrofia" | "saude_geral" | "performance" | "recomposicao" | "outro";
@@ -407,7 +407,7 @@ export interface MealFood {
   food_group?: string;          // ex: "Carboidrato", "Proteína" — para substituições
 }
 
-// ─── Clínica – CRUD ───────────────────────────────────────────────────────────
+// ─── Clínica – CRUD ───────────────────────────────────────────────────────────────────
 
 // Patients
 export async function fetchPatients(): Promise<Patient[]> {
@@ -609,9 +609,9 @@ export async function fetchFullMealPlan(planId: number): Promise<Meal[]> {
   return (data ?? []).map((m: any) => ({ ...m, foods: m.foods ?? [] }));
 }
 
-export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean> {
+export async function saveMeals(planId: number, meals: Meal[]): Promise<string | null> {
   const { error: delError } = await supabaseAdmin.from("meals").delete().eq("plan_id", planId);
-  if (delError) { console.error("[Supabase] saveMeals delete:", delError.message); return false; }
+  if (delError) { console.error("[Supabase] saveMeals delete:", delError.message); return delError.message; }
 
   for (let i = 0; i < meals.length; i++) {
     const meal = meals[i];
@@ -620,10 +620,14 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
       .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "" })
       .select()
       .single();
-    if (mealErr || !mealData) { console.error("[Supabase] saveMeals insert meal:", mealErr?.message); return false; }
+    if (mealErr || !mealData) {
+      console.error("[Supabase] saveMeals insert meal:", mealErr?.message);
+      return mealErr?.message ?? "Erro ao inserir refeição";
+    }
 
-    if (meal.foods && meal.foods.length > 0) {
-      const foodRows = meal.foods.map((f, fi) => ({
+    const validFoods = (meal.foods ?? []).filter((f) => f.food_name.trim() !== "");
+    if (validFoods.length > 0) {
+      const foodRows = validFoods.map((f, fi) => ({
         meal_id:           mealData.id,
         food_name:         f.food_name,
         quantity:          f.quantity          ?? null,
@@ -632,7 +636,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
         protein:           f.protein           ?? null,
         carbs:             f.carbs             ?? null,
         fat:               f.fat               ?? null,
-        notes:             f.notes             ?? "",
+        notes:             f.notes             ?? null,
         sort_order:        fi,
         kcal_per_100g:     f.kcal_per_100g     ?? null,
         protein_per_100g:  f.protein_per_100g  ?? null,
@@ -643,13 +647,16 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<boolean>
         food_group:        f.food_group        ?? null,
       }));
       const { error: foodErr } = await supabaseAdmin.from("meal_foods").insert(foodRows);
-      if (foodErr) { console.error("[Supabase] saveMeals insert foods:", foodErr.message); return false; }
+      if (foodErr) {
+        console.error("[Supabase] saveMeals insert foods:", foodErr.message);
+        return foodErr.message;
+      }
     }
   }
-  return true;
+  return null;
 }
 
-// ─── Booking System ───────────────────────────────────────────────────────────
+// ─── Booking System ───────────────────────────────────────────────────────────────────
 
 export interface AvailabilitySlot {
   id: number;
@@ -756,14 +763,10 @@ export async function fetchBookingsForDate(date: string, type: string): Promise<
 }
 
 export async function insertBooking(booking: Booking): Promise<boolean> {
-  // Tenta upsert por (booking_group_id, session_number) para ser idempotente:
-  // se o booking já existe (ex: pré-salvo como pending antes do pagamento),
-  // apenas atualiza o status sem duplicar.
   const { error } = await supabase
     .from('bookings')
     .upsert(booking, { onConflict: 'booking_group_id,session_number', ignoreDuplicates: false });
   if (error) {
-    // Fallback: se upsert falhar (ex: sem constraint unique), tenta insert simples
     const { error: insertError } = await supabase.from('bookings').insert(booking);
     if (insertError) { console.error("insertBooking error:", insertError); return false; }
   }
@@ -804,7 +807,7 @@ export async function autoExpirePendingBookings(bookings: Booking[]): Promise<Bo
   return bookings.filter(b => {
     if (b.status !== 'pending') return true;
     const created = new Date(b.created_at || 0);
-    return created >= cutoff; // mantém só os pending recentes
+    return created >= cutoff;
   });
 }
 
@@ -832,7 +835,7 @@ export interface ConsultationRecord {
   id?: number;
   booking_id?: number;
   booking_group_id?: string;
-  session_number?: number;      // 1 = consulta inicial, 2+ = retorno N-1
+  session_number?: number;
   client_name?: string;
   client_email?: string;
   notes?: string;
@@ -889,7 +892,7 @@ export async function confirmBookingsByGroupId(bookingGroupId: string): Promise<
   return !error;
 }
 
-// ─── Blog ─────────────────────────────────────────────────────────────────────
+// ─── Blog ────────────────────────────────────────────────────────────────────────────────
 /*
   SQL para criar a tabela (execute no Supabase SQL Editor):
 
@@ -941,12 +944,10 @@ export async function upsertBlogPost(post: BlogPost): Promise<BlogPost | null> {
   const payload = { ...fields, updated_at: new Date().toISOString() };
 
   if (id) {
-    // UPDATE existing post by id — don't chain .select() to avoid RLS select restrictions
     const { error } = await supabase.from('blog_posts').update(payload).eq('id', id);
     if (error) { console.error('upsertBlogPost update error:', error); return null; }
     return { ...post, ...payload };
   } else {
-    // INSERT new post — don't chain .select() to avoid RLS select restrictions
     const { error } = await supabase.from('blog_posts').insert(payload);
     if (error) { console.error('upsertBlogPost insert error:', error); return null; }
     return { ...payload } as BlogPost;
@@ -968,7 +969,7 @@ export async function uploadBlogImage(file: File): Promise<string | null> {
   return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
 }
 
-// ─── Epic 7: Diet Templates ───────────────────────────────────────────────────
+// ─── Epic 7: Diet Templates ────────────────────────────────────────────────────────────────
 
 export interface DietTemplateFood {
   id:                 number;
@@ -983,6 +984,7 @@ export interface DietTemplateFood {
   carbs_per_100g?:    number;
   fat_per_100g?:      number;
   food_group?:        string;
+  notes?:             string;
   order_index?:       number;
 }
 
@@ -992,6 +994,7 @@ export interface DietTemplateMeal {
   meal_name:        string;
   time_suggestion?: string;
   order_index?:     number;
+  notes?:           string;
   foods?:           DietTemplateFood[];
 }
 
@@ -1058,6 +1061,7 @@ export async function saveDietTemplateMeals(
     meal_name:        string;
     time_suggestion?: string;
     order_index:      number;
+    notes?:           string;
     foods: Array<{
       food_name:         string;
       quantity?:         number;
@@ -1069,12 +1073,12 @@ export async function saveDietTemplateMeals(
       household_measure?: string;
       measure_amount?:   number;
       food_group?:       string;
+      notes?:            string;
       order_index:       number;
     }>;
   }>
 ): Promise<boolean> {
   try {
-    // Apaga as refeições antigas (cascade apaga os alimentos via FK)
     const { error: delErr } = await supabaseAdmin
       .from("diet_template_meals")
       .delete()
@@ -1089,12 +1093,12 @@ export async function saveDietTemplateMeals(
           meal_name:       meal.meal_name,
           time_suggestion: meal.time_suggestion ?? "",
           order_index:     meal.order_index,
+          notes:           meal.notes ?? null,
         })
         .select()
         .single();
       if (mealErr || !mealData) { console.error("[Supabase] saveDietTemplateMeals insert meal:", mealErr?.message); return false; }
 
-      // Filtra alimentos sem nome antes de inserir
       const validFoods = meal.foods.filter((f) => f.food_name.trim() !== "");
       if (validFoods.length > 0) {
         const foodRows = validFoods.map((f) => ({
@@ -1109,6 +1113,7 @@ export async function saveDietTemplateMeals(
           household_measure: f.household_measure ?? null,
           measure_amount:    f.measure_amount    ?? null,
           food_group:        f.food_group        ?? null,
+          notes:             f.notes             ?? null,
           order_index:       f.order_index,
         }));
         const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
@@ -1122,7 +1127,7 @@ export async function saveDietTemplateMeals(
   }
 }
 
-// ─── Lab Exams ────────────────────────────────────────────────────────────────
+// ─── Lab Exams ──────────────────────────────────────────────────────────────────────────
 
 export interface LabExam {
   id?: number;
@@ -1182,5 +1187,169 @@ export async function saveLabResults(examId: number, results: LabResult[]): Prom
   const rows = results.map(r => ({ ...r, exam_id: examId, id: undefined }));
   const { error } = await supabaseAdmin.from("lab_results").insert(rows);
   if (error) { console.error("[Supabase] saveLabResults:", error.message); return false; }
+  return true;
+}
+
+// ─── Epic 10: Protocolo de Exames com Alvos Terapêuticos ──────────────────────
+
+export interface ExamCatalogItem {
+  id:                number;
+  name:              string;
+  group_category:    string;
+  unit?:             string;
+  ref_min?:          number;
+  ref_max?:          number;
+  target_male_min?:  number;
+  target_male_max?:  number;
+  target_female_min?:number;
+  target_female_max?:number;
+}
+
+export interface ExamProtocol {
+  id:          number;
+  name:        string;
+  description?:string;
+  exams?:      ExamCatalogItem[];
+}
+
+export interface PatientExamRequest {
+  id?:         number;
+  patient_id:  number;
+  protocol_id?:number;
+  status:      "Pendente" | "Concluído";
+  notes?:      string;
+  created_at?: string;
+  protocol?:   ExamProtocol;
+  items?:      ExamCatalogItem[];
+  results?:    PatientExamResult[];
+}
+
+export interface PatientExamResult {
+  id?:            number;
+  request_id?:    number;
+  exam_id:        number;
+  result_value?:  number;
+  date_collected?:string;
+  notes?:         string;
+  exam?:          ExamCatalogItem;
+}
+
+export async function fetchExamsCatalog(): Promise<ExamCatalogItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("exams_catalog")
+    .select("*")
+    .order("group_category")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchExamsCatalog:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function fetchExamProtocols(): Promise<ExamProtocol[]> {
+  const { data, error } = await supabaseAdmin
+    .from("exam_protocols")
+    .select("*, exams:protocol_exams(exam:exams_catalog(*))")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchExamProtocols:", error.message); return []; }
+  return (data ?? []).map((p) => ({
+    ...p,
+    exams: (p.exams ?? []).map((pe: { exam: ExamCatalogItem }) => pe.exam).filter(Boolean),
+  }));
+}
+
+export async function fetchExamRequests(patientId: number): Promise<PatientExamRequest[]> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .select(`
+      *,
+      protocol:exam_protocols(id, name),
+      items:patient_exam_request_items(exam:exams_catalog(*)),
+      results:patient_exam_results(*)
+    `)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchExamRequests:", error.message); return []; }
+  return (data ?? []).map((r) => ({
+    ...r,
+    items: (r.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
+  }));
+}
+
+export async function fetchExamRequest(requestId: number): Promise<PatientExamRequest | null> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .select(`
+      *,
+      protocol:exam_protocols(id, name),
+      items:patient_exam_request_items(exam:exams_catalog(*)),
+      results:patient_exam_results(*)
+    `)
+    .eq("id", requestId)
+    .single();
+  if (error) { console.error("[Supabase] fetchExamRequest:", error.message); return null; }
+  return {
+    ...data,
+    items: (data.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
+  };
+}
+
+export async function createExamRequest(
+  patientId: number,
+  protocolId: number | undefined,
+  examIds: number[],
+  notes?: string,
+): Promise<number | null> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .insert({ patient_id: patientId, protocol_id: protocolId ?? null, notes: notes ?? null, status: "Pendente" })
+    .select("id")
+    .single();
+  if (error || !data?.id) { console.error("[Supabase] createExamRequest:", error?.message); return null; }
+  const requestId = data.id as number;
+  if (examIds.length > 0) {
+    const items = examIds.map((examId) => ({ request_id: requestId, exam_id: examId }));
+    const { error: itemErr } = await supabaseAdmin.from("patient_exam_request_items").insert(items);
+    if (itemErr) { console.error("[Supabase] createExamRequest items:", itemErr.message); return null; }
+  }
+  return requestId;
+}
+
+export async function updateExamRequestStatus(
+  requestId: number,
+  status: "Pendente" | "Concluído",
+): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .update({ status })
+    .eq("id", requestId);
+  if (error) { console.error("[Supabase] updateExamRequestStatus:", error.message); return false; }
+  return true;
+}
+
+export async function saveExamResults(
+  requestId: number,
+  results: PatientExamResult[],
+): Promise<boolean> {
+  for (const r of results) {
+    const row = {
+      request_id:     requestId,
+      exam_id:        r.exam_id,
+      result_value:   r.result_value ?? null,
+      date_collected: r.date_collected ?? null,
+      notes:          r.notes ?? null,
+    };
+    const { error } = await supabaseAdmin
+      .from("patient_exam_results")
+      .upsert(row, { onConflict: "request_id,exam_id" });
+    if (error) { console.error("[Supabase] saveExamResults upsert:", error.message); return false; }
+  }
+  return true;
+}
+
+export async function deleteExamRequest(requestId: number): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .delete()
+    .eq("id", requestId);
+  if (error) { console.error("[Supabase] deleteExamRequest:", error.message); return false; }
   return true;
 }
