@@ -23,7 +23,7 @@ import {
   type MealFood,
 } from "@/lib/supabase";
 
-// ─── Defaults ────────────────────────────────────────────────────────────────
+// ─── Defaults ──────────────────────────────────────────────────────────────────────
 
 const DEFAULT_MEALS: Omit<EditorMeal, "_dbId">[] = [
   { meal_name: "Café da manhã",   time_suggestion: "07:00 – 08:00", foods: [] },
@@ -44,7 +44,7 @@ const STRATEGIES = [
   { value: "vegano",       label: "Vegano"             },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────────
 
 function computeTotals(meals: EditorMeal[]) {
   return meals.reduce(
@@ -82,12 +82,13 @@ function templateMealToEditor(tm: import("@/lib/supabase").DietTemplateMeal): Ed
         household_measure: tf.household_measure ?? undefined,
         measure_amount:    tf.measure_amount    ?? undefined,
         food_group:        tf.food_group        ?? undefined,
+        notes:             tf.notes             ?? undefined,
       };
     }),
   };
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────────────
 
 export default function AdminTemplateEditor() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -95,17 +96,14 @@ export default function AdminTemplateEditor() {
   const isNew          = templateId === "novo";
   const numId          = isNew ? null : Number(templateId);
 
-  // ── Metadata state ─────────────────────────────────────────────────────────
   const [name,        setName]        = useState("Novo Modelo");
   const [description, setDescription] = useState("");
   const [strategy,    setStrategy]    = useState("");
 
-  // ── Meals state ────────────────────────────────────────────────────────────
   const [meals,   setMeals]   = useState<EditorMeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
-  // ── Load ───────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     if (isNew) {
@@ -128,15 +126,13 @@ export default function AdminTemplateEditor() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Totals (reactive) ──────────────────────────────────────────────────────
   const grand = computeTotals(meals);
 
   const goalPct = grand.cal > 0
     ? Math.min(100, Math.round((grand.cal / (grand.cal || 1)) * 100))
     : 0;
-  void goalPct; // computed but used for display only
+  void goalPct;
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!name.trim()) { toast.error("Informe um nome para o modelo."); return; }
     setSaving(true);
@@ -172,6 +168,7 @@ export default function AdminTemplateEditor() {
             household_measure: f.household_measure,
             measure_amount:    f.measure_amount,
             food_group:        f.food_group,
+            notes:             f.notes,
             order_index:       fi,
           })),
         }))
@@ -189,7 +186,6 @@ export default function AdminTemplateEditor() {
     }
   };
 
-  // ── Meal helpers ───────────────────────────────────────────────────────────
   const updateMeal = (i: number, m: EditorMeal) =>
     setMeals((prev) => { const n = [...prev]; n[i] = m; return n; });
   const removeMeal = (i: number) =>
@@ -211,7 +207,6 @@ export default function AdminTemplateEditor() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-5xl mx-auto px-3 sm:px-6 flex items-center gap-2 sm:gap-3 py-3">
           <Link to="/admin/modelos"
@@ -240,7 +235,6 @@ export default function AdminTemplateEditor() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* ── Metadados ───────────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <div className="flex items-center gap-2 mb-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Dados do Modelo</p>
@@ -283,7 +277,6 @@ export default function AdminTemplateEditor() {
           </div>
         </section>
 
-        {/* ── Resumo nutricional ──────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">
             Totais Calculados (soma automática das refeições)
@@ -302,7 +295,6 @@ export default function AdminTemplateEditor() {
             ))}
           </div>
 
-          {/* Distribuição % VET */}
           {grand.cal > 0 && (
             <div className="space-y-1.5 mt-4 pt-4 border-t border-border/40">
               {[
@@ -326,7 +318,6 @@ export default function AdminTemplateEditor() {
           )}
         </section>
 
-        {/* ── Refeições ───────────────────────────────────────────────────── */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -362,7 +353,6 @@ export default function AdminTemplateEditor() {
           </div>
         </div>
 
-        {/* ── Botão Salvar ────────────────────────────────────────────────── */}
         <div className="flex justify-end pb-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-6">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}

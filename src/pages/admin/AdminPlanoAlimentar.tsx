@@ -30,7 +30,7 @@ import {
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_MEALS = [
   { meal_name: "Café da manhã",   time_suggestion: "07:00 – 08:00" },
@@ -41,7 +41,7 @@ const DEFAULT_MEALS = [
   { meal_name: "Ceia",            time_suggestion: "21:30 – 22:00" },
 ];
 
-// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────
+// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────────────
 
 const mealToEditor = (m: Meal): EditorMeal => ({
   _dbId:           m.id,
@@ -60,7 +60,7 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   foods:           m.foods,
 });
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ──────────────────────────────────────────────────────────────────────────────
 
 export default function AdminPlanoAlimentar() {
   const { id, planId } = useParams<{ id: string; planId: string }>();
@@ -70,7 +70,6 @@ export default function AdminPlanoAlimentar() {
   const resolvedPlanId  = Number(planId);
   const isNew           = planId === "novo";
 
-  // ── ConsultationContext — fonte única de verdade para dados do paciente ───
   const {
     patient,
     latestMeasurement,
@@ -90,7 +89,6 @@ export default function AdminPlanoAlimentar() {
   const [showTemplate, setShowTemplate] = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
 
-  // ── Energy panel state ────────────────────────────────────────────────────
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
   const [adjustment, setAdjustment]       = useState(0);
@@ -131,9 +129,9 @@ export default function AdminPlanoAlimentar() {
     if (!savedPlan?.id) { toast.error("Erro ao salvar o plano."); setSaving(false); return; }
     setPlan((p) => ({ ...p, id: savedPlan.id }));
     const dbMeals = meals.map((m) => editorToMeal(m, savedPlan.id!));
-    const ok = await saveMeals(savedPlan.id, dbMeals);
+    const saveErr = await saveMeals(savedPlan.id, dbMeals);
     setSaving(false);
-    if (!ok) { toast.error("Erro ao salvar as refeições."); return; }
+    if (saveErr) { toast.error(`Erro ao salvar as refeições: ${saveErr}`); return; }
     toast.success("Plano salvo com sucesso.");
     if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
   };
@@ -161,7 +159,6 @@ export default function AdminPlanoAlimentar() {
     ? Math.min(100, Math.round((grand.cal / plan.daily_calories) * 100))
     : 0;
 
-  // ── Energy calculations — reactivos ao ConsultationContext ────────────────
   const energyInput = useMemo(() => {
     if (!latestMeasurement?.weight || !latestMeasurement?.height || !patient?.birth_date || !patient?.gender) return null;
     return {
@@ -182,10 +179,8 @@ export default function AdminPlanoAlimentar() {
   const energyResult  = energyInput ? calcEnergy(energyInput, resolvedFormula, activityLevel) : null;
   const suggestedKcal = energyResult ? applyAdjustment(energyResult.get, adjustment) : null;
 
-  // ── Clinical alerts ───────────────────────────────────────────────────────
   const clinicalAlerts = generateClinicalAlerts(anamnesis, latestMeasurement);
 
-  // ── Diet audit ────────────────────────────────────────────────────────────
   const audit = auditDiet({
     totalKcal:    grand.cal,
     totalProtein: grand.prot,
@@ -207,7 +202,7 @@ export default function AdminPlanoAlimentar() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-5xl mx-auto px-3 sm:px-6 flex items-center gap-2 sm:gap-3 py-3">
           <Link to={`/admin/pacientes/${id}?tab=planos`}
@@ -248,7 +243,7 @@ export default function AdminPlanoAlimentar() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* ── Metadados ───────────────────────────────────────────────────── */}
+        {/* ── Metadados ──────────────────────────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Dados do Plano</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -276,10 +271,10 @@ export default function AdminPlanoAlimentar() {
           </div>
         </section>
 
-        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────── */}
+        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────────────────── */}
         <ClinicalInsightsPanel alerts={clinicalAlerts} />
 
-        {/* ── Painel de Metas Energéticas ─────────────────────────────────── */}
+        {/* ── Painel de Metas Energéticas ─────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border/60 bg-muted/30">
             <Zap size={14} className="text-primary" />
@@ -293,7 +288,6 @@ export default function AdminPlanoAlimentar() {
             </div>
           ) : (
             <div className="p-5 space-y-4">
-              {/* Linha 1: fórmula + nível de atividade */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Fórmula</Label>
@@ -333,7 +327,6 @@ export default function AdminPlanoAlimentar() {
                 </div>
               </div>
 
-              {/* Linha 2: TMB / GET / ajuste */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg bg-muted/40 border border-border/60 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">TMB</p>
@@ -344,7 +337,6 @@ export default function AdminPlanoAlimentar() {
                   <p className="text-xl font-bold tabular-nums text-foreground mt-0.5">{energyResult!.get} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
                 </div>
 
-                {/* Slider de ajuste */}
                 <div className="sm:col-span-2 rounded-lg bg-muted/40 border border-border/60 px-4 py-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -364,7 +356,6 @@ export default function AdminPlanoAlimentar() {
                 </div>
               </div>
 
-              {/* Linha 3: sugestão e botão aplicar */}
               <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/60 flex-wrap">
                 <div className="flex items-center gap-3">
                   {adjustment < 0 ? <TrendingDown size={16} className="text-blue-500 shrink-0" /> : adjustment > 0 ? <TrendingUp size={16} className="text-emerald-500 shrink-0" /> : <Zap size={16} className="text-primary shrink-0" />}
@@ -380,7 +371,6 @@ export default function AdminPlanoAlimentar() {
                 </Button>
               </div>
 
-              {/* Dados usados no cálculo */}
               <p className="text-[10px] text-muted-foreground">
                 Calculado com: {energyInput!.weight} kg · {energyInput!.height} cm · {energyInput!.age} anos · {energyInput!.gender === "F" ? "Feminino" : "Masculino"}
                 {energyInput!.lean_mass ? ` · MLG ${energyInput!.lean_mass} kg` : ""}
@@ -393,7 +383,7 @@ export default function AdminPlanoAlimentar() {
           )}
         </section>
 
-        {/* ── Planejamento Dietético (travamento de macros) ───────────────── */}
+        {/* ── Planejamento Dietético (travamento de macros) ───────────────────────── */}
         <DietaryPlanningPanel
           weightKg={latestMeasurement?.weight}
           totalKcal={plan.daily_calories}
@@ -401,7 +391,7 @@ export default function AdminPlanoAlimentar() {
           onGoalsChange={setMacroGoals}
         />
 
-        {/* ── Resumo nutricional ──────────────────────────────────────────── */}
+        {/* ── Resumo nutricional ───────────────────────────────────────────────────────────── */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
@@ -419,7 +409,6 @@ export default function AdminPlanoAlimentar() {
             ))}
           </div>
 
-          {/* Alertas de auditoria */}
           {grand.cal > 0 && (audit.proteinExcess || audit.calorieOverage || audit.calorieDeficit) && (
             <div className="flex flex-wrap gap-2 mb-4">
               {audit.proteinExcess && (
@@ -449,7 +438,6 @@ export default function AdminPlanoAlimentar() {
             </div>
           )}
 
-          {/* Barras de macros */}
           <div className="space-y-2 mb-4">
             {macroGoals ? (
               [
@@ -499,7 +487,6 @@ export default function AdminPlanoAlimentar() {
             )}
           </div>
 
-          {/* Barra de progresso calórico */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
               Progresso calórico{plan.daily_calories ? <> — meta: <strong>{plan.daily_calories} kcal</strong></> : null}
@@ -516,7 +503,7 @@ export default function AdminPlanoAlimentar() {
           </div>
         </section>
 
-        {/* ── Refeições ───────────────────────────────────────────────────── */}
+        {/* ── Refeições ───────────────────────────────────────────────────────────────────── */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -547,7 +534,7 @@ export default function AdminPlanoAlimentar() {
           </div>
         </div>
 
-        {/* ── Salvar ──────────────────────────────────────────────────────── */}
+        {/* ── Salvar ──────────────────────────────────────────────────────────────────────── */}
         <div className="flex justify-end pb-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-6">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -556,7 +543,6 @@ export default function AdminPlanoAlimentar() {
         </div>
       </main>
 
-      {/* ── Modal de e-mail ─────────────────────────────────────────────── */}
       {showEmail && (
         <EmailPlanModal
           plan={plan}
@@ -566,7 +552,6 @@ export default function AdminPlanoAlimentar() {
         />
       )}
 
-      {/* ── Modal de importação de template ─────────────────────────────── */}
       <TemplateImportModal
         open={showTemplate}
         hasMeals={meals.some((m) => m.foods.length > 0)}
