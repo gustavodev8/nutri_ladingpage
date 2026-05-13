@@ -23,6 +23,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { ExamesTab } from "@/components/admin/ExamesTab";
+import { ExamProtocolsTab } from "@/components/admin/ExamProtocolsTab";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
 import { AnthropometryWizard, type MeasurementForm } from "@/components/admin/AnthropometryWizard";
 import { useConsultation } from "@/contexts/ConsultationContext";
@@ -55,7 +56,7 @@ import {
   type PatientPhoto,
 } from "@/lib/supabase";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────
 
 const initials = (name: string) =>
   name
@@ -70,7 +71,7 @@ const calcBMI = (weight?: number, height?: number): string | null => {
   return (weight / Math.pow(height / 100, 2)).toFixed(1);
 };
 
-// ─── CPF helpers ──────────────────────────────────────────────────────────────
+// ─── CPF helpers ────────────────────────────────────────────────────────────────
 
 function formatCPF(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
@@ -123,23 +124,20 @@ const formatDate = (dateStr: string) =>
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
+// ─── Tab config ───────────────────────────────────────────────────────────────────
 
-type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "exames";
+type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "exames" | "protocolos";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: "perfil", label: "Perfil", icon: <User size={16} /> },
-  { key: "anamnese", label: "Anamnese", icon: <ClipboardList size={16} /> },
-  {
-    key: "antropometria",
-    label: "Antropometria",
-    icon: <Activity size={16} />,
-  },
-  { key: "planos", label: "Planos Alimentares", icon: <BookOpen size={16} /> },
-  { key: "exames", label: "Exames Laboratoriais", icon: <FlaskConical size={16} /> },
+  { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
+  { key: "anamnese",     label: "Anamnese",              icon: <ClipboardList size={16} /> },
+  { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
+  { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
+  { key: "exames",       label: "Exames Laboratoriais",  icon: <FlaskConical size={16} /> },
+  { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
 ];
 
-// ─── Shared Textarea ─────────────────────────────────────────────────────────
+// ─── Shared Textarea ────────────────────────────────────────────────────────────────────
 
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -153,7 +151,7 @@ const Textarea = ({ minRows = 3, className = "", ...props }: TextareaProps) => (
   />
 );
 
-// ─── BMI Badge ────────────────────────────────────────────────────────────────
+// ─── BMI Badge ─────────────────────────────────────────────────────────────────────
 
 const BMIBadge = ({ bmi }: { bmi: string }) => {
   const num = parseFloat(bmi);
@@ -165,7 +163,7 @@ const BMIBadge = ({ bmi }: { bmi: string }) => {
   );
 };
 
-// ─── Page Component ────────────────────────────────────────────────────────────
+// ─── Page Component ────────────────────────────────────────────────────────────────────
 
 export default function AdminPaciente() {
   const { id } = useParams<{ id: string }>();
@@ -224,7 +222,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: FULL PAGE REPORT VIEW ─────────────────────────────────────────
+  // ─── RENDER: FULL PAGE REPORT VIEW ─────────────────────────────────────────────────────
   if (selectedMeasurement) {
     const m = selectedMeasurement;
     const bmi = calcBMI(m.weight, m.height);
@@ -407,7 +405,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ─────────────────────────────────
+  // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ────────────────────────────────────────────
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6">
       {/* Breadcrumbs & Navigation */}
@@ -517,6 +515,12 @@ export default function AdminPaciente() {
             {activeTab === "exames" && (
               <ExamesTab patientId={Number(id)} />
             )}
+            {activeTab === "protocolos" && (
+              <ExamProtocolsTab
+                patientId={Number(id)}
+                gender={(patient?.gender as "M" | "F" | "outro") ?? "M"}
+              />
+            )}
           </div>
         </div>
       )}
@@ -524,9 +528,9 @@ export default function AdminPaciente() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // TAB 1: Perfil (Cadastro Básico)
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 function PerfilTab({
   patient,
@@ -779,13 +783,13 @@ function PerfilTab({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // TAB 2: Anamnese (Histórico Clínico)
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // Field auxiliar da Anamnese — fora do componente para não perder foco
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 
 
@@ -949,7 +953,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       {latest && (
         <div className="flex items-stretch gap-0 border border-border rounded-md overflow-hidden">
           <div className="px-4 py-3.5 bg-muted/50 border-r border-border flex flex-col justify-center shrink-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Última</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Púltima</p>
             <p className="text-sm font-medium text-foreground mt-0.5">
               {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
             </p>
@@ -1081,9 +1085,9 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // TAB 4: Planos Alimentares
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
   deficit:     { label: "Déficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
