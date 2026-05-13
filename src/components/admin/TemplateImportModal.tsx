@@ -63,6 +63,8 @@ function templateToMeals(template: DietTemplate): Meal[] {
         fat:              calc(tf.fat_per_100g),
         household_measure: tf.household_measure ?? undefined,
         measure_amount:    tf.measure_amount    ?? undefined,
+        food_group:        tf.food_group        ?? undefined,
+        notes:             tf.notes             ?? undefined,
       };
     }),
   }));
@@ -157,7 +159,7 @@ function MealPreview({ meal }: { meal: DietTemplateMeal }) {
 
 interface Props {
   open:       boolean;
-  hasMeals:   boolean;   // whether the current plan already has meals
+  hasMeals:   boolean;
   onClose:    () => void;
   onImport:   (meals: Meal[], mode: "replace" | "append") => void;
 }
@@ -216,7 +218,6 @@ export function TemplateImportModal({ open, hasMeals, onClose, onImport }: Props
             </div>
           ) : (
             <>
-              {/* Template list */}
               <div className="space-y-2">
                 {templates.map((t) => (
                   <TemplateCard
@@ -228,7 +229,6 @@ export function TemplateImportModal({ open, hasMeals, onClose, onImport }: Props
                 ))}
               </div>
 
-              {/* Preview expandable */}
               {selected && (
                 <div className="rounded-lg border border-border/60 overflow-hidden mt-2">
                   <button
@@ -250,7 +250,6 @@ export function TemplateImportModal({ open, hasMeals, onClose, onImport }: Props
                 </div>
               )}
 
-              {/* Import mode — só mostra quando já existem refeições no plano */}
               {selected && hasMeals && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
                   <p className="text-xs font-semibold text-amber-800">O plano já possui refeições. O que deseja fazer?</p>
