@@ -14,7 +14,19 @@ import type { MealFood } from "@/lib/supabase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const UNITS = ["g", "ml", "unid.", "col. sopa", "col. chá", "xícara", "fatia", "porção"] as const;
+export const UNITS = ["g", "ml", "kg", "un", "xícara", "col. sopa", "col. chá", "fatia", "porção"] as const;
+
+export const UNIT_OPTIONS: { value: string; label: string }[] = [
+  { value: "g",         label: "g  (Gramas)"         },
+  { value: "ml",        label: "ml  (Mililitros)"     },
+  { value: "kg",        label: "kg  (Quilos)"         },
+  { value: "un",        label: "un  (Unidade)"        },
+  { value: "xícara",    label: "xícara"               },
+  { value: "col. sopa", label: "col. de sopa"         },
+  { value: "col. chá",  label: "col. de chá"          },
+  { value: "fatia",     label: "fatia"                },
+  { value: "porção",    label: "porção"               },
+];
 
 export const MEAL_BORDER = [
   "border-l-slate-400",
@@ -138,22 +150,25 @@ export function FoodRow({
           />
         </td>
 
-        {/* Quantidade */}
-        <td className="py-1.5 pr-2 w-20 align-middle">
-          <input type="number" min={0} step="any" placeholder="—"
-            value={food.quantity !== undefined ? String(food.quantity) : ""}
-            onChange={(e) => handleQty(e.target.value)}
-            className={cellNum} />
-        </td>
-
-        {/* Unidade */}
-        <td className="py-1.5 pr-3 w-24 align-middle">
-          <input type="text" list="unit-list-shared" value={food.unit ?? "g"}
-            onChange={(e) => onChange({ ...food, unit: e.target.value })}
-            className={cellTxt} />
-          <datalist id="unit-list-shared">
-            {UNITS.map((u) => <option key={u} value={u} />)}
-          </datalist>
+        {/* Quantidade + Unidade */}
+        <td className="py-1.5 pr-3 w-48 align-middle">
+          <div className="flex">
+            <input
+              type="number" min={0} step="any" placeholder="—"
+              value={food.quantity !== undefined ? String(food.quantity) : ""}
+              onChange={(e) => handleQty(e.target.value)}
+              className="h-8 w-20 bg-transparent border border-border/60 rounded-l border-r-0 px-2 text-sm text-right tabular-nums focus:outline-none focus:z-10 focus:ring-1 focus:ring-ring focus:border-primary"
+            />
+            <select
+              value={food.unit ?? "g"}
+              onChange={(e) => onChange({ ...food, unit: e.target.value })}
+              className="h-8 flex-1 min-w-0 bg-background border border-border/60 rounded-r px-1.5 text-sm focus:outline-none focus:z-10 focus:ring-1 focus:ring-ring focus:border-primary text-foreground cursor-pointer"
+            >
+              {UNIT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
         </td>
 
         {/* Macros */}
@@ -196,7 +211,7 @@ export function FoodRow({
       {/* Nota / modo de preparo por alimento */}
       {showNotes && (
         <tr className="border-b border-border/20 bg-amber-50/40">
-          <td colSpan={9} className="px-4 pb-2.5 pt-1.5">
+          <td colSpan={8} className="px-4 pb-2.5 pt-1.5">
             <div className="flex items-start gap-2">
               <NotebookPen size={13} className="text-amber-600/70 mt-2 shrink-0" />
               <textarea
@@ -214,7 +229,7 @@ export function FoodRow({
       {/* Detalhes: medida caseira + grupo alimentar */}
       {showDetails && (
         <tr className="border-b border-border/20 bg-muted/10">
-          <td colSpan={9} className="px-4 pb-3 pt-1.5">
+          <td colSpan={8} className="px-4 pb-3 pt-1.5">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60 shrink-0">Medida:</span>
@@ -324,8 +339,7 @@ export function MealSection({
             <tr className="border-b border-border/40 bg-background/60">
               <th className="pl-4 pr-3 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-8">#</th>
               <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Alimento</th>
-              <th className="py-1.5 pr-2 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-20">Qtd</th>
-              <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-24">Un.</th>
+              <th className="py-1.5 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-48">Qtd / Un.</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">kcal</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Prot. g</th>
               <th className="hidden sm:table-cell py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 w-16">Carb. g</th>
@@ -336,7 +350,7 @@ export function MealSection({
           <tbody>
             {foods.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-5 text-center text-sm text-primary/60 italic">
+                <td colSpan={8} className="py-5 text-center text-sm text-primary/60 italic">
                   Nenhum alimento adicionado a esta refeição
                 </td>
               </tr>
