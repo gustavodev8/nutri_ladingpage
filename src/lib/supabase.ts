@@ -419,7 +419,7 @@ export async function fetchPatients(): Promise<Patient[]> {
   return data ?? [];
 }
 
-export async function fetchPatient(id: number): Promise<Patient | null> {
+export async function fetchPatient(id: number | string): Promise<Patient | null> {
   const { data, error } = await supabaseAdmin
     .from("patients")
     .select("*")
@@ -1187,5 +1187,169 @@ export async function saveLabResults(examId: number, results: LabResult[]): Prom
   const rows = results.map(r => ({ ...r, exam_id: examId, id: undefined }));
   const { error } = await supabaseAdmin.from("lab_results").insert(rows);
   if (error) { console.error("[Supabase] saveLabResults:", error.message); return false; }
+  return true;
+}
+
+// ─── Epic 10: Protocolo de Exames com Alvos Terapêuticos ──────────────────────
+
+export interface ExamCatalogItem {
+  id:                number;
+  name:              string;
+  group_category:    string;
+  unit?:             string;
+  ref_min?:          number;
+  ref_max?:          number;
+  target_male_min?:  number;
+  target_male_max?:  number;
+  target_female_min?:number;
+  target_female_max?:number;
+}
+
+export interface ExamProtocol {
+  id:          number;
+  name:        string;
+  description?:string;
+  exams?:      ExamCatalogItem[];
+}
+
+export interface PatientExamRequest {
+  id?:         number;
+  patient_id:  number;
+  protocol_id?:number;
+  status:      "Pendente" | "Concluído";
+  notes?:      string;
+  created_at?: string;
+  protocol?:   ExamProtocol;
+  items?:      ExamCatalogItem[];
+  results?:    PatientExamResult[];
+}
+
+export interface PatientExamResult {
+  id?:            number;
+  request_id?:    number;
+  exam_id:        number;
+  result_value?:  number;
+  date_collected?:string;
+  notes?:         string;
+  exam?:          ExamCatalogItem;
+}
+
+export async function fetchExamsCatalog(): Promise<ExamCatalogItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("exams_catalog")
+    .select("*")
+    .order("group_category")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchExamsCatalog:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function fetchExamProtocols(): Promise<ExamProtocol[]> {
+  const { data, error } = await supabaseAdmin
+    .from("exam_protocols")
+    .select("*, exams:protocol_exams(exam:exams_catalog(*))")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchExamProtocols:", error.message); return []; }
+  return (data ?? []).map((p) => ({
+    ...p,
+    exams: (p.exams ?? []).map((pe: { exam: ExamCatalogItem }) => pe.exam).filter(Boolean),
+  }));
+}
+
+export async function fetchExamRequests(patientId: number): Promise<PatientExamRequest[]> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .select(`
+      *,
+      protocol:exam_protocols(id, name),
+      items:patient_exam_request_items(exam:exams_catalog(*)),
+      results:patient_exam_results(*)
+    `)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchExamRequests:", error.message); return []; }
+  return (data ?? []).map((r) => ({
+    ...r,
+    items: (r.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
+  }));
+}
+
+export async function fetchExamRequest(requestId: number): Promise<PatientExamRequest | null> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .select(`
+      *,
+      protocol:exam_protocols(id, name),
+      items:patient_exam_request_items(exam:exams_catalog(*)),
+      results:patient_exam_results(*)
+    `)
+    .eq("id", requestId)
+    .single();
+  if (error) { console.error("[Supabase] fetchExamRequest:", error.message); return null; }
+  return {
+    ...data,
+    items: (data.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
+  };
+}
+
+export async function createExamRequest(
+  patientId: number,
+  protocolId: number | undefined,
+  examIds: number[],
+  notes?: string,
+): Promise<number | null> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .insert({ patient_id: patientId, protocol_id: protocolId ?? null, notes: notes ?? null, status: "Pendente" })
+    .select("id")
+    .single();
+  if (error || !data?.id) { console.error("[Supabase] createExamRequest:", error?.message); return null; }
+  const requestId = data.id as number;
+  if (examIds.length > 0) {
+    const items = examIds.map((examId) => ({ request_id: requestId, exam_id: examId }));
+    const { error: itemErr } = await supabaseAdmin.from("patient_exam_request_items").insert(items);
+    if (itemErr) { console.error("[Supabase] createExamRequest items:", itemErr.message); return null; }
+  }
+  return requestId;
+}
+
+export async function updateExamRequestStatus(
+  requestId: number,
+  status: "Pendente" | "Concluído",
+): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .update({ status })
+    .eq("id", requestId);
+  if (error) { console.error("[Supabase] updateExamRequestStatus:", error.message); return false; }
+  return true;
+}
+
+export async function saveExamResults(
+  requestId: number,
+  results: PatientExamResult[],
+): Promise<boolean> {
+  for (const r of results) {
+    const row = {
+      request_id:     requestId,
+      exam_id:        r.exam_id,
+      result_value:   r.result_value ?? null,
+      date_collected: r.date_collected ?? null,
+      notes:          r.notes ?? null,
+    };
+    const { error } = await supabaseAdmin
+      .from("patient_exam_results")
+      .upsert(row, { onConflict: "request_id,exam_id" });
+    if (error) { console.error("[Supabase] saveExamResults upsert:", error.message); return false; }
+  }
+  return true;
+}
+
+export async function deleteExamRequest(requestId: number): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("patient_exam_requests")
+    .delete()
+    .eq("id", requestId);
+  if (error) { console.error("[Supabase] deleteExamRequest:", error.message); return false; }
   return true;
 }
