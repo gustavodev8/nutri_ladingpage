@@ -62,6 +62,7 @@ function templateMealToEditor(tm: import("@/lib/supabase").DietTemplateMeal): Ed
     _dbId:           tm.id,
     meal_name:       tm.meal_name,
     time_suggestion: tm.time_suggestion,
+    notes:           tm.notes ?? undefined,
     foods: (tm.foods ?? []).map((tf): MealFood => {
       const qty   = tf.quantity ?? undefined;
       const calc  = (per100?: number) =>
@@ -157,6 +158,7 @@ export default function AdminTemplateEditor() {
           meal_name:       m.meal_name,
           time_suggestion: m.time_suggestion,
           order_index:     idx,
+          notes:           m.notes,
           foods:           m.foods.map((f, fi) => ({
             food_name:         f.food_name,
             quantity:          f.quantity,

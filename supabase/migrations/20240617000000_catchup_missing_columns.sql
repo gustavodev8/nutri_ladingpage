@@ -19,3 +19,6 @@ ALTER TABLE meal_plans ADD COLUMN IF NOT EXISTS get_kcal        NUMERIC(7,1);
 
 -- ── Epic 9: notas por alimento em diet_template_foods ─────────────────────────
 ALTER TABLE diet_template_foods ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- ── notas por refeição em diet_template_meals ────────────────────────────────
+ALTER TABLE diet_template_meals ADD COLUMN IF NOT EXISTS notes TEXT;

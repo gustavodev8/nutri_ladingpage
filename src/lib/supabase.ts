@@ -994,6 +994,7 @@ export interface DietTemplateMeal {
   meal_name:        string;
   time_suggestion?: string;
   order_index?:     number;
+  notes?:           string;
   foods?:           DietTemplateFood[];
 }
 
@@ -1060,6 +1061,7 @@ export async function saveDietTemplateMeals(
     meal_name:        string;
     time_suggestion?: string;
     order_index:      number;
+    notes?:           string;
     foods: Array<{
       food_name:         string;
       quantity?:         number;
@@ -1091,6 +1093,7 @@ export async function saveDietTemplateMeals(
           meal_name:       meal.meal_name,
           time_suggestion: meal.time_suggestion ?? "",
           order_index:     meal.order_index,
+          notes:           meal.notes ?? null,
         })
         .select()
         .single();
