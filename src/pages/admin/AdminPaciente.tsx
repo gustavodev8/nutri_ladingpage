@@ -56,7 +56,7 @@ import {
   type PatientPhoto,
 } from "@/lib/supabase";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 const initials = (name: string) =>
   name
@@ -71,7 +71,7 @@ const calcBMI = (weight?: number, height?: number): string | null => {
   return (weight / Math.pow(height / 100, 2)).toFixed(1);
 };
 
-// ─── CPF helpers ────────────────────────────────────────────────────────────────
+// ─── CPF helpers ──────────────────────────────────────────────────────────────
 
 function formatCPF(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
@@ -124,7 +124,7 @@ const formatDate = (dateStr: string) =>
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
-// ─── Tab config ───────────────────────────────────────────────────────────────────
+// ─── Tab config ───────────────────────────────────────────────────────────────
 
 type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "exames" | "protocolos";
 
@@ -137,7 +137,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
 ];
 
-// ─── Shared Textarea ────────────────────────────────────────────────────────────────────
+// ─── Shared Textarea ──────────────────────────────────────────────────────────────
 
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -151,7 +151,7 @@ const Textarea = ({ minRows = 3, className = "", ...props }: TextareaProps) => (
   />
 );
 
-// ─── BMI Badge ─────────────────────────────────────────────────────────────────────
+// ─── BMI Badge ────────────────────────────────────────────────────────────────
 
 const BMIBadge = ({ bmi }: { bmi: string }) => {
   const num = parseFloat(bmi);
@@ -163,7 +163,7 @@ const BMIBadge = ({ bmi }: { bmi: string }) => {
   );
 };
 
-// ─── Page Component ────────────────────────────────────────────────────────────────────
+// ─── Page Component ──────────────────────────────────────────────────────────────
 
 export default function AdminPaciente() {
   const { id } = useParams<{ id: string }>();
@@ -222,7 +222,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: FULL PAGE REPORT VIEW ─────────────────────────────────────────────────────
+  // ─── RENDER: FULL PAGE REPORT VIEW ───────────────────────────────────────────────
   if (selectedMeasurement) {
     const m = selectedMeasurement;
     const bmi = calcBMI(m.weight, m.height);
@@ -405,7 +405,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ────────────────────────────────────────────
+  // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ──────────────────────────────────────
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6">
       {/* Breadcrumbs & Navigation */}
@@ -528,9 +528,9 @@ export default function AdminPaciente() {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 // TAB 1: Perfil (Cadastro Básico)
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 
 function PerfilTab({
   patient,
@@ -783,13 +783,13 @@ function PerfilTab({
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 // TAB 2: Anamnese (Histórico Clínico)
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 // Field auxiliar da Anamnese — fora do componente para não perder foco
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 
 
 
@@ -928,7 +928,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[handleSave] exceção:", err);
+      console.error("[handleSave] excessão:", err);
       toast.error(`Erro ao salvar: ${msg}`);
     } finally {
       setSaving(false);
@@ -1085,9 +1085,9 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 // TAB 4: Planos Alimentares
-// ────────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────────
 
 const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
   deficit:     { label: "Déficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },

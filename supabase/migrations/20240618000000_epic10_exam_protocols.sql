@@ -1,7 +1,7 @@
 -- Epic 10: Módulo Avançado de Exames Laboratoriais com Alvos Terapêuticos Nutricionais
 -- Seguro para rodar múltiplas vezes (IF NOT EXISTS em todas as operações).
 
--- ─── 1. Catálogo de exames ─────────────────────────────────────────────────────────
+-- ─── 1. Catálogo de exames ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS exams_catalog (
   id                BIGSERIAL    PRIMARY KEY,
   name              TEXT         NOT NULL,
@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS exams_catalog (
   created_at        TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
+-- ─── 2. Protocolos de solicitação ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS exam_protocols (
   id          BIGSERIAL   PRIMARY KEY,
   name        TEXT        NOT NULL,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS exam_protocols (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ─── 3. Pivô protocolo ↔ exame ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS protocol_exams (
   id          BIGSERIAL PRIMARY KEY,
   protocol_id BIGINT    NOT NULL REFERENCES exam_protocols(id) ON DELETE CASCADE,
@@ -31,6 +33,7 @@ CREATE TABLE IF NOT EXISTS protocol_exams (
   UNIQUE (protocol_id, exam_id)
 );
 
+-- ─── 4. Pedidos de exame por paciente ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS patient_exam_requests (
   id          BIGSERIAL   PRIMARY KEY,
   patient_id  BIGINT      NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -41,6 +44,7 @@ CREATE TABLE IF NOT EXISTS patient_exam_requests (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Itens do pedido (quais exames foram solicitados)
 CREATE TABLE IF NOT EXISTS patient_exam_request_items (
   id         BIGSERIAL PRIMARY KEY,
   request_id BIGINT    NOT NULL REFERENCES patient_exam_requests(id) ON DELETE CASCADE,
@@ -48,6 +52,7 @@ CREATE TABLE IF NOT EXISTS patient_exam_request_items (
   UNIQUE (request_id, exam_id)
 );
 
+-- ─── 5. Resultados dos laudos ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS patient_exam_results (
   id             BIGSERIAL    PRIMARY KEY,
   request_id     BIGINT       NOT NULL REFERENCES patient_exam_requests(id) ON DELETE CASCADE,
@@ -59,7 +64,7 @@ CREATE TABLE IF NOT EXISTS patient_exam_results (
   UNIQUE (request_id, exam_id)
 );
 
--- ─── RLS ─────────────────────────────────────────────────────────────────────────
+-- ─── RLS ────────────────────────────────────────────────────────────────────────
 ALTER TABLE exams_catalog              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exam_protocols             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE protocol_exams             ENABLE ROW LEVEL SECURITY;
@@ -106,15 +111,19 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- ─── SEED: Catálogo de Exames com Alvos Terapêuticos Nutricionais ────────────────────
+-- ─── SEED: Catálogo de Exames com Alvos Terapêuticos Nutricionais ────────────────
+-- Valores baseados nas diretrizes SBD, SBC, SBEM, SBPC/ML e medicina funcional integrativa.
+-- target_*: alvos terapêuticos mais restritos que os valores de referência laboratorial.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM exams_catalog LIMIT 1) THEN
     INSERT INTO exams_catalog (name, group_category, unit, ref_min, ref_max, target_male_min, target_male_max, target_female_min, target_female_max) VALUES
+    -- ── Glicídios ────────────────────────────────────────────────────────────────
     ('Glicemia de Jejum',              'Glicídios',           'mg/dL',    70,    99,    70,    90,    70,    90),
     ('Hemoglobina Glicada (HbA1c)',    'Glicídios',           '%',        NULL,  5.7,   NULL,  5.4,   NULL,  5.4),
     ('Insulina de Jejum',              'Glicídios',           'µUI/mL',   2,     25,    2,     10,    2,     10),
     ('HOMA-IR',                        'Glicídios',           '',         NULL,  2.7,   NULL,  1.5,   NULL,  1.5),
     ('Peptídeo C',                     'Glicídios',           'ng/mL',    0.8,   3.1,   0.8,   2.0,   0.8,   2.0),
+    -- ── Lipídios ─────────────────────────────────────────────────────────────────
     ('Colesterol Total',               'Lipídios',            'mg/dL',    NULL,  200,   NULL,  180,   NULL,  180),
     ('HDL-Colesterol',                 'Lipídios',            'mg/dL',    40,    NULL,  55,    NULL,  65,    NULL),
     ('LDL-Colesterol',                 'Lipídios',            'mg/dL',    NULL,  130,   NULL,  100,   NULL,  100),
@@ -122,15 +131,18 @@ DO $$ BEGIN
     ('Triglicerídeos',                 'Lipídios',            'mg/dL',    NULL,  150,   NULL,  100,   NULL,  100),
     ('Lp(a)',                          'Lipídios',            'mg/dL',    NULL,  30,    NULL,  20,    NULL,  20),
     ('ApoB',                           'Lipídios',            'mg/dL',    NULL,  100,   NULL,  80,    NULL,  80),
+    -- ── Função Hepática ───────────────────────────────────────────────────────────
     ('TGO (AST)',                      'Função Hepática',     'U/L',      NULL,  40,    NULL,  30,    NULL,  25),
     ('TGP (ALT)',                      'Função Hepática',     'U/L',      NULL,  41,    NULL,  25,    NULL,  20),
     ('Gama-GT',                        'Função Hepática',     'U/L',      NULL,  61,    NULL,  30,    NULL,  24),
     ('Fosfatase Alcalina',             'Função Hepática',     'U/L',      44,    147,   44,    100,   44,    100),
     ('Bilirrubina Total',              'Função Hepática',     'mg/dL',    NULL,  1.2,   NULL,  1.0,   NULL,  1.0),
+    -- ── Função Renal ──────────────────────────────────────────────────────────────
     ('Creatinina',                     'Função Renal',        'mg/dL',    0.5,   1.2,   0.7,   1.1,   0.5,   0.9),
     ('Ureia',                          'Função Renal',        'mg/dL',    15,    45,    15,    40,    15,    40),
     ('Ácido Úrico',                    'Função Renal',        'mg/dL',    2.4,   7.0,   2.4,   5.5,   2.4,   5.0),
     ('TFG Estimada (CKD-EPI)',         'Função Renal',        'mL/min',   60,    NULL,  90,    NULL,  90,    NULL),
+    -- ── Hematologia ───────────────────────────────────────────────────────────────
     ('Hemoglobina',                    'Hematologia',         'g/dL',     12,    17.5,  13.5,  17.5,  12,    16),
     ('Hematócrito',                    'Hematologia',         '%',        36,    52,    40,    52,    36,    48),
     ('VCM',                            'Hematologia',         'fL',       80,    100,   82,    97,    82,    97),
@@ -140,11 +152,13 @@ DO $$ BEGIN
     ('Ferro Sérico',                   'Hematologia',         'µg/dL',    59,    158,   80,    150,   59,    140),
     ('Transferrina',                   'Hematologia',         'mg/dL',    200,   360,   200,   300,   200,   360),
     ('Saturação de Transferrina',      'Hematologia',         '%',        20,    50,    25,    45,    20,    40),
+    -- ── Tireoide ──────────────────────────────────────────────────────────────────
     ('TSH',                            'Tireoide',            'µUI/mL',   0.4,   4.0,   0.5,   2.5,   0.5,   2.0),
     ('T4 Livre',                       'Tireoide',            'ng/dL',    0.8,   1.9,   1.0,   1.7,   1.0,   1.7),
     ('T3 Livre',                       'Tireoide',            'pg/mL',    2.3,   4.2,   2.5,   4.0,   2.5,   4.0),
     ('T3 Total',                       'Tireoide',            'ng/dL',    80,    200,   100,   180,   100,   180),
     ('Anti-TPO',                       'Tireoide',            'UI/mL',    NULL,  34,    NULL,  10,    NULL,  10),
+    -- ── Vitaminas e Minerais ──────────────────────────────────────────────────────
     ('Vitamina D (25-OH)',             'Vitaminas e Minerais','ng/mL',    20,    100,   40,    80,    40,    80),
     ('Vitamina B12',                   'Vitaminas e Minerais','pg/mL',    200,   900,   500,   900,   500,   900),
     ('Vitamina B9 (Ácido Fólico)',     'Vitaminas e Minerais','ng/mL',    3,     17,    6,     17,    6,     17),
@@ -152,9 +166,11 @@ DO $$ BEGIN
     ('Magnésio',                       'Vitaminas e Minerais','mg/dL',    1.6,   2.6,   1.9,   2.6,   1.9,   2.5),
     ('Cobre',                          'Vitaminas e Minerais','µg/dL',    70,    140,   70,    130,   80,    140),
     ('Selênio',                        'Vitaminas e Minerais','µg/L',     60,    120,   70,    120,   70,    120),
+    -- ── Inflamação ────────────────────────────────────────────────────────────────
     ('PCR Ultrassensível',             'Inflamação',          'mg/L',     NULL,  5.0,   NULL,  1.0,   NULL,  1.0),
     ('Homocisteína',                   'Inflamação',          'µmol/L',   NULL,  15,    NULL,  10,    NULL,  10),
     ('VHS',                            'Inflamação',          'mm/h',     NULL,  20,    NULL,  10,    NULL,  15),
+    -- ── Hormônios ─────────────────────────────────────────────────────────────────
     ('Cortisol (Manhã)',               'Hormônios',           'µg/dL',    5,     25,    10,    20,    10,    20),
     ('DHEA-S',                         'Hormônios',           'µg/dL',    80,    560,   150,   400,   45,    270),
     ('Testosterona Total',             'Hormônios',           'ng/dL',    190,   830,   400,   800,   NULL,  NULL),
@@ -165,8 +181,10 @@ DO $$ BEGIN
     ('FSH',                            'Hormônios',           'mUI/mL',   NULL,  NULL,  NULL,  NULL,  2,     12),
     ('Prolactina',                     'Hormônios',           'ng/mL',    NULL,  20,    NULL,  10,    NULL,  20),
     ('IGF-1',                          'Hormônios',           'ng/mL',    100,   300,   150,   250,   100,   230),
+    -- ── Proteínas ─────────────────────────────────────────────────────────────────
     ('Proteínas Totais',               'Proteínas',           'g/dL',     6.0,   8.5,   6.5,   8.0,   6.5,   8.0),
     ('Albumina',                       'Proteínas',           'g/dL',     3.5,   5.2,   4.0,   5.0,   4.0,   5.0),
+    -- ── Eletrólitos ───────────────────────────────────────────────────────────────
     ('Sódio',                          'Eletrólitos',         'mEq/L',    136,   145,   138,   142,   138,   142),
     ('Potássio',                       'Eletrólitos',         'mEq/L',    3.5,   5.0,   3.8,   4.8,   3.8,   4.8),
     ('Cálcio Total',                   'Eletrólitos',         'mg/dL',    8.5,   10.5,  9.0,   10.2,  9.0,   10.2),
@@ -175,6 +193,7 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- ─── SEED: Protocolos com seus exames ────────────────────────────────────────────
 DO $$
 DECLARE
   p1 BIGINT; p2 BIGINT; p3 BIGINT; p4 BIGINT;
@@ -197,6 +216,7 @@ BEGIN
       ('Checkup Tireoidiano', 'Avaliação completa da função tireoidiana com marcadores nutricionais')
     RETURNING id INTO p4;
 
+    -- Checkup Básico
     INSERT INTO protocol_exams (protocol_id, exam_id, sort_order)
     SELECT p1, id, ROW_NUMBER() OVER (ORDER BY id) - 1
     FROM exams_catalog WHERE name IN (
@@ -210,6 +230,7 @@ BEGIN
       'PCR Ultrassensível'
     );
 
+    -- Checkup Emagrecimento
     INSERT INTO protocol_exams (protocol_id, exam_id, sort_order)
     SELECT p2, id, ROW_NUMBER() OVER (ORDER BY id) - 1
     FROM exams_catalog WHERE name IN (
@@ -222,6 +243,7 @@ BEGIN
       'TGO (AST)','TGP (ALT)'
     );
 
+    -- Checkup Hipertrofia
     INSERT INTO protocol_exams (protocol_id, exam_id, sort_order)
     SELECT p3, id, ROW_NUMBER() OVER (ORDER BY id) - 1
     FROM exams_catalog WHERE name IN (
@@ -234,6 +256,7 @@ BEGIN
       'TGO (AST)','TGP (ALT)','Creatinina'
     );
 
+    -- Checkup Tireoidiano
     INSERT INTO protocol_exams (protocol_id, exam_id, sort_order)
     SELECT p4, id, ROW_NUMBER() OVER (ORDER BY id) - 1
     FROM exams_catalog WHERE name IN (

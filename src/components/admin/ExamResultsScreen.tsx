@@ -14,18 +14,26 @@ import {
 
 export type TherapeuticStatus = "no_alvo" | "fora_alvo" | "critico";
 
+/**
+ * Compara o valor com:
+ * 1. ref_min / ref_max → fora = "critico" (vermelho)
+ * 2. target_*_min / target_*_max (por sexo) → fora = "fora_alvo" (amarelo)
+ * 3. Dentro do alvo terapêutico → "no_alvo" (verde)
+ */
 export function calcTherapeuticStatus(
   value: number,
   exam: ExamCatalogItem,
   gender: "M" | "F" | "outro",
 ): TherapeuticStatus {
+  // 1. Fora da referência laboratorial → Crítico
   if (exam.ref_max != null && value > exam.ref_max) return "critico";
   if (exam.ref_min != null && value < exam.ref_min) return "critico";
 
+  // 2. Alvo terapêutico por sexo
   const tMin = gender === "F" ? exam.target_female_min : exam.target_male_min;
   const tMax = gender === "F" ? exam.target_female_max : exam.target_male_max;
 
-  if (tMin == null && tMax == null) return "no_alvo";
+  if (tMin == null && tMax == null) return "no_alvo"; // sem alvo definido
 
   if (tMin != null && value < tMin) return "fora_alvo";
   if (tMax != null && value > tMax) return "fora_alvo";
@@ -67,12 +75,16 @@ const STATUS_CFG: Record<TherapeuticStatus, {
   },
 };
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
 function fmtRange(min?: number | null, max?: number | null, unit?: string): string | null {
   if (min != null && max != null) return `${min}–${max}${unit ? " " + unit : ""}`;
   if (min != null)                return `>${min}${unit ? " " + unit : ""}`;
   if (max != null)                return `<${max}${unit ? " " + unit : ""}`;
   return null;
 }
+
+// ─── ResultRow ─────────────────────────────────────────────────────────────────
 
 interface ResultEntry {
   exam:           ExamCatalogItem;
@@ -103,6 +115,7 @@ function ResultRow({
   const refRange    = fmtRange(exam.ref_min, exam.ref_max, exam.unit);
   const targetRange = fmtRange(tMin, tMax, exam.unit);
 
+  // How far from target
   let deviation: string | null = null;
   if (status === "fora_alvo" && entry.result_value != null) {
     if (tMin != null && entry.result_value < tMin)
@@ -123,6 +136,8 @@ function ResultRow({
       cfg ? cfg.rowBg : "border-border/50 bg-background",
     )}>
       <div className="flex items-start gap-3 p-3 flex-wrap sm:flex-nowrap">
+
+        {/* Exam name + ranges */}
         <div className="flex-1 min-w-[160px]">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-semibold text-foreground">{exam.name}</p>
@@ -153,6 +168,7 @@ function ResultRow({
           </div>
         </div>
 
+        {/* Value input */}
         <div className="w-28 shrink-0">
           <Input
             type="number"
@@ -170,6 +186,7 @@ function ResultRow({
           />
         </div>
 
+        {/* Status badge */}
         {status && cfg ? (
           <div className="shrink-0 pt-1">
             <span className={cn(
@@ -185,6 +202,7 @@ function ResultRow({
         )}
       </div>
 
+      {/* Deviation hint */}
       {status && status !== "no_alvo" && cfg && (
         <div className={cn(
           "px-3 pb-2.5 text-[11px]",
@@ -195,6 +213,7 @@ function ResultRow({
         </div>
       )}
 
+      {/* Range detail */}
       {showDetail && (
         <div className="px-3 pb-2.5 flex flex-wrap gap-x-5 gap-y-1 border-t border-border/30 pt-2">
           {refRange && (
@@ -217,6 +236,8 @@ function ResultRow({
     </div>
   );
 }
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 interface Props {
   requestId: number;
@@ -270,6 +291,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
       }));
     const ok = await saveExamResults(request.id, results);
     if (!ok) { toast.error("Erro ao salvar os resultados."); setSaving(false); return; }
+    // Auto-complete if all exams have values
     if (results.length === entries.length && entries.length > 0) {
       await updateExamRequestStatus(request.id, "Concluído");
       setRequest((r) => r ? { ...r, status: "Concluído" } : r);
@@ -290,6 +312,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
     return <p className="text-sm text-muted-foreground py-8 text-center">Pedido não encontrado.</p>;
   }
 
+  // ── Summary stats ──
   const filled = entries.filter((e) => e.result_value != null);
   const counts = filled.reduce<Record<TherapeuticStatus, number>>(
     (acc, e) => {
@@ -300,6 +323,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
     { no_alvo: 0, fora_alvo: 0, critico: 0 },
   );
 
+  // ── Group by category ──
   const grouped = entries.reduce<Record<string, { entry: ResultEntry; idx: number }[]>>(
     (acc, entry, idx) => {
       const cat = entry.exam.group_category;
@@ -308,9 +332,15 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
     }, {},
   );
 
+  const fmtDate = (iso: string) =>
+    new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", {
+      day: "2-digit", month: "short", year: "numeric",
+    });
+
   return (
     <div className="space-y-5">
 
+      {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <button
@@ -349,6 +379,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
         </div>
       </div>
 
+      {/* ── Status legend ── */}
       <div className="flex flex-wrap gap-2">
         {(["critico", "fora_alvo", "no_alvo"] as TherapeuticStatus[]).map((s) => {
           const cfg = STATUS_CFG[s];
@@ -370,6 +401,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
         )}
       </div>
 
+      {/* ── Exam results grouped by category ── */}
       <div className="space-y-5">
         {Object.entries(grouped).map(([category, items]) => (
           <div key={category}>
@@ -393,6 +425,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
         ))}
       </div>
 
+      {/* ── Save ── */}
       <div className="flex items-center justify-between pt-2 border-t border-border/40">
         <p className="text-xs text-muted-foreground">
           {filled.length === entries.length && entries.length > 0
@@ -409,4 +442,5 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
   );
 }
 
+// ─── Legenda de referência (para exibir em outro lugar, se necessário) ────────
 export { STATUS_CFG };
