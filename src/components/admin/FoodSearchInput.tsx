@@ -5,7 +5,7 @@ import { searchFoods, type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase"
 import { searchOpenFoodFacts } from "@/lib/openFoodFacts";
 import { cn } from "@/lib/utils";
 
-// ─── Temporary localStorage stubs ────────────────────────────────────────────
+// ─── Temporary localStorage stubs ───────────────────────────────────────────────
 // Store custom foods in localStorage until the Supabase table is created.
 
 const getCustomFoods = (): FoodItem[] => {
@@ -48,7 +48,7 @@ export async function saveCustomFood(food: {
   return newFood;
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────────
 
 interface FoodSearchInputProps {
   value: string;
@@ -82,7 +82,7 @@ const EMPTY_FORM: CustomFoodForm = {
   fiber_per_100g: "",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────────
 
 export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInputProps) {
   const [query, setQuery] = useState(value);
@@ -101,12 +101,12 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const apiAbortRef = useRef<AbortController | null>(null);
   const apiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Sync external value ──────────────────────────────────────────────────
+  // ── Sync external value ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  // ── Search ───────────────────────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────────────────────────────
   const runSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
       setResults([]);
@@ -155,7 +155,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     runSearch(q);
   };
 
-  // ── Cleanup API requests on unmount ─────────────────────────────────────
+  // ── Cleanup API requests on unmount ─────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
@@ -163,14 +163,14 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     };
   }, []);
 
-  // ── Compute dropdown position (portal needs fixed coords) ───────────────
+  // ── Compute dropdown position (portal needs fixed coords) ─────────────────────────────────
   const updatePos = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
   }, []);
 
-  // ── Close on outside click ───────────────────────────────────────────────
+  // ── Close on outside click ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -182,7 +182,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Update position on scroll/resize ────────────────────────────────────
+  // ── Update position on scroll/resize ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     window.addEventListener("scroll", updatePos, true);
@@ -193,7 +193,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     };
   }, [isOpen, updatePos]);
 
-  // ── Select food from dropdown ────────────────────────────────────────────
+  // ── Select food from dropdown ─────────────────────────────────────────────────────────────────
   const handleSelect = (food: FoodItem) => {
     setQuery(food.name);
     setIsOpen(false);
@@ -206,7 +206,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     });
   };
 
-  // ── Clear input ──────────────────────────────────────────────────────────
+  // ── Clear input ─────────────────────────────────────────────────────────────────────────
   const handleClear = () => {
     setQuery("");
     setIsOpen(false);
@@ -219,7 +219,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     inputRef.current?.focus();
   };
 
-  // ── Open custom food modal ───────────────────────────────────────────────
+  // ── Open custom food modal ──────────────────────────────────────────────────────────────
   const openModal = () => {
     setForm({ ...EMPTY_FORM, name: query });
     setFormErrors({});
@@ -233,7 +233,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     setFormErrors({});
   };
 
-  // ── Custom food form handling ────────────────────────────────────────────
+  // ── Custom food form handling ──────────────────────────────────────────────────────────────
   const setField = (field: keyof CustomFoodForm, val: string) => {
     setForm((prev) => ({ ...prev, [field]: val }));
     if (formErrors[field]) {
@@ -283,7 +283,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -327,7 +327,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
             className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
           >
             <ul className="max-h-[26rem] overflow-y-auto divide-y divide-border/50">
-              {/* ── Local results ─────────────────────────────────────────── */}
+              {/* ── Local results ─────────────────────────────────────────────────────── */}
               {results.length === 0 ? (
                 <li className="px-4 py-3 text-sm text-muted-foreground text-center">
                   Nenhum alimento local para "{query}"
@@ -338,7 +338,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
                 ))
               )}
 
-              {/* ── API results section ───────────────────────────────────── */}
+              {/* ── API results section ───────────────────────────────────────────────── */}
               {apiStatus !== "idle" && (
                 <>
                   <li className="px-4 py-1.5 flex items-center gap-1.5 bg-muted/40">
@@ -556,7 +556,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   );
 }
 
-// ─── FoodRow ──────────────────────────────────────────────────────────────────
+// ─── FoodRow ───────────────────────────────────────────────────────────────────────────────
 
 function FoodRow({
   food,
@@ -597,7 +597,7 @@ function FoodRow({
   );
 }
 
-// ─── MacroField helper ────────────────────────────────────────────────────────
+// ─── MacroField helper ────────────────────────────────────────────────────────────────────
 
 interface MacroFieldProps {
   label: string;
