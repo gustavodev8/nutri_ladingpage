@@ -49,10 +49,13 @@ export async function searchOpenFoodFacts(
   query: string,
   signal?: AbortSignal
 ): Promise<FoodItem[]> {
+  // Use v2 API — more reliable, supports CORS
   const params = new URLSearchParams({
     search_terms: query,
     fields: "product_name,product_name_pt,product_name_en,nutriments,categories_tags",
-    page_size: "50",
+    page_size: "20",
+    lc: "pt",
+    cc: "br",
     sort_by: "unique_scans_n",
   });
 

@@ -136,7 +136,6 @@ function RequestCard({
       {/* Body */}
       {open && (
         <div className="p-5 space-y-4">
-          {/* Exam list preview */}
           {(request.items ?? []).length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {(request.items ?? []).map((exam) => {
@@ -175,12 +174,10 @@ function RequestCard({
             </div>
           )}
 
-          {/* Notes */}
           {request.notes && (
             <p className="text-xs text-muted-foreground italic">{request.notes}</p>
           )}
 
-          {/* Action */}
           <div className="flex justify-end">
             <Button size="sm" onClick={onOpenResults} className="gap-1.5" variant="outline">
               <ClipboardList size={13} />
@@ -223,7 +220,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     }).length;
   }, 0);
 
-  // ── Results view ──
   if (view.kind === "results") {
     return (
       <ExamResultsScreen
@@ -235,7 +231,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     );
   }
 
-  // ── New request view ──
   if (view.kind === "new-request") {
     return (
       <ExamRequestScreen
@@ -246,7 +241,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     );
   }
 
-  // ── List view ──
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -258,7 +252,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
   return (
     <div className="space-y-4">
 
-      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Protocolos de Exames</h2>
@@ -276,7 +269,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
         </Button>
       </div>
 
-      {/* Critical alert */}
       {totalCritical > 0 && (
         <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
           <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
@@ -289,7 +281,6 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
         </div>
       )}
 
-      {/* Request list */}
       {requests.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-14 gap-3 border border-border rounded-xl bg-card text-muted-foreground">
           <FileText size={28} className="opacity-30" />
