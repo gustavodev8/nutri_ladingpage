@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, X, ChevronRight, Sparkles, Type } from "lucide-react";
+import { Search, Plus, X, ChevronRight, Sparkles, Type, Globe, Loader2 } from "lucide-react";
 import { searchFoods, type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
+import { searchOpenFoodFacts } from "@/lib/openFoodFacts";
 import { cn } from "@/lib/utils";
 
 // ─── Temporary localStorage stubs ────────────────────────────────────────────
@@ -44,7 +45,7 @@ export async function saveCustomFood(food: {
   return newFood;
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────────
 
 interface FoodSearchInputProps {
   value: string;
@@ -78,12 +79,14 @@ const EMPTY_FORM: CustomFoodForm = {
   fiber_per_100g: "",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────────────
 
 export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInputProps) {
   const [query, setQuery] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<FoodItem[]>([]);
+  const [apiResults, setApiResults] = useState<FoodItem[]>([]);
+  const [apiStatus, setApiStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<CustomFoodForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<CustomFoodForm>>({});
@@ -92,14 +95,24 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const apiAbortRef = useRef<AbortController | null>(null);
+  const apiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
 
   const runSearch = useCallback(async (q: string) => {
-    if (q.trim().length < 2) { setResults([]); setIsOpen(false); return; }
+    if (q.trim().length < 2) {
+      setResults([]);
+      setApiResults([]);
+      setApiStatus("idle");
+      setIsOpen(false);
+      return;
+    }
     const builtIn = searchFoods(q);
     const custom = await fetchCustomFoods();
-    const filteredCustom = custom.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
+    const filteredCustom = custom.filter((f) =>
+      f.name.toLowerCase().includes(q.toLowerCase())
+    );
     const seen = new Set<string>();
     const merged: FoodItem[] = [];
     for (const f of [...filteredCustom, ...builtIn]) {
@@ -108,6 +121,23 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     setResults(merged.slice(0, 30));
     updatePos();
     setIsOpen(true);
+
+    // Debounced API search
+    if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
+    if (apiAbortRef.current) apiAbortRef.current.abort();
+    setApiStatus("loading");
+    setApiResults([]);
+    apiTimerRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      apiAbortRef.current = controller;
+      try {
+        const offResults = await searchOpenFoodFacts(q, controller.signal);
+        setApiResults(offResults);
+        setApiStatus("done");
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") setApiStatus("error");
+      }
+    }, 600);
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +147,14 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     updatePos();
     runSearch(q);
   };
+
+  // ── Cleanup API requests on unmount ─────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
+      if (apiAbortRef.current) apiAbortRef.current.abort();
+    };
+  }, []);
 
   const updatePos = useCallback(() => {
     if (!containerRef.current) return;
@@ -156,9 +194,13 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
     onCustomName(""); inputRef.current?.focus();
   };
 
-  // ── Use as free text (no macros) ────────────────────────────────────────
   const handleFreeText = () => {
     setIsOpen(false);
+    setResults([]);
+    setApiResults([]);
+    setApiStatus("idle");
+    if (apiTimerRef.current) clearTimeout(apiTimerRef.current);
+    if (apiAbortRef.current) apiAbortRef.current.abort();
     onSelect({ name: query.trim(), kcal_per_100g: 0, protein_per_100g: 0, carbs_per_100g: 0, fat_per_100g: 0 });
   };
 
@@ -229,29 +271,47 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
             style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 380), zIndex: 9999 }}
             className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
           >
-            <ul className="max-h-80 overflow-y-auto divide-y divide-border/50">
+            <ul className="max-h-[26rem] overflow-y-auto divide-y divide-border/50">
               {results.length === 0 ? (
                 <li className="px-4 py-3 text-sm text-muted-foreground text-center">
-                  Nenhum alimento encontrado para "{query}"
+                  Nenhum alimento local para "{query}"
                 </li>
               ) : (
                 results.map((food) => (
-                  <li key={food.id}>
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleSelect(food); }} className="w-full text-left">
-                      <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/60 cursor-pointer transition-colors gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-foreground">{food.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{food.category}</p>
-                        </div>
-                        <div className="text-right text-xs tabular-nums shrink-0">
-                          <p className="font-semibold text-foreground/80">{food.kcal} kcal</p>
-                          <p className="text-muted-foreground mt-0.5">P {food.protein}g · C {food.carbs}g · G {food.fat}g</p>
-                        </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                      </div>
-                    </button>
-                  </li>
+                  <FoodRow key={food.id} food={food} onSelect={handleSelect} />
                 ))
+              )}
+
+              {apiStatus !== "idle" && (
+                <>
+                  <li className="px-4 py-1.5 flex items-center gap-1.5 bg-muted/40">
+                    <Globe className="h-3 w-3 text-primary/70" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
+                      Open Food Facts
+                    </span>
+                    {apiStatus === "loading" && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />
+                    )}
+                  </li>
+                  {apiStatus === "loading" && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Buscando na base global…
+                    </li>
+                  )}
+                  {apiStatus === "error" && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Sem conexão com a API — usando base local
+                    </li>
+                  )}
+                  {apiStatus === "done" && apiResults.length === 0 && (
+                    <li className="px-4 py-2.5 text-xs text-muted-foreground">
+                      Nenhum resultado externo para "{query}"
+                    </li>
+                  )}
+                  {apiResults.map((food) => (
+                    <FoodRow key={food.id} food={food} onSelect={handleSelect} isApi />
+                  ))}
+                </>
               )}
             </ul>
 
@@ -341,7 +401,48 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
   );
 }
 
-// ─── MacroField helper ────────────────────────────────────────────────────────
+// ─── FoodRow ──────────────────────────────────────────────────────────────────────────────
+
+function FoodRow({
+  food,
+  onSelect,
+  isApi,
+}: {
+  food: FoodItem;
+  onSelect: (food: FoodItem) => void;
+  isApi?: boolean;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); onSelect(food); }}
+        className="w-full text-left"
+      >
+        <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/60 cursor-pointer transition-colors gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-foreground truncate">{food.name}</p>
+              {isApi && (
+                <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1 py-px rounded bg-primary/10 text-primary/70">
+                  OFF
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{food.category}</p>
+          </div>
+          <div className="text-right text-xs tabular-nums shrink-0">
+            <p className="font-semibold text-foreground/80">{food.kcal} kcal</p>
+            <p className="text-muted-foreground mt-0.5">P {food.protein}g · C {food.carbs}g · G {food.fat}g</p>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+        </div>
+      </button>
+    </li>
+  );
+}
+
+// ─── MacroField helper ──────────────────────────────────────────────────────────────────────
 
 interface MacroFieldProps {
   label: string; required?: boolean; value: string;
