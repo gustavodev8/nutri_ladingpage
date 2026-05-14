@@ -19,10 +19,8 @@ import {
   Eye,
   MapPin,
   MessageSquareQuote,
-  FlaskConical,
   Pencil,
 } from "lucide-react";
-import { ExamesTab } from "@/components/admin/ExamesTab";
 import { ExamProtocolsTab } from "@/components/admin/ExamProtocolsTab";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
 import { AnthropometryWizard, type MeasurementForm } from "@/components/admin/AnthropometryWizard";
@@ -126,14 +124,13 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "exames" | "protocolos";
+type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "protocolos";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
   { key: "anamnese",     label: "Anamnese",              icon: <ClipboardList size={16} /> },
   { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
   { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
-  { key: "exames",       label: "Exames Laboratoriais",  icon: <FlaskConical size={16} /> },
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
 ];
 
@@ -511,9 +508,6 @@ export default function AdminPaciente() {
             )}
             {activeTab === "planos" && (
               <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} patient={patient} />
-            )}
-            {activeTab === "exames" && (
-              <ExamesTab patientId={Number(id)} />
             )}
             {activeTab === "protocolos" && (
               <ExamProtocolsTab
