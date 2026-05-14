@@ -1,16 +1,21 @@
-import { useState, useEffect, useRef } from "react";
-import { Search, Check, FileText, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Search, FileText, Loader2, Trash2, FlaskConical, Printer, Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  fetchExamProtocols, fetchExamsCatalog, createExamRequest,
+  fetchExamProtocols, fetchExamsCatalog, createExamRequest, fetchPatient,
   type ExamCatalogItem, type ExamProtocol,
 } from "@/lib/supabase";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+interface CartItem {
+  exam:  ExamCatalogItem;
+  notes: string;
+}
 
 interface Props {
   patientId: number;
@@ -18,82 +23,301 @@ interface Props {
   onCancel:  () => void;
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────────
-
-export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
-  const [protocols, setProtocols]               = useState<ExamProtocol[]>([]);
-  const [catalog,   setCatalog]                 = useState<ExamCatalogItem[]>([]);
-  const [loading,   setLoading]                 = useState(true);
-  const [saving,    setSaving]                  = useState(false);
-  const [selectedProtocolId, setSelectedProtocolId] = useState<number | null>(null);
-  const [selectedExamIds, setSelectedExamIds]   = useState<Set<number>>(new Set());
-  const [search,    setSearch]                  = useState("");
-  const [notes,     setNotes]                   = useState("");
-  const [collapsed, setCollapsed]               = useState<Set<string>>(new Set());
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    Promise.all([fetchExamProtocols(), fetchExamsCatalog()]).then(([protos, cat]) => {
-      setProtocols(protos);
-      setCatalog(cat);
-      setLoading(false);
-    });
-  }, []);
-
-  const handleProtocolChange = (protocolId: number | null) => {
-    setSelectedProtocolId(protocolId);
-    if (protocolId) {
-      const proto = protocols.find((p) => p.id === protocolId);
-      setSelectedExamIds(new Set((proto?.exams ?? []).map((e) => e.id)));
-    } else {
-      setSelectedExamIds(new Set());
-    }
-  };
-
-  const toggleExam = (examId: number) => {
-    setSelectedExamIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(examId)) next.delete(examId);
-      else next.add(examId);
-      return next;
-    });
-  };
-
-  const toggleCategory = (cat: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-  };
-
-  const toggleAll = (exams: ExamCatalogItem[], selectAll: boolean) => {
-    setSelectedExamIds((prev) => {
-      const next = new Set(prev);
-      exams.forEach((e) => (selectAll ? next.add(e.id) : next.delete(e.id)));
-      return next;
-    });
-  };
-
-  const filtered = catalog.filter((e) =>
-    search === "" || e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.group_category.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const grouped = filtered.reduce<Record<string, ExamCatalogItem[]>>((acc, e) => {
-    (acc[e.group_category] ??= []).push(e);
+function printExamOrder(items: CartItem[], patientName: string) {
+  const grouped = items.reduce<Record<string, CartItem[]>>((acc, item) => {
+    (acc[item.exam.group_category] ??= []).push(item);
     return acc;
   }, {});
 
-  const handleSubmit = async () => {
-    if (selectedExamIds.size === 0) { toast.error("Selecione pelo menos um exame."); return; }
+  const today = new Date().toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "long", year: "numeric",
+  });
+
+  const examRows = Object.entries(grouped).map(([category, catItems]) => `
+    <div class="category-block">
+      <div class="category-title">${category}</div>
+      ${catItems.map((item) => `
+        <div class="exam-row">
+          <span class="exam-name">${item.exam.name}${item.exam.unit ? ` <span class="exam-unit">(${item.exam.unit})</span>` : ""}</span>
+          ${item.notes ? `<span class="exam-notes">${item.notes}</span>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Pedido de Exames — ${patientName}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    color: #111;
+    background: #fff;
+    padding: 0;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 20mm 22mm 25mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    border-bottom: 2px solid #2c6e4e;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .header-left .clinic-name {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #2c6e4e;
+    letter-spacing: 0.5px;
+  }
+  .header-left .clinic-sub {
+    font-size: 9pt;
+    color: #555;
+    margin-top: 2px;
+  }
+  .header-right {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #555;
+    line-height: 1.5;
+  }
+  .doc-title {
+    text-align: center;
+    font-size: 13pt;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    color: #2c6e4e;
+    border: 1px solid #c8e6d6;
+    padding: 6px;
+    border-radius: 4px;
+  }
+  .patient-box {
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 18px;
+    background: #f9fafb;
+    font-size: 10.5pt;
+  }
+  .patient-box .label { color: #666; font-size: 8.5pt; display: block; }
+  .patient-box .value { font-weight: bold; color: #111; }
+  .exams-section { flex: 1; }
+  .section-label {
+    font-size: 8.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #2c6e4e;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #c8e6d6;
+    padding-bottom: 4px;
+  }
+  .category-block { margin-bottom: 14px; }
+  .category-title {
+    font-size: 9pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #444;
+    background: #f0f7f3;
+    padding: 3px 8px;
+    border-left: 3px solid #2c6e4e;
+    margin-bottom: 5px;
+  }
+  .exam-row {
+    padding: 4px 8px 4px 14px;
+    border-bottom: 1px dotted #e5e7eb;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .exam-name { flex: 1; font-size: 10.5pt; }
+  .exam-unit { font-size: 9pt; color: #666; font-style: italic; }
+  .exam-notes { font-size: 9pt; color: #888; font-style: italic; white-space: nowrap; }
+  .footer {
+    margin-top: 32px;
+    border-top: 1px solid #ddd;
+    padding-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+  }
+  .signature-block { flex: 1; text-align: center; }
+  .signature-line { border-top: 1px solid #333; margin-bottom: 5px; margin-top: 40px; }
+  .signature-name { font-size: 10pt; font-weight: bold; }
+  .signature-sub { font-size: 8.5pt; color: #555; }
+  .stamp-box {
+    width: 90px; height: 90px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8pt; color: #bbb; text-align: center; padding: 6px;
+  }
+  @media print {
+    body { padding: 0; }
+    .page { padding: 15mm 18mm 20mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <div class="clinic-name">Dr. Fillipe David</div>
+      <div class="clinic-sub">Nutricionista Clínico e Esportivo &nbsp;·&nbsp; CRN-5 &nbsp;·&nbsp; Alagoinhas / BA</div>
+    </div>
+    <div class="header-right">Emitido em: ${today}</div>
+  </div>
+  <div class="doc-title">Pedido de Exames Laboratoriais</div>
+  <div class="patient-box">
+    <div>
+      <span class="label">Paciente</span>
+      <span class="value">${patientName}</span>
+    </div>
+    <div style="text-align:right">
+      <span class="label">Data</span>
+      <span class="value">${today}</span>
+    </div>
+  </div>
+  <div class="exams-section">
+    <div class="section-label">Exames Solicitados (${items.length})</div>
+    ${examRows}
+  </div>
+  <div class="footer">
+    <div class="signature-block">
+      <div class="signature-line"></div>
+      <div class="signature-name">Dr. Fillipe David</div>
+      <div class="signature-sub">Nutricionista · CRN-5</div>
+    </div>
+    <div class="stamp-box">Carimbo</div>
+  </div>
+</div>
+<script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { toast.error("Permita popups para gerar o PDF."); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
+  const [protocols,    setProtocols]    = useState<ExamProtocol[]>([]);
+  const [catalog,      setCatalog]      = useState<ExamCatalogItem[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [saving,       setSaving]       = useState(false);
+  const [cart,         setCart]         = useState<CartItem[]>([]);
+  const [patientName,  setPatientName]  = useState<string>("Paciente");
+  const [search,       setSearch]       = useState("");
+  const [dropOpen,     setDropOpen]     = useState(false);
+  const [focusIdx,     setFocusIdx]     = useState(-1);
+  const [globalNotes,  setGlobalNotes]  = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const dropRef   = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetchExamProtocols(),
+      fetchExamsCatalog(),
+      fetchPatient(patientId),
+    ]).then(([protos, cat, patient]) => {
+      setProtocols(protos);
+      setCatalog(cat);
+      if (patient?.name) setPatientName(patient.name);
+      setLoading(false);
+    });
+  }, [patientId]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const cartIds = new Set(cart.map((c) => c.exam.id));
+
+  const addExam = useCallback((exam: ExamCatalogItem) => {
+    if (cartIds.has(exam.id)) return;
+    setCart((prev) => [...prev, { exam, notes: "" }]);
+    setSearch("");
+    setDropOpen(false);
+    setFocusIdx(-1);
+  }, [cartIds]);
+
+  const removeExam = (examId: number) => {
+    setCart((prev) => prev.filter((c) => c.exam.id !== examId));
+  };
+
+  const updateNotes = (examId: number, notes: string) => {
+    setCart((prev) => prev.map((c) => c.exam.id === examId ? { ...c, notes } : c));
+  };
+
+  const addProtocol = (protocolId: number) => {
+    const proto = protocols.find((p) => p.id === protocolId);
+    if (!proto) return;
+    const toAdd = (proto.exams ?? []).filter((e) => !cartIds.has(e.id));
+    if (toAdd.length === 0) { toast.info(`Todos os exames de "${proto.name}" já estão no pedido.`); return; }
+    setCart((prev) => [...prev, ...toAdd.map((e) => ({ exam: e, notes: "" }))]);
+    toast.success(`${toAdd.length} exame(s) de "${proto.name}" adicionado(s).`);
+  };
+
+  const searchResults = search.length > 0
+    ? catalog.filter(
+        (e) => !cartIds.has(e.id) &&
+          (e.name.toLowerCase().includes(search.toLowerCase()) ||
+           e.group_category.toLowerCase().includes(search.toLowerCase()))
+      ).slice(0, 8)
+    : [];
+
+  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!dropOpen || searchResults.length === 0) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setFocusIdx((i) => Math.min(i + 1, searchResults.length - 1)); }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setFocusIdx((i) => Math.max(i - 1, -1)); }
+    if (e.key === "Enter" && focusIdx >= 0) { e.preventDefault(); addExam(searchResults[focusIdx]); }
+    if (e.key === "Escape") { setDropOpen(false); setSearch(""); }
+  };
+
+  const cartGrouped = cart.reduce<Record<string, CartItem[]>>((acc, item) => {
+    (acc[item.exam.group_category] ??= []).push(item);
+    return acc;
+  }, {});
+
+  const handleSave = async () => {
+    if (cart.length === 0) { toast.error("Adicione pelo menos um exame ao pedido."); return; }
     setSaving(true);
-    const requestId = await createExamRequest(patientId, selectedProtocolId ?? undefined, [...selectedExamIds], notes);
+    const examIds = cart.map((c) => c.exam.id);
+    const requestId = await createExamRequest(patientId, undefined, examIds, globalNotes);
     setSaving(false);
-    if (!requestId) { toast.error("Erro ao gerar o pedido. Tente novamente."); return; }
-    toast.success(`Pedido gerado com ${selectedExamIds.size} exame(s).`);
+    if (!requestId) { toast.error("Erro ao salvar o pedido. Tente novamente."); return; }
+    toast.success(`Pedido salvo com ${cart.length} exame(s).`);
     onCreated(requestId);
+  };
+
+  const handlePrint = () => {
+    if (cart.length === 0) { toast.error("Adicione pelo menos um exame para imprimir."); return; }
+    printExamOrder(cart, patientName);
   };
 
   if (loading) {
@@ -107,186 +331,176 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* ── Protocolos ── */}
       <div className="space-y-2">
         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Protocolo
+          Adicionar protocolo
         </Label>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => handleProtocolChange(null)}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-              selectedProtocolId === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:bg-muted"
-            )}
-          >
-            Seleção manual
-          </button>
           {protocols.map((p) => (
             <button
               key={p.id}
               type="button"
-              onClick={() => handleProtocolChange(p.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                selectedProtocolId === p.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              )}
+              onClick={() => addProtocol(p.id)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center gap-1.5"
             >
+              <Plus size={11} />
               {p.name}
             </button>
           ))}
         </div>
-        {selectedProtocolId != null && (
-          <p className="text-xs text-muted-foreground pl-0.5">
-            {protocols.find((p) => p.id === selectedProtocolId)?.description}
-          </p>
-        )}
       </div>
 
-      {/* ── Search + counter ── */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-foreground">
-            {selectedExamIds.size} exame(s) selecionado(s)
-          </span>
-          {selectedExamIds.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedExamIds(new Set())}
-              className="text-[11px] text-muted-foreground hover:text-destructive underline transition-colors"
-            >
-              limpar
-            </button>
-          )}
-        </div>
-        <div className="relative w-52">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Adicionar exame individual
+        </Label>
+        <div className="relative" ref={dropRef}>
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
           <Input
             ref={searchRef}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar exame…"
-            className="pl-7 h-8 text-sm"
+            onChange={(e) => { setSearch(e.target.value); setDropOpen(true); setFocusIdx(-1); }}
+            onFocus={() => { if (search) setDropOpen(true); }}
+            onKeyDown={handleSearchKey}
+            placeholder="Buscar exame pelo nome ou categoria…"
+            className="pl-7 h-9 text-sm"
           />
+          {dropOpen && searchResults.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-background border border-border rounded-lg shadow-lg overflow-hidden">
+              {searchResults.map((exam, i) => (
+                <button
+                  key={exam.id}
+                  type="button"
+                  onMouseEnter={() => setFocusIdx(i)}
+                  onClick={() => addExam(exam)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors",
+                    focusIdx === i ? "bg-primary/8 text-foreground" : "hover:bg-muted/60 text-foreground"
+                  )}
+                >
+                  <span className="font-medium">{exam.name}</span>
+                  <span className="text-[10px] text-muted-foreground ml-2 shrink-0">{exam.group_category}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {dropOpen && search.length > 0 && searchResults.length === 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-background border border-border rounded-lg shadow-lg px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">Nenhum exame encontrado para "{search}".</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Grouped exam list ── */}
-      <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
-        {Object.entries(grouped).map(([category, exams]) => {
-          const isCollapsed = collapsed.has(category);
-          const allSelected = exams.every((e) => selectedExamIds.has(e.id));
-          const someSelected = exams.some((e) => selectedExamIds.has(e.id));
-
-          return (
-            <div key={category} className="rounded-lg border border-border/50 overflow-hidden">
-              {/* Category header */}
-              <div
-                className="flex items-center justify-between px-3 py-2 bg-muted/30 cursor-pointer select-none hover:bg-muted/50 transition-colors"
-                onClick={() => toggleCategory(category)}
-              >
-                <div className="flex items-center gap-2">
-                  {isCollapsed
-                    ? <ChevronRight size={13} className="text-muted-foreground" />
-                    : <ChevronDown  size={13} className="text-muted-foreground" />
-                  }
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">
-                    {category}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    ({exams.filter((e) => selectedExamIds.has(e.id)).length}/{exams.length})
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={(ev) => { ev.stopPropagation(); toggleAll(exams, !allSelected); }}
-                  className={cn(
-                    "text-[10px] font-semibold transition-colors px-2 py-0.5 rounded",
-                    someSelected
-                      ? "text-primary hover:text-primary/80"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {allSelected ? "Desmarcar todos" : "Marcar todos"}
-                </button>
-              </div>
-
-              {/* Exam checkboxes */}
-              {!isCollapsed && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/20 p-1.5">
-                  {exams.map((exam) => {
-                    const selected = selectedExamIds.has(exam.id);
-                    return (
-                      <button
-                        key={exam.id}
-                        type="button"
-                        onClick={() => toggleExam(exam.id)}
-                        className={cn(
-                          "flex items-center gap-2.5 px-3 py-2 rounded-md text-left transition-all",
-                          selected
-                            ? "bg-primary/8 text-foreground"
-                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                        )}
-                      >
-                        <span className={cn(
-                          "flex-shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
-                          selected ? "bg-primary border-primary" : "border-muted-foreground/30"
-                        )}>
-                          {selected && <Check size={9} className="text-primary-foreground" />}
+      {cart.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 rounded-lg border-2 border-dashed border-border/50 text-muted-foreground">
+          <FlaskConical size={24} className="mb-2 opacity-30" />
+          <p className="text-xs">Nenhum exame adicionado.</p>
+          <p className="text-[11px] mt-0.5">Use um protocolo ou busque exames acima.</p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border/60 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/30 border-b border-border/40">
+                <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Exame
+                </th>
+                <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-52">
+                  Instruções / Observações
+                </th>
+                <th className="px-3 py-2 w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(cartGrouped).map(([category, items]) => (
+                <>
+                  <tr key={`cat-${category}`} className="bg-muted/10 border-b border-border/20">
+                    <td colSpan={3} className="px-3 py-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <FlaskConical size={10} className="text-muted-foreground" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          {category}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{exam.name}</p>
-                          {exam.unit && (
-                            <p className="text-[10px] text-muted-foreground">{exam.unit}</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {Object.keys(grouped).length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            Nenhum exame encontrado para "{search}".
-          </p>
-        )}
-      </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {items.map((item) => (
+                    <tr key={item.exam.id} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
+                      <td className="px-3 py-2">
+                        <p className="font-medium text-foreground">{item.exam.name}</p>
+                        {item.exam.unit && (
+                          <p className="text-[10px] text-muted-foreground">{item.exam.unit}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <Input
+                          value={item.notes}
+                          onChange={(e) => updateNotes(item.exam.id, e.target.value)}
+                          placeholder="Ex: jejum 12h"
+                          className="h-7 text-xs border-border/40 bg-transparent focus:bg-background"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeExam(item.exam.id)}
+                          className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-3 py-1.5 bg-muted/10 border-t border-border/30">
+            <span className="text-[11px] text-muted-foreground">
+              {cart.length} exame(s) no pedido
+            </span>
+          </div>
+        </div>
+      )}
 
-      {/* ── Notes ── */}
       <div className="space-y-1.5">
         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Observações (opcional)
+          Observações gerais (opcional)
         </Label>
         <Input
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Ex: jejum de 12h, não usar biotina 48h antes…"
+          value={globalNotes}
+          onChange={(e) => setGlobalNotes(e.target.value)}
+          placeholder="Ex: não usar biotina 48h antes, informar uso de medicamentos…"
           className="text-sm"
         />
       </div>
 
-      {/* ── Actions ── */}
-      <div className="flex items-center justify-end gap-2.5 pt-1">
+      <div className="flex items-center justify-between pt-1 border-t border-border/40">
         <Button variant="outline" size="sm" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button
-          size="sm"
-          onClick={handleSubmit}
-          disabled={saving || selectedExamIds.size === 0}
-          className="gap-1.5"
-        >
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-          {saving ? "Gerando…" : `Gerar Pedido (${selectedExamIds.size})`}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            disabled={cart.length === 0}
+            className="gap-1.5"
+          >
+            <Printer size={13} />
+            Imprimir PDF
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || cart.length === 0}
+            className="gap-1.5"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+            {saving ? "Salvando…" : `Salvar Pedido (${cart.length})`}
+          </Button>
+        </div>
       </div>
     </div>
   );
