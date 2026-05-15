@@ -1353,3 +1353,121 @@ export async function deleteExamRequest(requestId: number): Promise<boolean> {
   if (error) { console.error("[Supabase] deleteExamRequest:", error.message); return false; }
   return true;
 }
+
+// ─── Epic 11: Prescrição Magistral ────────────────────────────────────────────
+
+export interface Substrate {
+  id:           number;
+  name:         string;
+  category:     string;
+  min_dose?:    number | null;
+  ideal_dose?:  number | null;
+  max_dose?:    number | null;
+  unit:         string;
+  purpose?:     string | null;
+  interactions?:string | null;
+}
+
+export interface FormulaItem {
+  substrate_id:   number;
+  substrate_name?: string;
+  substrate?:     { name: string };
+  applied_dose:   number;
+  unit:           string;
+  sort_order?:    number;
+}
+
+export interface ReadyFormula {
+  id:                 number;
+  name:               string;
+  objective:          string;
+  posology?:          string | null;
+  pharmaceutical_form:string;
+  items?:             FormulaItem[];
+}
+
+export interface PrescriptionBlockItemInput {
+  substrateId?: number;
+  name:         string;
+  dose:         number;
+  unit:         string;
+}
+
+export interface PrescriptionBlockInput {
+  label:              string;
+  pharmaceuticalForm: string;
+  posology:           string;
+  items:              PrescriptionBlockItemInput[];
+}
+
+export async function fetchSubstrates(): Promise<Substrate[]> {
+  const { data, error } = await supabaseAdmin
+    .from("substrates")
+    .select("*")
+    .order("category")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchSubstrates:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function fetchReadyFormulas(): Promise<ReadyFormula[]> {
+  const { data, error } = await supabaseAdmin
+    .from("ready_formulas")
+    .select(`*, items:formula_items(substrate_id, applied_dose, unit, sort_order, substrate:substrates(name))`)
+    .order("objective")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchReadyFormulas:", error.message); return []; }
+  return (data ?? []).map((f) => ({
+    ...f,
+    items: (f.items ?? [])
+      .sort((a: FormulaItem, b: FormulaItem) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((fi: FormulaItem) => ({
+        ...fi,
+        substrate_name: fi.substrate?.name ?? "",
+      })),
+  }));
+}
+
+export async function savePrescription(
+  patientId: number,
+  blocks: PrescriptionBlockInput[],
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("prescriptions")
+    .insert({ patient_id: patientId })
+    .select("id")
+    .single();
+  if (error || !data?.id) { console.error("[Supabase] savePrescription:", error?.message); return false; }
+  const prescriptionId = data.id as number;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const { data: blockData, error: blockErr } = await supabaseAdmin
+      .from("prescription_blocks")
+      .insert({
+        prescription_id:     prescriptionId,
+        label:               b.label,
+        pharmaceutical_form: b.pharmaceuticalForm,
+        posology:            b.posology || null,
+        sort_order:          i,
+      })
+      .select("id")
+      .single();
+    if (blockErr || !blockData?.id) { console.error("[Supabase] savePrescription block:", blockErr?.message); return false; }
+    const blockId = blockData.id as number;
+
+    if (b.items.length > 0) {
+      const itemRows = b.items.map((item, j) => ({
+        block_id:     blockId,
+        substrate_id: item.substrateId ?? null,
+        name:         item.name,
+        dose:         item.dose,
+        unit:         item.unit,
+        sort_order:   j,
+      }));
+      const { error: itemErr } = await supabaseAdmin.from("prescription_block_items").insert(itemRows);
+      if (itemErr) { console.error("[Supabase] savePrescription items:", itemErr.message); return false; }
+    }
+  }
+  return true;
+}

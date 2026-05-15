@@ -22,6 +22,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { ExamProtocolsTab } from "@/components/admin/ExamProtocolsTab";
+import { PrescriptionBuilder } from "@/components/admin/PrescriptionBuilder";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
 import { AnthropometryWizard, type MeasurementForm } from "@/components/admin/AnthropometryWizard";
 import { useConsultation } from "@/contexts/ConsultationContext";
@@ -124,7 +125,7 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "protocolos";
+type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "protocolos" | "prescricao";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
@@ -132,6 +133,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
   { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
+  { key: "prescricao",   label: "Prescrição Magistral",  icon: <BookOpen size={16} /> },
 ];
 
 // ─── Shared Textarea ──────────────────────────────────────────────────────────────
@@ -514,6 +516,9 @@ export default function AdminPaciente() {
                 patientId={Number(id)}
                 gender={(patient?.gender as "M" | "F" | "outro") ?? "M"}
               />
+            )}
+            {activeTab === "prescricao" && (
+              <PrescriptionBuilder patientId={Number(id)} />
             )}
           </div>
         </div>
