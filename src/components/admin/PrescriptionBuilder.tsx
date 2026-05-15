@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Trash2, Printer, Save, Loader2, Search, FlaskConical,
-  ChevronDown, FileText, Beaker,
+  ChevronDown, FileText, Beaker, History, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchSubstrates, fetchReadyFormulas, savePrescription, fetchPatient,
-  type Substrate, type ReadyFormula,
+  fetchPrescriptions, deletePrescription,
+  type Substrate, type ReadyFormula, type SavedPrescription,
 } from "@/lib/supabase";
 
 // ─── Local types ───────────────────────────────────────────────────────────────
@@ -141,22 +141,31 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
 export function PrescriptionBuilder({ patientId }: Props) {
   const [substrates,   setSubstrates]   = useState<Substrate[]>([]);
   const [formulas,     setFormulas]     = useState<ReadyFormula[]>([]);
+  const [history,      setHistory]      = useState<SavedPrescription[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [patientName,  setPatientName]  = useState("Paciente");
+  const [view,         setView]         = useState<"builder" | "history">("builder");
   const [leftTab,      setLeftTab]      = useState<"formulas" | "substrates">("formulas");
   const [objective,    setObjective]    = useState("Todos");
   const [subSearch,    setSubSearch]    = useState("");
   const [blocks,       setBlocks]       = useState<PrescriptionBlock[]>([]);
   const [objOpen,      setObjOpen]      = useState(false);
+  const [expandedId,   setExpandedId]   = useState<number | null>(null);
   const objRef = useRef<HTMLDivElement>(null);
 
+  const loadHistory = useCallback(async () => {
+    const data = await fetchPrescriptions(patientId);
+    setHistory(data);
+  }, [patientId]);
+
   useEffect(() => {
-    Promise.all([fetchSubstrates(), fetchReadyFormulas(), fetchPatient(patientId)])
-      .then(([subs, fmls, patient]) => {
+    Promise.all([fetchSubstrates(), fetchReadyFormulas(), fetchPatient(patientId), fetchPrescriptions(patientId)])
+      .then(([subs, fmls, patient, hist]) => {
         setSubstrates(subs);
         setFormulas(fmls);
         if (patient?.name) setPatientName(patient.name);
+        setHistory(hist);
         setLoading(false);
       });
   }, [patientId]);
@@ -258,6 +267,29 @@ export function PrescriptionBuilder({ patientId }: Props) {
     if (!ok) { toast.error("Erro ao salvar a prescrição."); return; }
     toast.success("Prescrição salva com sucesso.");
     setBlocks([]);
+    await loadHistory();
+    setView("history");
+  };
+
+  const handleDeletePrescription = async (id: number) => {
+    if (!confirm("Excluir esta prescrição?")) return;
+    if (await deletePrescription(id)) {
+      toast.success("Prescrição excluída.");
+      setHistory((prev) => prev.filter((p) => p.id !== id));
+    } else {
+      toast.error("Erro ao excluir.");
+    }
+  };
+
+  const printSaved = (p: SavedPrescription) => {
+    const blocks: PrescriptionBlock[] = p.blocks.map((b) => ({
+      localId:            String(b.id),
+      label:              b.label,
+      pharmaceuticalForm: b.pharmaceutical_form,
+      posology:           b.posology ?? "",
+      items:              b.items.map((i) => ({ name: i.name, dose: i.dose, unit: i.unit })),
+    }));
+    printPrescription(blocks, patientName);
   };
 
   const handlePrint = () => {
@@ -290,6 +322,92 @@ export function PrescriptionBuilder({ patientId }: Props) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="animate-spin text-primary" size={22} />
+      </div>
+    );
+  }
+
+  // ── History view ────────────────────────────────────────────────────────────
+  if (view === "history") {
+    const fmtDate = (iso: string) =>
+      new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-foreground">Histórico de Prescrições</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{patientName} · {history.length} prescrição(ões)</p>
+          </div>
+          <Button size="sm" onClick={() => setView("builder")} className="gap-1.5">
+            <Plus size={13} /> Nova Prescrição
+          </Button>
+        </div>
+
+        {history.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground">
+            <History size={28} className="opacity-20" />
+            <p className="text-sm">Nenhuma prescrição salva ainda.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {history.map((p) => (
+              <div key={p.id} className="border border-border/70 rounded-xl overflow-hidden bg-card">
+                <div
+                  className="flex items-center gap-3 px-4 py-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                >
+                  <FileText size={14} className="text-primary shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Prescrição #{p.id}
+                      <span className="text-muted-foreground font-normal text-xs ml-2">· {fmtDate(p.created_at)}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.blocks.length} bloco(s) · {p.blocks.reduce((n, b) => n + b.items.length, 0)} ativo(s)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); printSaved(p); }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded border border-border/50 hover:border-primary/30"
+                    >
+                      <Printer size={11} /> PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDeletePrescription(p.id); }}
+                      className="text-muted-foreground/30 hover:text-destructive transition-colors p-1"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    <ChevronRight size={14} className={cn("text-muted-foreground transition-transform", expandedId === p.id && "rotate-90")} />
+                  </div>
+                </div>
+                {expandedId === p.id && (
+                  <div className="p-4 space-y-3">
+                    {p.blocks.map((b) => (
+                      <div key={b.id} className="rounded-lg border border-border/50 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
+                          <span className="text-xs font-bold text-foreground">{b.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{b.pharmaceutical_form}{b.posology ? ` · ${b.posology}` : ""}</span>
+                        </div>
+                        <div className="divide-y divide-border/20">
+                          {b.items.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-1.5">
+                              <span className="text-xs text-foreground">{item.name}</span>
+                              <span className="text-xs font-semibold text-primary tabular-nums">{item.dose} {item.unit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -473,6 +591,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView("history")}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border/50 hover:border-border"
+            >
+              <History size={12} />
+              Histórico {history.length > 0 && <span className="ml-0.5 tabular-nums">({history.length})</span>}
+            </button>
             <Button
               variant="outline"
               size="sm"

@@ -1471,3 +1471,41 @@ export async function savePrescription(
   }
   return true;
 }
+
+export interface SavedPrescription {
+  id:         number;
+  created_at: string;
+  notes?:     string | null;
+  blocks:     {
+    id:                 number;
+    label:              string;
+    pharmaceutical_form:string;
+    posology?:          string | null;
+    sort_order:         number;
+    items: { name: string; dose: number; unit: string; sort_order: number }[];
+  }[];
+}
+
+export async function fetchPrescriptions(patientId: number): Promise<SavedPrescription[]> {
+  const { data, error } = await supabaseAdmin
+    .from("prescriptions")
+    .select(`id, created_at, notes, blocks:prescription_blocks(id, label, pharmaceutical_form, posology, sort_order, items:prescription_block_items(name, dose, unit, sort_order))`)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchPrescriptions:", error.message); return []; }
+  return (data ?? []).map((p) => ({
+    ...p,
+    blocks: (p.blocks ?? [])
+      .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
+      .map((b: SavedPrescription["blocks"][number]) => ({
+        ...b,
+        items: (b.items ?? []).sort((x, y) => x.sort_order - y.sort_order),
+      })),
+  }));
+}
+
+export async function deletePrescription(prescriptionId: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("prescriptions").delete().eq("id", prescriptionId);
+  if (error) { console.error("[Supabase] deletePrescription:", error.message); return false; }
+  return true;
+}
