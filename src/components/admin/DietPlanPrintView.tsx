@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { X, Printer } from "lucide-react";
 import type { MealPlan, Meal, Patient } from "@/lib/supabase";
+import { fetchSmartSubstitutions } from "@/lib/supabase";
+import { calculateSubstitutions, type FoodSubstitution } from "@/lib/smartSubstitutions";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +39,15 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
+  const [substitutions, setSubstitutions] = useState<FoodSubstitution[]>([]);
+
+  useEffect(() => {
+    fetchSmartSubstitutions().then((rules) => {
+      const allFoods = meals.flatMap((m) => m.foods ?? []);
+      setSubstitutions(calculateSubstitutions(allFoods, rules));
+    });
+  }, [meals]);
+
   const grand = meals.reduce(
     (a, m) => {
       const t = sumFoods(m.foods);
@@ -307,6 +319,101 @@ export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
               );
             })}
           </div>
+
+          {/* ── Guia de Substituições Inteligentes ──────────────────────── */}
+          {substitutions.length > 0 && (
+            <div style={{ pageBreakBefore: "always", paddingTop: "8mm" }}>
+              {/* Section header */}
+              <div
+                className="rounded-xl px-7 py-5 mb-6 print:rounded-none"
+                style={{ backgroundColor: "#065f46" }}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#6ee7b7" }}>
+                  Personalização do Plano
+                </p>
+                <h2 className="text-xl font-black text-white">🔄 Guia de Substituições Inteligentes</h2>
+                <p className="text-sm mt-1" style={{ color: "#a7f3d0" }}>
+                  Quantidades calculadas proporcionalmente ao seu plano. Troque mantendo o equivalente nutricional.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {substitutions.map((sub) => (
+                  <div
+                    key={`${sub.originalName}-${sub.originalQty}`}
+                    className="bg-white rounded-lg overflow-hidden break-inside-avoid"
+                    style={{ border: "1px solid #e5e7eb", pageBreakInside: "avoid" }}
+                  >
+                    {/* Food header */}
+                    <div
+                      className="flex items-center gap-3 px-5 py-3 border-b"
+                      style={{ backgroundColor: "#f0fdf4", borderBottomColor: "#d1fae5" }}
+                    >
+                      <span className="text-base">🔄</span>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Se quiser trocar
+                        </p>
+                        <p className="text-sm font-black text-gray-800">
+                          {sub.originalQty}{sub.unit} de {sub.originalName}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Options */}
+                    <div>
+                      {sub.options.map((opt, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between px-5 py-3"
+                          style={{
+                            borderBottom: i < sub.options.length - 1 ? "1px solid #f3f4f6" : "none",
+                            backgroundColor: i % 2 === 1 ? "#fafafa" : "white",
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded"
+                              style={{
+                                backgroundColor: "#ecfdf5",
+                                color: "#065f46",
+                                border: "1px solid #a7f3d0",
+                              }}
+                            >
+                              Opção {i + 1}
+                            </span>
+                            <div>
+                              <span className="text-sm font-semibold text-gray-800">
+                                {opt.substituteQty}{opt.unit} de {opt.substituteName}
+                              </span>
+                              <span
+                                className="ml-2 text-[10px] text-gray-400 italic"
+                              >
+                                · {opt.criteria}
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: "#f0fdf4", color: "#059669" }}
+                          >
+                            {opt.category}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p
+                className="mt-5 text-[10px] text-gray-400 italic text-center"
+              >
+                As substituições foram calculadas proporcionalmente à quantidade prescrita no plano.
+                Consulte sempre seu nutricionista antes de realizar trocas.
+              </p>
+            </div>
+          )}
 
           {/* ── Footer ─────────────────────────────────────────────────────── */}
           <footer className="mt-10 pt-4 border-t border-gray-200 flex items-center justify-between print:mt-6">

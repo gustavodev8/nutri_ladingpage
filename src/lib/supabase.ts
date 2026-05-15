@@ -1509,3 +1509,15 @@ export async function deletePrescription(prescriptionId: number): Promise<boolea
   if (error) { console.error("[Supabase] deletePrescription:", error.message); return false; }
   return true;
 }
+
+// ─── Epic 14: Motor de Substituições Inteligentes ─────────────────────────────
+
+export async function fetchSmartSubstitutions(): Promise<import("./smartSubstitutions").SubstitutionRule[]> {
+  const { data, error } = await supabaseAdmin
+    .from("smart_substitutions")
+    .select("id, reference_food_name, ref_amount, substitute_food_name, sub_amount, category, criteria")
+    .order("category")
+    .order("reference_food_name");
+  if (error) { console.error("[Supabase] fetchSmartSubstitutions:", error.message); return []; }
+  return data ?? [];
+}
