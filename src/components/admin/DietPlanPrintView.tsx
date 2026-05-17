@@ -325,13 +325,20 @@ export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
                       <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-1.5">
                         🔄 Opções de substituição
                       </p>
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         {(meal.substitution_items ?? []).filter(s => s.food_name).map((sub, si) => (
-                          <p key={si} className="text-[11px] text-orange-800">
-                            <span className="font-semibold">Opção {si + 1}:</span>{" "}
+                          <div key={si} className="text-[11px] text-orange-800">
+                            {sub.replaces_food && (
+                              <span className="font-semibold text-orange-600">
+                                No lugar de {sub.replaces_food}:{" "}
+                              </span>
+                            )}
+                            {!sub.replaces_food && (
+                              <span className="font-semibold">Opção {si + 1}: </span>
+                            )}
                             {sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : ""}{sub.food_name}
                             {sub.notes ? <span className="text-orange-500 italic"> · {sub.notes}</span> : ""}
-                          </p>
+                          </div>
                         ))}
                       </div>
                     </div>

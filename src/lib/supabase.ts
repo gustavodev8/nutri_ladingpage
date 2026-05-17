@@ -375,10 +375,12 @@ export interface MealPlan {
 }
 
 export interface SubstitutionItem {
-  food_name: string;
-  quantity?:  number;
-  unit?:      string;
-  notes?:     string;
+  food_name:     string;
+  quantity?:     number;
+  unit?:         string;
+  notes?:        string;
+  /** Nome do alimento original que esta opção substitui */
+  replaces_food?: string;
 }
 
 export interface Meal {

@@ -305,9 +305,12 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
       const subText:   RGB = [154,  52,  18];
 
       const subLines = subs.map((s, i) => {
-        const qty  = s.quantity ? `${s.quantity}${s.unit ?? "g"} de ` : "";
-        const note = s.notes ? ` · ${s.notes}` : "";
-        return `Opção ${i + 1}: ${qty}${s.food_name}${note}`;
+        const qty    = s.quantity ? `${s.quantity}${s.unit ?? "g"} de ` : "";
+        const note   = s.notes ? ` · ${s.notes}` : "";
+        const prefix = s.replaces_food
+          ? `No lugar de ${s.replaces_food}: `
+          : `Opção ${i + 1}: `;
+        return `${prefix}${qty}${s.food_name}${note}`;
       });
 
       const subH = subLines.length * 4.2 + 7;

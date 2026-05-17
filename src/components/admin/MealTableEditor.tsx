@@ -492,10 +492,11 @@ export function MealSection({
                             type="button"
                             disabled={added}
                             onClick={() => addSub({
-                              food_name: opt.substituteName,
-                              quantity:  opt.substituteQty,
-                              unit:      opt.unit,
-                              notes:     opt.criteria,
+                              food_name:     opt.substituteName,
+                              quantity:      opt.substituteQty,
+                              unit:          opt.unit,
+                              notes:         opt.criteria,
+                              replaces_food: sub.originalName,
                             })}
                             title={opt.criteria}
                             className={cn(
@@ -530,32 +531,50 @@ export function MealSection({
                 </p>
               )}
               {subs.map((sub, si) => (
-                <div key={si} className="flex items-center gap-1.5 bg-white rounded border border-amber-200/70 px-2 py-1">
-                  <ArrowLeftRight size={10} className="text-amber-400 shrink-0" />
-                  <input
-                    value={sub.food_name}
-                    onChange={e => updateSub(si, { food_name: e.target.value })}
-                    placeholder="Alimento substituto"
-                    className="flex-1 min-w-0 text-xs bg-transparent border-0 focus:outline-none text-foreground placeholder:text-muted-foreground/40"
-                  />
-                  <input
-                    type="number"
-                    value={sub.quantity ?? ""}
-                    onChange={e => updateSub(si, { quantity: e.target.value ? parseFloat(e.target.value) : undefined })}
-                    placeholder="Qtd"
-                    className="w-14 text-xs bg-transparent border-0 focus:outline-none text-right tabular-nums text-foreground"
-                  />
-                  <span className="text-[10px] text-muted-foreground w-6">{sub.unit ?? "g"}</span>
-                  <input
-                    value={sub.notes ?? ""}
-                    onChange={e => updateSub(si, { notes: e.target.value })}
-                    placeholder="Observação"
-                    className="w-32 text-xs bg-transparent border-0 focus:outline-none text-muted-foreground placeholder:text-muted-foreground/30 italic"
-                  />
-                  <button type="button" onClick={() => removeSub(si)}
-                    className="text-muted-foreground/20 hover:text-destructive transition-colors shrink-0">
-                    <X size={12} />
-                  </button>
+                <div key={si} className="bg-white rounded border border-amber-200/70 px-2 py-1.5 space-y-1">
+                  {/* Linha 1: qual alimento esta opção substitui */}
+                  <div className="flex items-center gap-1.5">
+                    <ArrowLeftRight size={10} className="text-amber-400 shrink-0" />
+                    <span className="text-[10px] text-muted-foreground/70 shrink-0">Substitui:</span>
+                    <select
+                      value={sub.replaces_food ?? ""}
+                      onChange={e => updateSub(si, { replaces_food: e.target.value || undefined })}
+                      className="flex-1 min-w-0 text-xs bg-transparent border-0 focus:outline-none text-foreground/80 cursor-pointer"
+                    >
+                      <option value="">— selecionar alimento —</option>
+                      {foods.filter(f => f.food_name?.trim()).map((f, fi) => (
+                        <option key={fi} value={f.food_name}>{f.food_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Linha 2: alimento substituto + qtd + obs */}
+                  <div className="flex items-center gap-1.5 pl-3.5">
+                    <span className="text-[10px] text-muted-foreground/50 shrink-0">Por:</span>
+                    <input
+                      value={sub.food_name}
+                      onChange={e => updateSub(si, { food_name: e.target.value })}
+                      placeholder="Alimento substituto"
+                      className="flex-1 min-w-0 text-xs bg-transparent border-0 focus:outline-none text-foreground placeholder:text-muted-foreground/40"
+                    />
+                    <input
+                      type="number"
+                      value={sub.quantity ?? ""}
+                      onChange={e => updateSub(si, { quantity: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      placeholder="Qtd"
+                      className="w-14 text-xs bg-transparent border-0 focus:outline-none text-right tabular-nums text-foreground"
+                    />
+                    <span className="text-[10px] text-muted-foreground w-6">{sub.unit ?? "g"}</span>
+                    <input
+                      value={sub.notes ?? ""}
+                      onChange={e => updateSub(si, { notes: e.target.value })}
+                      placeholder="Observação"
+                      className="w-32 text-xs bg-transparent border-0 focus:outline-none text-muted-foreground placeholder:text-muted-foreground/30 italic"
+                    />
+                    <button type="button" onClick={() => removeSub(si)}
+                      className="text-muted-foreground/20 hover:text-destructive transition-colors shrink-0">
+                      <X size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={() => addSub()}
