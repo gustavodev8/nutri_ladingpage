@@ -10,7 +10,7 @@ VALUES (
   'Protocolo Base — 6 Refeições',
   'Plano equilibrado com 6 refeições distribuídas ao longo do dia. Foco em fonte proteica magra, carboidrato de baixo índice glicêmico e gorduras saudáveis. Ideal como base de personalização.',
   'alta_proteina',
-  1640.0, 114.0, 188.0, 38.0, TRUE
+  1819.0, 148.0, 190.0, 41.0, TRUE
 )
 ON CONFLICT DO NOTHING;
 
@@ -135,7 +135,11 @@ INSERT INTO diet_template_foods
    kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, food_group, order_index)
 VALUES
   -- TACO #6: Aveia em flocos — 394 kcal, P 13.9, C 66.6, G 8.5
-  ((SELECT id FROM meal), 'Aveia em flocos', 50.0, 'g', NULL, NULL::numeric, 394.0, 13.9, 66.6, 8.5, 'Carboidrato', 0)
+  ((SELECT id FROM meal), 'Aveia em flocos',           50.0, 'g', NULL, NULL::numeric, 394.0, 13.9, 66.6, 8.5, 'Carboidrato', 0),
+  -- TACO #190: Filé de frango cozido — 159 kcal, P 32.0, C 0.0, G 3.0
+  ((SELECT id FROM meal), 'Filé de frango cozido',    100.0, 'g', NULL, NULL::numeric, 159.0, 32.0,  0.0, 3.0, 'Proteína',    1),
+  -- TACO #309: Rúcula crua — 25 kcal, P 2.6, C 2.4, G 0.5
+  ((SELECT id FROM meal), 'Rúcula',                    80.0, 'g', NULL, NULL::numeric,  25.0,  2.6,  2.4, 0.5, 'Vegetal',     2)
 ON CONFLICT DO NOTHING;
 
 -- ── STEP 4: Conferência de macros por refeição ────────────────────────────────
