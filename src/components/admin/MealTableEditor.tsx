@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X, NotebookPen, ChevronUp, ChevronDown } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
