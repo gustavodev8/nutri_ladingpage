@@ -374,6 +374,13 @@ export interface MealPlan {
   created_at?: string;
 }
 
+export interface SubstitutionItem {
+  food_name: string;
+  quantity?:  number;
+  unit?:      string;
+  notes?:     string;
+}
+
 export interface Meal {
   id?: number;
   plan_id: number;
@@ -382,6 +389,7 @@ export interface Meal {
   sort_order?: number;
   notes?: string;
   foods?: MealFood[];
+  substitution_items?: SubstitutionItem[];
 }
 
 export interface MealFood {
@@ -617,7 +625,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<string |
     const meal = meals[i];
     const { data: mealData, error: mealErr } = await supabaseAdmin
       .from("meals")
-      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "" })
+      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "", substitution_items: meal.substitution_items ?? [] })
       .select()
       .single();
     if (mealErr || !mealData) {

@@ -45,20 +45,22 @@ const DEFAULT_MEALS = [
 // ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────
 
 const mealToEditor = (m: Meal): EditorMeal => ({
-  _dbId:           m.id,
-  meal_name:       m.meal_name,
-  time_suggestion: m.time_suggestion,
-  notes:           m.notes,
-  foods:           (m.foods ?? []) as MealFood[],
+  _dbId:              m.id,
+  meal_name:          m.meal_name,
+  time_suggestion:    m.time_suggestion,
+  notes:              m.notes,
+  foods:              (m.foods ?? []) as MealFood[],
+  substitution_items: m.substitution_items ?? [],
 });
 
 const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
-  id:              m._dbId,
-  plan_id:         planId,
-  meal_name:       m.meal_name,
-  time_suggestion: m.time_suggestion,
-  notes:           m.notes,
-  foods:           m.foods,
+  id:                 m._dbId,
+  plan_id:            planId,
+  meal_name:          m.meal_name,
+  time_suggestion:    m.time_suggestion,
+  notes:              m.notes,
+  foods:              m.foods,
+  substitution_items: m.substitution_items ?? [],
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

@@ -315,102 +315,98 @@ export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
                       <p className="text-[11px] text-amber-700 italic">📌 {meal.notes}</p>
                     </div>
                   )}
+
+                  {/* Manual substitution items */}
+                  {(meal.substitution_items ?? []).filter(s => s.food_name).length > 0 && (
+                    <div
+                      className="px-5 py-3 border-t"
+                      style={{ backgroundColor: "#fffbf0", borderTopColor: "#fed7aa" }}
+                    >
+                      <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-1.5">
+                        🔄 Opções de substituição
+                      </p>
+                      <div className="space-y-0.5">
+                        {(meal.substitution_items ?? []).filter(s => s.food_name).map((sub, si) => (
+                          <p key={si} className="text-[11px] text-orange-800">
+                            <span className="font-semibold">Opção {si + 1}:</span>{" "}
+                            {sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : ""}{sub.food_name}
+                            {sub.notes ? <span className="text-orange-500 italic"> · {sub.notes}</span> : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* ── Guia de Substituições Inteligentes ──────────────────────── */}
+          {/* ── Tabela de Equivalências (referência auxiliar) ───────────── */}
           {substitutions.length > 0 && (
-            <div style={{ pageBreakBefore: "always", paddingTop: "8mm" }}>
-              {/* Section header */}
+            <div className="mt-8 print:mt-6">
               <div
-                className="rounded-xl px-7 py-5 mb-6 print:rounded-none"
-                style={{ backgroundColor: "#065f46" }}
+                className="rounded-lg px-5 py-3 mb-3"
+                style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
               >
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#6ee7b7" }}>
-                  Personalização do Plano
+                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                  Referência auxiliar para o nutricionista
                 </p>
-                <h2 className="text-xl font-black text-white">🔄 Guia de Substituições Inteligentes</h2>
-                <p className="text-sm mt-1" style={{ color: "#a7f3d0" }}>
-                  Quantidades calculadas proporcionalmente ao seu plano. Troque mantendo o equivalente nutricional.
-                </p>
+                <h3 className="text-sm font-bold text-gray-700 mt-0.5">
+                  🔄 Tabela de Equivalências Proporcionais
+                </h3>
               </div>
 
-              <div className="space-y-4">
-                {substitutions.map((sub) => (
-                  <div
-                    key={`${sub.originalName}-${sub.originalQty}`}
-                    className="bg-white rounded-lg overflow-hidden break-inside-avoid"
-                    style={{ border: "1px solid #e5e7eb", pageBreakInside: "avoid" }}
-                  >
-                    {/* Food header */}
-                    <div
-                      className="flex items-center gap-3 px-5 py-3 border-b"
-                      style={{ backgroundColor: "#f0fdf4", borderBottomColor: "#d1fae5" }}
-                    >
-                      <span className="text-base">🔄</span>
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                          Se quiser trocar
-                        </p>
-                        <p className="text-sm font-black text-gray-800">
-                          {sub.originalQty}{sub.unit} de {sub.originalName}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Options */}
-                    <div>
-                      {sub.options.map((opt, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between px-5 py-3"
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ border: "1px solid #e2e8f0" }}
+              >
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr style={{ backgroundColor: "#f1f5f9" }}>
+                      <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-gray-400 w-1/4">
+                        Alimento Prescrito
+                      </th>
+                      <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                        Substituto
+                      </th>
+                      <th className="px-3 py-2 text-right text-[9px] font-bold uppercase tracking-wider text-gray-400 w-20">
+                        Quantidade
+                      </th>
+                      <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-gray-400 w-1/4">
+                        Critério
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {substitutions.flatMap((sub, si) =>
+                      sub.options.map((opt, oi) => (
+                        <tr
+                          key={`${si}-${oi}`}
                           style={{
-                            borderBottom: i < sub.options.length - 1 ? "1px solid #f3f4f6" : "none",
-                            backgroundColor: i % 2 === 1 ? "#fafafa" : "white",
+                            borderTop: oi === 0 && si > 0 ? "2px solid #e2e8f0" : "1px solid #f1f5f9",
+                            backgroundColor: oi % 2 === 1 ? "#fafafa" : "white",
                           }}
                         >
-                          <div className="flex items-center gap-3">
-                            <span
-                              className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded"
-                              style={{
-                                backgroundColor: "#ecfdf5",
-                                color: "#065f46",
-                                border: "1px solid #a7f3d0",
-                              }}
-                            >
-                              Opção {i + 1}
-                            </span>
-                            <div>
-                              <span className="text-sm font-semibold text-gray-800">
-                                {opt.substituteQty}{opt.unit} de {opt.substituteName}
-                              </span>
-                              <span
-                                className="ml-2 text-[10px] text-gray-400 italic"
-                              >
-                                · {opt.criteria}
-                              </span>
-                            </div>
-                          </div>
-                          <span
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: "#f0fdf4", color: "#059669" }}
-                          >
-                            {opt.category}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                          <td className="px-3 py-1.5 text-gray-700 font-medium">
+                            {oi === 0 ? `${sub.originalQty}${sub.unit} de ${sub.originalName}` : ""}
+                          </td>
+                          <td className="px-3 py-1.5 text-gray-800 font-semibold">
+                            {opt.substituteName}
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums font-bold" style={{ color: "#059669" }}>
+                            {opt.substituteQty}{opt.unit}
+                          </td>
+                          <td className="px-3 py-1.5 text-gray-400 italic">
+                            {opt.criteria}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
-
-              <p
-                className="mt-5 text-[10px] text-gray-400 italic text-center"
-              >
-                As substituições foram calculadas proporcionalmente à quantidade prescrita no plano.
-                Consulte sempre seu nutricionista antes de realizar trocas.
+              <p className="text-[9px] text-gray-300 mt-1.5 text-right italic">
+                Quantidades calculadas por regra de três a partir das porções prescritas.
               </p>
             </div>
           )}

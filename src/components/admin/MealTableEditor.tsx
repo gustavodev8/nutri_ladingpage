@@ -10,7 +10,7 @@ import { Plus, Trash2, MessageSquare, ChevronDown, ChevronUp, ArrowLeftRight, No
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
-import type { MealFood } from "@/lib/supabase";
+import type { MealFood, SubstitutionItem } from "@/lib/supabase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,10 +48,11 @@ export const FOOD_GROUPS = [
 export interface EditorMeal {
   /** id do registro no banco (meal.id ou diet_template_meal.id) — undefined para novos */
   _dbId?: number;
-  meal_name:       string;
-  time_suggestion?: string;
-  notes?:          string;
-  foods:           MealFood[];
+  meal_name:          string;
+  time_suggestion?:   string;
+  notes?:             string;
+  foods:              MealFood[];
+  substitution_items?: SubstitutionItem[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -300,6 +301,15 @@ export function MealSection({
   const totals    = sumFoods(foods);
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
   const [showNotes, setShowNotes] = useState(!!meal.notes);
+  const subs = meal.substitution_items ?? [];
+  const [showSubs, setShowSubs] = useState(subs.length > 0);
+
+  const addSub    = () => onUpdate({ ...meal, substitution_items: [...subs, { food_name: "", quantity: undefined, unit: "g", notes: "" }] });
+  const removeSub = (i: number) => onUpdate({ ...meal, substitution_items: subs.filter((_, si) => si !== i) });
+  const updateSub = (i: number, patch: Partial<SubstitutionItem>) => {
+    const next = [...subs]; next[i] = { ...next[i], ...patch };
+    onUpdate({ ...meal, substitution_items: next });
+  };
 
   const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
   const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
@@ -400,6 +410,17 @@ export function MealSection({
             <MessageSquare size={12} />
             {showNotes ? "Remover observação" : "Adicionar observação"}
           </button>
+          <button type="button"
+            onClick={() => { setShowSubs(v => !v); if (!showSubs && subs.length === 0) addSub(); }}
+            className={cn(
+              "flex items-center gap-1 text-xs font-medium transition-colors",
+              showSubs || subs.length > 0
+                ? "text-amber-600 hover:text-amber-500"
+                : "text-muted-foreground/50 hover:text-muted-foreground"
+            )}>
+            <ArrowLeftRight size={12} />
+            Substituições {subs.length > 0 && `(${subs.length})`}
+          </button>
         </div>
         {showNotes && (
           <div className="px-4 pb-3">
@@ -407,6 +428,52 @@ export function MealSection({
               onChange={e => onUpdate({ ...meal, notes: e.target.value })}
               placeholder="Observações para esta refeição (substituições, preparo, orientações…)"
               className="w-full text-sm bg-muted/30 border border-border/50 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary placeholder:text-muted-foreground/30 text-foreground/80" />
+          </div>
+        )}
+        {showSubs && (
+          <div className="px-4 pb-3 border-t border-amber-200/60 bg-amber-50/30">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/80 pt-2.5 pb-1.5 flex items-center gap-1.5">
+              <ArrowLeftRight size={10} /> Opções de substituição para esta refeição
+            </p>
+            <div className="space-y-1.5">
+              {subs.map((sub, si) => (
+                <div key={si} className="flex items-center gap-2">
+                  <input
+                    value={sub.food_name}
+                    onChange={e => updateSub(si, { food_name: e.target.value })}
+                    placeholder="Alimento substituto"
+                    className="flex-1 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300 placeholder:text-muted-foreground/40"
+                  />
+                  <input
+                    type="number"
+                    value={sub.quantity ?? ""}
+                    onChange={e => updateSub(si, { quantity: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    placeholder="Qtd"
+                    className="w-16 h-7 text-xs bg-white border border-amber-200 rounded px-2 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-amber-300"
+                  />
+                  <input
+                    value={sub.unit ?? "g"}
+                    onChange={e => updateSub(si, { unit: e.target.value })}
+                    placeholder="un."
+                    className="w-12 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                  />
+                  <input
+                    value={sub.notes ?? ""}
+                    onChange={e => updateSub(si, { notes: e.target.value })}
+                    placeholder="Observação (ex: sem glúten)"
+                    className="flex-1 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300 placeholder:text-muted-foreground/40"
+                  />
+                  <button type="button" onClick={() => removeSub(si)}
+                    className="text-amber-400 hover:text-destructive transition-colors">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={addSub}
+                className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-500 font-medium transition-colors mt-1">
+                <Plus size={11} /> Adicionar opção de substituição
+              </button>
+            </div>
           </div>
         )}
       </div>
