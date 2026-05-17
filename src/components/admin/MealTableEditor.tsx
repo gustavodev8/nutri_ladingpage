@@ -5,12 +5,14 @@
  * Contém: FoodRow, MealSection, helpers de cálculo e constantes de UI.
  */
 
-import { useState } from "react";
-import { Plus, Trash2, MessageSquare, ChevronDown, ChevronUp, ArrowLeftRight, NotebookPen } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
 import type { MealFood, SubstitutionItem } from "@/lib/supabase";
+import { fetchSmartSubstitutions } from "@/lib/supabase";
+import { calculateSubstitutions, type SubstitutionRule, type FoodSubstitution } from "@/lib/smartSubstitutions";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -290,6 +292,17 @@ export function FoodRow({
 
 // ─── MealSection ──────────────────────────────────────────────────────────────
 
+// Module-level cache so rules are fetched only once across all MealSections
+let _rulesCache: SubstitutionRule[] | null = null;
+let _rulesFetch: Promise<SubstitutionRule[]> | null = null;
+
+async function getRules(): Promise<SubstitutionRule[]> {
+  if (_rulesCache) return _rulesCache;
+  if (!_rulesFetch) _rulesFetch = fetchSmartSubstitutions();
+  _rulesCache = await _rulesFetch;
+  return _rulesCache;
+}
+
 export function MealSection({
   meal, idx, onUpdate, onRemove,
 }: {
@@ -302,14 +315,40 @@ export function MealSection({
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
   const [showNotes, setShowNotes] = useState(!!meal.notes);
   const subs = meal.substitution_items ?? [];
-  const [showSubs, setShowSubs] = useState(subs.length > 0);
+  const [showSubs, setShowSubs]   = useState(subs.length > 0);
+  const [suggestions, setSuggestions] = useState<FoodSubstitution[]>([]);
+  const loaded = useRef(false);
 
-  const addSub    = () => onUpdate({ ...meal, substitution_items: [...subs, { food_name: "", quantity: undefined, unit: "g", notes: "" }] });
-  const removeSub = (i: number) => onUpdate({ ...meal, substitution_items: subs.filter((_, si) => si !== i) });
+  // Load smart suggestions lazily when sub-panel is first opened
+  useEffect(() => {
+    if (!showSubs || loaded.current) return;
+    loaded.current = true;
+    getRules().then((rules) => {
+      setSuggestions(calculateSubstitutions(foods.filter(f => f.food_name && f.quantity), rules));
+    });
+  }, [showSubs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-calculate when foods change (if panel already open)
+  useEffect(() => {
+    if (!showSubs || !loaded.current) return;
+    getRules().then((rules) => {
+      setSuggestions(calculateSubstitutions(foods.filter(f => f.food_name && f.quantity), rules));
+    });
+  }, [foods]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addSub = (item?: Partial<SubstitutionItem>) =>
+    onUpdate({ ...meal, substitution_items: [...subs, { food_name: "", quantity: undefined, unit: "g", notes: "", ...item }] });
+
+  const removeSub = (i: number) =>
+    onUpdate({ ...meal, substitution_items: subs.filter((_, si) => si !== i) });
+
   const updateSub = (i: number, patch: Partial<SubstitutionItem>) => {
     const next = [...subs]; next[i] = { ...next[i], ...patch };
     onUpdate({ ...meal, substitution_items: next });
   };
+
+  const isAlreadyAdded = (name: string) =>
+    subs.some(s => s.food_name.toLowerCase() === name.toLowerCase());
 
   const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
   const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
@@ -431,47 +470,97 @@ export function MealSection({
           </div>
         )}
         {showSubs && (
-          <div className="px-4 pb-3 border-t border-amber-200/60 bg-amber-50/30">
-            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/80 pt-2.5 pb-1.5 flex items-center gap-1.5">
-              <ArrowLeftRight size={10} /> Opções de substituição para esta refeição
-            </p>
-            <div className="space-y-1.5">
+          <div className="border-t border-amber-200/60 bg-amber-50/20">
+
+            {/* Smart suggestions */}
+            {suggestions.length > 0 && (
+              <div className="px-4 pt-3 pb-2 space-y-2.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 flex items-center gap-1.5">
+                  <Sparkles size={10} /> Sugestões automáticas
+                </p>
+                {suggestions.map((sub) => (
+                  <div key={sub.originalName} className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      Substituir <span className="text-foreground font-semibold">{sub.originalQty}{sub.unit} de {sub.originalName}</span>:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {sub.options.map((opt) => {
+                        const added = isAlreadyAdded(opt.substituteName);
+                        return (
+                          <button
+                            key={opt.substituteName}
+                            type="button"
+                            disabled={added}
+                            onClick={() => addSub({
+                              food_name: opt.substituteName,
+                              quantity:  opt.substituteQty,
+                              unit:      opt.unit,
+                              notes:     opt.criteria,
+                            })}
+                            title={opt.criteria}
+                            className={cn(
+                              "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                              added
+                                ? "bg-green-50 border-green-200 text-green-600 cursor-default"
+                                : "bg-white border-amber-200 text-amber-800 hover:bg-amber-100 hover:border-amber-400 cursor-pointer"
+                            )}
+                          >
+                            {added ? "✓" : <Plus size={10} />}
+                            {opt.substituteQty}{opt.unit} {opt.substituteName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="border-t border-amber-200/50 pt-2 mt-1" />
+              </div>
+            )}
+
+            {/* Added substitution rows */}
+            <div className="px-4 pb-3 space-y-1.5">
+              {suggestions.length === 0 && (
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 pt-2.5 pb-1 flex items-center gap-1.5">
+                  <ArrowLeftRight size={10} /> Substituições desta refeição
+                </p>
+              )}
+              {subs.length === 0 && suggestions.length > 0 && (
+                <p className="text-[11px] text-muted-foreground/50 italic pb-1">
+                  Clique em uma sugestão acima ou adicione manualmente.
+                </p>
+              )}
               {subs.map((sub, si) => (
-                <div key={si} className="flex items-center gap-2">
+                <div key={si} className="flex items-center gap-1.5 bg-white rounded border border-amber-200/70 px-2 py-1">
+                  <ArrowLeftRight size={10} className="text-amber-400 shrink-0" />
                   <input
                     value={sub.food_name}
                     onChange={e => updateSub(si, { food_name: e.target.value })}
                     placeholder="Alimento substituto"
-                    className="flex-1 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300 placeholder:text-muted-foreground/40"
+                    className="flex-1 min-w-0 text-xs bg-transparent border-0 focus:outline-none text-foreground placeholder:text-muted-foreground/40"
                   />
                   <input
                     type="number"
                     value={sub.quantity ?? ""}
                     onChange={e => updateSub(si, { quantity: e.target.value ? parseFloat(e.target.value) : undefined })}
                     placeholder="Qtd"
-                    className="w-16 h-7 text-xs bg-white border border-amber-200 rounded px-2 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-amber-300"
+                    className="w-14 text-xs bg-transparent border-0 focus:outline-none text-right tabular-nums text-foreground"
                   />
-                  <input
-                    value={sub.unit ?? "g"}
-                    onChange={e => updateSub(si, { unit: e.target.value })}
-                    placeholder="un."
-                    className="w-12 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300"
-                  />
+                  <span className="text-[10px] text-muted-foreground w-6">{sub.unit ?? "g"}</span>
                   <input
                     value={sub.notes ?? ""}
                     onChange={e => updateSub(si, { notes: e.target.value })}
-                    placeholder="Observação (ex: sem glúten)"
-                    className="flex-1 h-7 text-xs bg-white border border-amber-200 rounded px-2 focus:outline-none focus:ring-1 focus:ring-amber-300 placeholder:text-muted-foreground/40"
+                    placeholder="Observação"
+                    className="w-32 text-xs bg-transparent border-0 focus:outline-none text-muted-foreground placeholder:text-muted-foreground/30 italic"
                   />
                   <button type="button" onClick={() => removeSub(si)}
-                    className="text-amber-400 hover:text-destructive transition-colors">
-                    <Trash2 size={12} />
+                    className="text-muted-foreground/20 hover:text-destructive transition-colors shrink-0">
+                    <X size={12} />
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={addSub}
-                className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-500 font-medium transition-colors mt-1">
-                <Plus size={11} /> Adicionar opção de substituição
+              <button type="button" onClick={() => addSub()}
+                className="flex items-center gap-1 text-xs text-amber-600/70 hover:text-amber-600 font-medium transition-colors mt-0.5">
+                <Plus size={11} /> Adicionar manualmente
               </button>
             </div>
           </div>
