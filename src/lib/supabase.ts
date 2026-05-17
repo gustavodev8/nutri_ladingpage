@@ -1523,11 +1523,16 @@ export async function deletePrescription(prescriptionId: number): Promise<boolea
 // ─── Epic 14: Motor de Substituições Inteligentes ─────────────────────────────
 
 export async function fetchSmartSubstitutions(): Promise<import("./smartSubstitutions").SubstitutionRule[]> {
-  const { data, error } = await supabaseAdmin
-    .from("smart_substitutions")
-    .select("id, reference_food_name, ref_amount, substitute_food_name, sub_amount, category, criteria")
-    .order("category")
-    .order("reference_food_name");
-  if (error) { console.error("[Supabase] fetchSmartSubstitutions:", error.message); return []; }
-  return data ?? [];
+  const { BUILTIN_SUBSTITUTION_RULES } = await import("./smartSubstitutions");
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("smart_substitutions")
+      .select("id, reference_food_name, ref_amount, substitute_food_name, sub_amount, category, criteria")
+      .order("category")
+      .order("reference_food_name");
+    if (error || !data?.length) return BUILTIN_SUBSTITUTION_RULES;
+    return data;
+  } catch {
+    return BUILTIN_SUBSTITUTION_RULES;
+  }
 }
