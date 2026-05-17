@@ -1537,3 +1537,104 @@ export async function fetchSmartSubstitutions(): Promise<import("./smartSubstitu
     return BUILTIN_SUBSTITUTION_RULES;
   }
 }
+
+// ─── Epic: Biblioteca Global de Exames ────────────────────────────────────────
+
+export interface GlobalExam {
+  id?:                   number;
+  name:                  string;
+  category:              string;
+  clinical_axis?:        string;
+  unit?:                 string;
+  lab_ref_min?:          number | null;
+  lab_ref_max?:          number | null;
+  target_male_min?:      number | null;
+  target_male_max?:      number | null;
+  target_female_min?:    number | null;
+  target_female_max?:    number | null;
+  clinical_observation?: string;
+}
+
+export interface GlobalProtocol {
+  id?:          number;
+  name:         string;
+  description?: string;
+}
+
+export async function fetchGlobalExams(): Promise<GlobalExam[]> {
+  const { data, error } = await supabaseAdmin
+    .from("global_exams_catalog")
+    .select("*")
+    .order("category")
+    .order("name");
+  if (error) { console.error("[Supabase] fetchGlobalExams:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function upsertGlobalExam(exam: GlobalExam): Promise<GlobalExam | null> {
+  const payload = { ...exam, updated_at: new Date().toISOString() };
+  if (exam.id) {
+    const { id, ...fields } = payload;
+    const { data, error } = await supabaseAdmin
+      .from("global_exams_catalog").update(fields).eq("id", id).select().single();
+    if (error) { console.error("[Supabase] upsertGlobalExam update:", error.message); return null; }
+    return data;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from("global_exams_catalog").insert(payload).select().single();
+    if (error) { console.error("[Supabase] upsertGlobalExam insert:", error.message); return null; }
+    return data;
+  }
+}
+
+export async function deleteGlobalExam(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("global_exams_catalog").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteGlobalExam:", error.message); return false; }
+  return true;
+}
+
+export async function fetchGlobalProtocols(): Promise<GlobalProtocol[]> {
+  const { data, error } = await supabaseAdmin
+    .from("global_exam_protocols").select("*").order("name");
+  if (error) { console.error("[Supabase] fetchGlobalProtocols:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function upsertGlobalProtocol(protocol: GlobalProtocol): Promise<GlobalProtocol | null> {
+  if (protocol.id) {
+    const { id, ...fields } = protocol;
+    const { data, error } = await supabaseAdmin
+      .from("global_exam_protocols").update(fields).eq("id", id).select().single();
+    if (error) { console.error("[Supabase] upsertGlobalProtocol update:", error.message); return null; }
+    return data;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from("global_exam_protocols").insert(protocol).select().single();
+    if (error) { console.error("[Supabase] upsertGlobalProtocol insert:", error.message); return null; }
+    return data;
+  }
+}
+
+export async function deleteGlobalProtocol(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("global_exam_protocols").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deleteGlobalProtocol:", error.message); return false; }
+  return true;
+}
+
+export async function fetchProtocolExamIds(protocolId: number): Promise<number[]> {
+  const { data, error } = await supabaseAdmin
+    .from("global_protocol_items").select("exam_id").eq("protocol_id", protocolId);
+  if (error) { console.error("[Supabase] fetchProtocolExamIds:", error.message); return []; }
+  return (data ?? []).map((r: { exam_id: number }) => r.exam_id);
+}
+
+export async function setProtocolExams(protocolId: number, examIds: number[]): Promise<boolean> {
+  const { error: delErr } = await supabaseAdmin
+    .from("global_protocol_items").delete().eq("protocol_id", protocolId);
+  if (delErr) { console.error("[Supabase] setProtocolExams delete:", delErr.message); return false; }
+  if (examIds.length === 0) return true;
+  const rows = examIds.map((exam_id) => ({ protocol_id: protocolId, exam_id }));
+  const { error } = await supabaseAdmin.from("global_protocol_items").insert(rows);
+  if (error) { console.error("[Supabase] setProtocolExams insert:", error.message); return false; }
+  return true;
+}

@@ -6,7 +6,7 @@ import {
   Menu, ExternalLink, KeyRound, Globe, Loader2, ReceiptText,
   CalendarDays, CalendarCheck, ChevronDown, FileText, Star, Settings,
   Stethoscope, Users, LayoutDashboard, Store, Wrench, Tag, Send, UserPlus,
-  LayoutList,
+  LayoutList, FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,9 +43,10 @@ const NAV_GROUPS = [
     label: "Clínica",
     icon: Stethoscope,
     items: [
-      { to: "/admin/pacientes",  icon: Users,      label: "Pacientes"        },
-      { to: "/admin/alimentos",  icon: Leaf,        label: "Alimentos"        },
-      { to: "/admin/modelos",    icon: LayoutList,  label: "Modelos de Dieta" },
+      { to: "/admin/pacientes",  icon: Users,         label: "Pacientes"        },
+      { to: "/admin/alimentos",  icon: Leaf,           label: "Alimentos"        },
+      { to: "/admin/modelos",    icon: LayoutList,     label: "Modelos de Dieta" },
+      { to: "/admin/biblioteca", icon: FlaskConical,   label: "Biblioteca Clínica"},
     ],
   },
   {
