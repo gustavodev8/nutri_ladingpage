@@ -524,17 +524,18 @@ export async function fetchAnamnesis(patientId: number): Promise<Anamnesis | nul
   return data;
 }
 
-export async function upsertAnamnesis(a: Anamnesis): Promise<boolean | string> {
+export async function upsertAnamnesis(a: Anamnesis): Promise<{ id: number } | string> {
   const payload = { ...a, updated_at: new Date().toISOString() };
   if (a.id) {
     const { id, ...fields } = payload;
     const { error } = await supabaseAdmin.from("anamnesis").update(fields).eq("id", id);
     if (error) { console.error("[Supabase] upsertAnamnesis update:", error.message); return error.message; }
+    return { id };
   } else {
-    const { error } = await supabaseAdmin.from("anamnesis").insert(payload);
+    const { data, error } = await supabaseAdmin.from("anamnesis").insert(payload).select("id").single();
     if (error) { console.error("[Supabase] upsertAnamnesis insert:", error.message); return error.message; }
+    return { id: data.id };
   }
-  return true;
 }
 
 // Measurements

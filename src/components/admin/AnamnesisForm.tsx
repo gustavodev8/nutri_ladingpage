@@ -199,12 +199,13 @@ export function AnamnesisForm({
       structured_data: sd,
       ...(anamnesisId ? { id: anamnesisId } : {}),
     };
-    const ok = await upsertAnamnesis(payload);
-    if (ok === true) {
-      toast.success("Anamnese salva!");
-      onSaved?.(payload);
+    const result = await upsertAnamnesis(payload);
+    if (typeof result === "string") {
+      toast.error("Falha ao salvar: " + result);
     } else {
-      toast.error("Falha ao salvar: " + ok);
+      if (!anamnesisId) setAnamnesisId(result.id);
+      toast.success("Anamnese salva!");
+      onSaved?.({ ...payload, id: result.id });
     }
     setSaving(false);
   };
@@ -290,8 +291,8 @@ export function AnamnesisForm({
             { value: ">2.5L",  label: "Mais de 2,5 L" },
           ]}
         />
-        <TextField label="Aversões alimentares" field="diet_aversions"   data={sd} set={set} placeholder="Ex: brócolis, fígado, frutos do mar…" />
-        <TextField label="Preferências alimentares" field="diet_preferences" data={sd} set={set} placeholder="Ex: frango, aveia, frutas…" />
+        <TextField label="Alimentos que não gosta (paladar)" field="diet_aversions"   data={sd} set={set} placeholder="Ex: brócolis, fígado, frutos do mar…" />
+        <TextField label="Alimentos preferidos" field="diet_preferences" data={sd} set={set} placeholder="Ex: frango, aveia, frutas…" />
         <NotesArea field="diet_notes" data={sd} set={set} />
       </Section>
 
@@ -449,11 +450,11 @@ export function AnamnesisForm({
           placeholder="Ex: lactose, glúten, amendoim, frutos do mar…"
         />
         <TextField
-          label="Aversões alimentares (não come)"
+          label="Restrições alimentares por condição clínica"
           field="clinical_food_aversions"
           data={sd}
           set={set}
-          placeholder="Ex: fígado, beterraba, couve…"
+          placeholder="Ex: fígado (vesícula), laticínios (intolerância), cafeína (ansiedade)…"
         />
         <NotesArea field="clinical_notes" data={sd} set={set} />
       </Section>
