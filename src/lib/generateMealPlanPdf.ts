@@ -297,6 +297,40 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
       y += noteH;
     }
 
+    // Substitution items strip
+    const subs = (meal.substitution_items ?? []).filter(s => s.food_name?.trim());
+    if (subs.length > 0) {
+      const subBg:     RGB = [255, 251, 240];
+      const subBorder: RGB = [253, 186, 116];
+      const subText:   RGB = [154,  52,  18];
+
+      const subLines = subs.map((s, i) => {
+        const qty  = s.quantity ? `${s.quantity}${s.unit ?? "g"} de ` : "";
+        const note = s.notes ? ` · ${s.notes}` : "";
+        return `Opção ${i + 1}: ${qty}${s.food_name}${note}`;
+      });
+
+      const subH = subLines.length * 4.2 + 7;
+      if (y + subH > ph - 18) { doc.addPage(); y = 12; }
+
+      doc.setFillColor(...subBg);
+      doc.rect(ml, y, cw, subH, "F");
+      hline(doc, ml, ml + cw, y, subBorder, 0.3);
+
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...subText);
+      doc.text("🔄 OPÇÕES DE SUBSTITUIÇÃO", ml + 4, y + 4);
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      subLines.forEach((line, li) => {
+        doc.text(line, ml + 4, y + 8.5 + li * 4.2);
+      });
+
+      y += subH;
+    }
+
     y += 5; // gap between cards
   });
 
