@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, LayoutList,
-  AlertTriangle, TrendingDown, TrendingUp,
+  AlertTriangle, TrendingDown, TrendingUp, ArrowLeftRight, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,13 +56,14 @@ function computeTotals(meals: EditorMeal[]) {
   );
 }
 
-/** Converte DietTemplateMeal+DietTemplateFood → EditorMeal */
+/** Converte DietTemplateMeal+DietTemplateFood → EditorMeal (sem agrupar subs) */
 function templateMealToEditor(tm: import("@/lib/supabase").DietTemplateMeal): EditorMeal {
   return {
     _dbId:           tm.id,
     meal_name:       tm.meal_name,
     time_suggestion: tm.time_suggestion,
     notes:           tm.notes ?? undefined,
+    substitutions:   [],
     foods: (tm.foods ?? []).map((tf): MealFood => {
       const qty   = tf.quantity ?? undefined;
       const calc  = (per100?: number) =>
@@ -116,7 +117,18 @@ export default function AdminTemplateEditor() {
         setName(found.name);
         setDescription(found.description ?? "");
         setStrategy(found.strategy ?? "");
-        setMeals((found.meals ?? []).map(templateMealToEditor));
+        const rawMeals = found.meals ?? [];
+        const parents = rawMeals
+          .filter((m) => !m.is_substitution_of)
+          .map(templateMealToEditor);
+        const subs = rawMeals.filter((m) => m.is_substitution_of);
+        parents.forEach((p) => {
+          p.substitutions = subs
+            .filter((s) => s.is_substitution_of === p._dbId)
+            .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+            .map(templateMealToEditor);
+        });
+        setMeals(parents);
       } else {
         toast.error("Modelo não encontrado.");
         navigate("/admin/modelos");
@@ -152,6 +164,22 @@ export default function AdminTemplateEditor() {
 
       if (!saved?.id) { toast.error("Erro ao salvar o modelo."); return; }
 
+      const mealFoodsPayload = (foods: typeof meals[0]["foods"]) =>
+        foods.map((f, fi) => ({
+          food_name:         f.food_name,
+          quantity:          f.quantity,
+          unit:              f.unit,
+          kcal_per_100g:     f.kcal_per_100g,
+          protein_per_100g:  f.protein_per_100g,
+          carbs_per_100g:    f.carbs_per_100g,
+          fat_per_100g:      f.fat_per_100g,
+          household_measure: f.household_measure,
+          measure_amount:    f.measure_amount,
+          food_group:        f.food_group,
+          notes:             f.notes,
+          order_index:       fi,
+        }));
+
       const ok = await saveDietTemplateMeals(
         saved.id,
         meals.map((m, idx) => ({
@@ -159,19 +187,13 @@ export default function AdminTemplateEditor() {
           time_suggestion: m.time_suggestion,
           order_index:     idx,
           notes:           m.notes,
-          foods:           m.foods.map((f, fi) => ({
-            food_name:         f.food_name,
-            quantity:          f.quantity,
-            unit:              f.unit,
-            kcal_per_100g:     f.kcal_per_100g,
-            protein_per_100g:  f.protein_per_100g,
-            carbs_per_100g:    f.carbs_per_100g,
-            fat_per_100g:      f.fat_per_100g,
-            household_measure: f.household_measure,
-            measure_amount:    f.measure_amount,
-            food_group:        f.food_group,
-            notes:             f.notes,
-            order_index:       fi,
+          foods:           mealFoodsPayload(m.foods),
+          substitutions:   (m.substitutions ?? []).map((s, si) => ({
+            meal_name:       s.meal_name,
+            time_suggestion: s.time_suggestion,
+            order_index:     si,
+            notes:           s.notes,
+            foods:           mealFoodsPayload(s.foods),
           })),
         }))
       );
@@ -193,7 +215,37 @@ export default function AdminTemplateEditor() {
   const removeMeal = (i: number) =>
     setMeals((prev) => prev.filter((_, fi) => fi !== i));
   const addMeal = () =>
-    setMeals((prev) => [...prev, { meal_name: "Nova refeição", time_suggestion: "", foods: [] }]);
+    setMeals((prev) => [...prev, { meal_name: "Nova refeição", time_suggestion: "", foods: [], substitutions: [] }]);
+
+  const addSubstitution = (i: number) =>
+    setMeals((prev) => {
+      const n = [...prev];
+      const parent = n[i];
+      const sub: EditorMeal = {
+        meal_name:       `${parent.meal_name} — Sub. ${(parent.substitutions?.length ?? 0) + 1}`,
+        time_suggestion: parent.time_suggestion,
+        foods:           [],
+        substitutions:   [],
+      };
+      n[i] = { ...parent, substitutions: [...(parent.substitutions ?? []), sub] };
+      return n;
+    });
+
+  const removeSubstitution = (mealIdx: number, subIdx: number) =>
+    setMeals((prev) => {
+      const n = [...prev];
+      n[mealIdx] = { ...n[mealIdx], substitutions: (n[mealIdx].substitutions ?? []).filter((_, si) => si !== subIdx) };
+      return n;
+    });
+
+  const updateSubstitution = (mealIdx: number, subIdx: number, m: EditorMeal) =>
+    setMeals((prev) => {
+      const n = [...prev];
+      const subs = [...(n[mealIdx].substitutions ?? [])];
+      subs[subIdx] = m;
+      n[mealIdx] = { ...n[mealIdx], substitutions: subs };
+      return n;
+    });
 
   if (loading) {
     return (
@@ -332,15 +384,51 @@ export default function AdminTemplateEditor() {
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             {meals.map((meal, i) => (
-              <MealSection
-                key={i}
-                meal={meal}
-                idx={i}
-                onUpdate={(m) => updateMeal(i, m)}
-                onRemove={() => removeMeal(i)}
-              />
+              <div key={i} className="space-y-2">
+                <MealSection
+                  meal={meal}
+                  idx={i}
+                  onUpdate={(m) => updateMeal(i, m)}
+                  onRemove={() => removeMeal(i)}
+                />
+
+                {/* Substituições desta refeição */}
+                {(meal.substitutions ?? []).map((sub, si) => (
+                  <div key={si} className="ml-5 border-l-2 border-amber-400/50 pl-3">
+                    <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                      <ArrowLeftRight size={11} className="text-amber-500 flex-shrink-0" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+                        Substituição {si + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeSubstitution(i, si)}
+                        className="ml-auto h-5 w-5 flex items-center justify-center rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                    <MealSection
+                      meal={sub}
+                      idx={si}
+                      onUpdate={(m) => updateSubstitution(i, si, m)}
+                      onRemove={() => removeSubstitution(i, si)}
+                    />
+                  </div>
+                ))}
+
+                {/* Botão adicionar substituição */}
+                <button
+                  type="button"
+                  onClick={() => addSubstitution(i)}
+                  className="ml-5 flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 font-medium transition-colors py-0.5"
+                >
+                  <ArrowLeftRight size={11} />
+                  + Adicionar substituição
+                </button>
+              </div>
             ))}
 
             {meals.length === 0 && (

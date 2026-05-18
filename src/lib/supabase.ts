@@ -1000,13 +1000,14 @@ export interface DietTemplateFood {
 }
 
 export interface DietTemplateMeal {
-  id:               number;
-  template_id:      number;
-  meal_name:        string;
-  time_suggestion?: string;
-  order_index?:     number;
-  notes?:           string;
-  foods?:           DietTemplateFood[];
+  id:                  number;
+  template_id:         number;
+  meal_name:           string;
+  time_suggestion?:    string;
+  order_index?:        number;
+  notes?:              string;
+  is_substitution_of?: number | null;
+  foods?:              DietTemplateFood[];
 }
 
 export interface DietTemplate {
@@ -1065,29 +1066,77 @@ export async function deleteDietTemplate(id: number): Promise<boolean> {
   return true;
 }
 
+type TemplateFoodInput = {
+  food_name:          string;
+  quantity?:          number;
+  unit?:              string;
+  kcal_per_100g?:     number;
+  protein_per_100g?:  number;
+  carbs_per_100g?:    number;
+  fat_per_100g?:      number;
+  household_measure?: string;
+  measure_amount?:    number;
+  food_group?:        string;
+  notes?:             string;
+  order_index:        number;
+};
+
+type TemplateMealInput = {
+  meal_name:        string;
+  time_suggestion?: string;
+  order_index:      number;
+  notes?:           string;
+  foods:            TemplateFoodInput[];
+  /** Refeições alternativas completas para esta refeição */
+  substitutions?:   Omit<TemplateMealInput, "substitutions">[];
+};
+
+async function insertTemplateMealWithFoods(
+  templateId: number,
+  meal: Omit<TemplateMealInput, "substitutions">,
+  isSubstitutionOf?: number,
+): Promise<number | null> {
+  const { data, error } = await supabaseAdmin
+    .from("diet_template_meals")
+    .insert({
+      template_id:        templateId,
+      meal_name:          meal.meal_name,
+      time_suggestion:    meal.time_suggestion ?? "",
+      order_index:        meal.order_index,
+      notes:              meal.notes ?? null,
+      is_substitution_of: isSubstitutionOf ?? null,
+    })
+    .select()
+    .single();
+  if (error || !data) { console.error("[Supabase] insertTemplateMealWithFoods:", error?.message); return null; }
+
+  const validFoods = meal.foods.filter((f) => f.food_name.trim() !== "");
+  if (validFoods.length > 0) {
+    const foodRows = validFoods.map((f) => ({
+      template_meal_id:  data.id,
+      food_name:         f.food_name,
+      quantity:          f.quantity          ?? null,
+      unit:              f.unit              ?? "g",
+      kcal_per_100g:     f.kcal_per_100g     ?? null,
+      protein_per_100g:  f.protein_per_100g  ?? null,
+      carbs_per_100g:    f.carbs_per_100g    ?? null,
+      fat_per_100g:      f.fat_per_100g      ?? null,
+      household_measure: f.household_measure ?? null,
+      measure_amount:    f.measure_amount    ?? null,
+      food_group:        f.food_group        ?? null,
+      notes:             f.notes             ?? null,
+      order_index:       f.order_index,
+    }));
+    const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
+    if (foodErr) { console.error("[Supabase] insertTemplateMealWithFoods foods:", foodErr.message); return null; }
+  }
+  return data.id;
+}
+
 /** Apaga e re-insere todas as refeições (+ alimentos) de um template. */
 export async function saveDietTemplateMeals(
   templateId: number,
-  meals: Array<{
-    meal_name:        string;
-    time_suggestion?: string;
-    order_index:      number;
-    notes?:           string;
-    foods: Array<{
-      food_name:         string;
-      quantity?:         number;
-      unit?:             string;
-      kcal_per_100g?:    number;
-      protein_per_100g?: number;
-      carbs_per_100g?:   number;
-      fat_per_100g?:     number;
-      household_measure?: string;
-      measure_amount?:   number;
-      food_group?:       string;
-      notes?:            string;
-      order_index:       number;
-    }>;
-  }>
+  meals: TemplateMealInput[],
 ): Promise<boolean> {
   try {
     const { error: delErr } = await supabaseAdmin
@@ -1097,38 +1146,13 @@ export async function saveDietTemplateMeals(
     if (delErr) { console.error("[Supabase] saveDietTemplateMeals delete:", delErr.message); return false; }
 
     for (const meal of meals) {
-      const { data: mealData, error: mealErr } = await supabaseAdmin
-        .from("diet_template_meals")
-        .insert({
-          template_id:     templateId,
-          meal_name:       meal.meal_name,
-          time_suggestion: meal.time_suggestion ?? "",
-          order_index:     meal.order_index,
-          notes:           meal.notes ?? null,
-        })
-        .select()
-        .single();
-      if (mealErr || !mealData) { console.error("[Supabase] saveDietTemplateMeals insert meal:", mealErr?.message); return false; }
+      const { substitutions, ...mealData } = meal;
+      const parentId = await insertTemplateMealWithFoods(templateId, mealData);
+      if (!parentId) return false;
 
-      const validFoods = meal.foods.filter((f) => f.food_name.trim() !== "");
-      if (validFoods.length > 0) {
-        const foodRows = validFoods.map((f) => ({
-          template_meal_id:  mealData.id,
-          food_name:         f.food_name,
-          quantity:          f.quantity          ?? null,
-          unit:              f.unit              ?? "g",
-          kcal_per_100g:     f.kcal_per_100g     ?? null,
-          protein_per_100g:  f.protein_per_100g  ?? null,
-          carbs_per_100g:    f.carbs_per_100g    ?? null,
-          fat_per_100g:      f.fat_per_100g      ?? null,
-          household_measure: f.household_measure ?? null,
-          measure_amount:    f.measure_amount    ?? null,
-          food_group:        f.food_group        ?? null,
-          notes:             f.notes             ?? null,
-          order_index:       f.order_index,
-        }));
-        const { error: foodErr } = await supabaseAdmin.from("diet_template_foods").insert(foodRows);
-        if (foodErr) { console.error("[Supabase] saveDietTemplateMeals insert foods:", foodErr.message); return false; }
+      for (const sub of (substitutions ?? [])) {
+        const ok = await insertTemplateMealWithFoods(templateId, sub, parentId);
+        if (!ok) return false;
       }
     }
     return true;

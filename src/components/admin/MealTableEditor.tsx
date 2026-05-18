@@ -50,11 +50,13 @@ export const FOOD_GROUPS = [
 export interface EditorMeal {
   /** id do registro no banco (meal.id ou diet_template_meal.id) — undefined para novos */
   _dbId?: number;
-  meal_name:          string;
-  time_suggestion?:   string;
-  notes?:             string;
-  foods:              MealFood[];
+  meal_name:           string;
+  time_suggestion?:    string;
+  notes?:              string;
+  foods:               MealFood[];
   substitution_items?: SubstitutionItem[];
+  /** Refeições alternativas completas (apenas em templates) */
+  substitutions?:      EditorMeal[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

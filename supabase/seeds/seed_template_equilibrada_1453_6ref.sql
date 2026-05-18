@@ -129,3 +129,13 @@ INSERT INTO diet_template_foods (template_meal_id,food_name,quantity,unit,househ
   ((SELECT id FROM meal),'Iogurte integral natural',170.0,'g','pote',1.0::numeric,61.0,3.5,4.7,3.3,'Laticínio',0),
   ((SELECT id FROM meal),'Chia em grãos',15.0,'g','col. sopa',1.0::numeric,484.0,16.5,42.1,30.7,'Semente',1)
 ON CONFLICT DO NOTHING;
+
+-- Linka Sub. 1 de cada refeição ao seu pai via is_substitution_of
+UPDATE diet_template_meals sub
+SET is_substitution_of = main.id
+FROM diet_template_meals main
+JOIN diet_templates dt ON dt.id = main.template_id
+WHERE dt.name = 'Dieta Equilibrada — 1453 kcal 6 Refeições'
+  AND sub.template_id = main.template_id
+  AND sub.meal_name = main.meal_name || ' — Sub. 1'
+  AND main.meal_name NOT LIKE '% — Sub. 1';

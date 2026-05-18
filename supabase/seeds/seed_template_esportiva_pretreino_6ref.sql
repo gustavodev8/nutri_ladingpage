@@ -137,3 +137,13 @@ INSERT INTO diet_template_foods (template_meal_id,food_name,quantity,unit,househ
   ((SELECT id FROM meal),'Acelga crua',30.0,'g',NULL,NULL::numeric,16.0,1.5,2.7,0.2,'Vegetal',5),
   ((SELECT id FROM meal),'Couve-flor crua',30.0,'g',NULL,NULL::numeric,25.0,1.9,3.0,0.3,'Vegetal',6)
 ON CONFLICT DO NOTHING;
+
+-- Linka Sub. 1 de cada refeição ao seu pai via is_substitution_of
+UPDATE diet_template_meals sub
+SET is_substitution_of = main.id
+FROM diet_template_meals main
+JOIN diet_templates dt ON dt.id = main.template_id
+WHERE dt.name = 'Dieta Esportiva — 6 Refeições com Pré-treino'
+  AND sub.template_id = main.template_id
+  AND sub.meal_name = main.meal_name || ' — Sub. 1'
+  AND main.meal_name NOT LIKE '% — Sub. 1';
