@@ -138,6 +138,15 @@ const AdminAgendamentos = () => {
   const [filterDateTo, setFilterDateTo]       = useState("");
   const [filterPlan, setFilterPlan]           = useState("");
 
+  // Patients for manual creation
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [isManualEntry, setIsManualEntry] = useState(true);
+  
+  useEffect(() => {
+    fetchPatients().then(setPatients);
+  }, []);
+
   // Prontuário — visualização / edição / exclusão
   const [viewRecord, setViewRecord]             = useState<ConsultationRecord | null>(null);
   const [editingRecordId, setEditingRecordId]   = useState<number | null>(null);
@@ -2533,33 +2542,71 @@ const AdminAgendamentos = () => {
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
 
               {/* Paciente */}
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paciente</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs">Nome completo *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                    <Input value={newName} onChange={e => setNewName(e.target.value)}
-                      placeholder="Nome do paciente" className="pl-8 h-9 text-sm" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                    <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                      placeholder="email@exemplo.com" className="pl-8 h-9 text-sm" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Telefone</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                    <Input value={newPhone} onChange={e => setNewPhone(e.target.value)}
-                      placeholder="(00) 00000-0000" className="pl-8 h-9 text-sm" />
-                  </div>
-                </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paciente</p>
+                <button
+                  type="button"
+                  onClick={() => setIsManualEntry(!isManualEntry)}
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  {isManualEntry ? "Selecionar existente" : "Preencher manualmente"}
+                </button>
               </div>
+
+              {!isManualEntry ? (
+                <div className="space-y-1.5">
+                  <select
+                    value={selectedPatientId}
+                    onChange={e => {
+                      const id = e.target.value;
+                      setSelectedPatientId(id);
+                      const p = patients.find(p => p.id === Number(id));
+                      if (p) {
+                        setNewName(p.name);
+                        setNewEmail(p.email || "");
+                        setNewPhone(p.phone || "");
+                      } else {
+                        setNewName("");
+                        setNewEmail("");
+                        setNewPhone("");
+                      }
+                    }}
+                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Selecione um paciente...</option>
+                    {patients.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} {p.email ? `(${p.email})` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">Nome completo *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                      <Input value={newName} onChange={e => setNewName(e.target.value)}
+                        placeholder="Nome do paciente" className="pl-8 h-9 text-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                      <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                        placeholder="email@exemplo.com" className="pl-8 h-9 text-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Telefone</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                      <Input value={newPhone} onChange={e => setNewPhone(e.target.value)}
+                        placeholder="(00) 00000-0000" className="pl-8 h-9 text-sm" />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Plano + Tipo */}
               {(() => {
