@@ -15,7 +15,7 @@ import {
   insertBooking, insertConsultationRecord, updateConsultationRecord,
   deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
   fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
-  linkBookingGroupToPatient, findPatientByCPF, findSimilarPatients, upsertPatient,
+  linkBookingGroupToPatient, findPatientByCPF, findSimilarPatients, upsertPatient, fetchPatients,
   type Booking, type ConsultationRecord, type RecordFile, type Patient
 } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
