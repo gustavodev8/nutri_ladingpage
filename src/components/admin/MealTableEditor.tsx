@@ -76,10 +76,20 @@ export function sumFoods(foods: MealFood[]) {
   );
 }
 
-export function calcFoodMacros(food: MealFood): MealFood {
+export function calcFoodMacros(food: MealFood, foodDb?: FoodItem): MealFood {
   const qty = food.quantity;
   if (!qty || !food.kcal_per_100g) return food;
-  const f = qty / 100;
+
+  // Se o alimento tem fator de conversão (ex: colher de sopa = 15g), aplica
+  let grams = qty;
+  if (food.unit !== "g" && food.unit !== "ml" && foodDb?.household_measures) {
+    const measure = foodDb.household_measures.find((m) => m.unit === food.unit);
+    if (measure) {
+      grams = qty * measure.grams;
+    }
+  }
+
+  const f = grams / 100;
   return {
     ...food,
     calories: parseFloat(((food.kcal_per_100g   ?? 0) * f).toFixed(1)),
@@ -127,8 +137,13 @@ export function FoodRow({
       fat_per_100g:     s.fat_per_100g,
     }));
 
-  const handleQty = (val: string) =>
-    onChange(calcFoodMacros({ ...food, quantity: val === "" ? undefined : parseFloat(val) }));
+  const handleQty = (val: string) => {
+    // Para converter, precisamos do item completo do banco para pegar os fatores de conversão
+    // Como FoodRow não tem acesso direto à lista completa de alimentos do banco (BUILT_IN_FOODS),
+    // precisamos garantir que os dados necessários (kcal_per_100g, etc.) estejam em `food`.
+    // A função calcFoodMacros já recebe o próprio `food` que contém esses dados.
+    onChange(calcFoodMacros({ ...food, quantity: val === "" ? undefined : parseFloat(val) }, food as any));
+  };
 
   const numCell = (v?: number) => (
     <td className="hidden sm:table-cell py-2 pr-3 text-right tabular-nums text-sm text-foreground/80 w-16 align-middle">
