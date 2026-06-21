@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Search, Plus, X, ChevronRight, Sparkles, Globe, Loader2 } from "lucide-react";
-import { searchFoods, type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
+import { searchFoodsInSupabase } from "@/lib/supabase";
+import { type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
 import { searchOpenFoodFacts } from "@/lib/openFoodFacts";
 import { cn } from "@/lib/utils";
 
@@ -115,14 +116,14 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
       setIsOpen(false);
       return;
     }
-    const builtIn = searchFoods(q);
+    const dbFoods = await searchFoodsInSupabase(q);
     const custom = await fetchCustomFoods();
     const filteredCustom = custom.filter((f) =>
       f.name.toLowerCase().includes(q.toLowerCase())
     );
     const seen = new Set<string>();
     const merged: FoodItem[] = [];
-    for (const f of [...filteredCustom, ...builtIn]) {
+    for (const f of [...filteredCustom, ...dbFoods]) {
       if (!seen.has(f.id)) { seen.add(f.id); merged.push(f); }
     }
     setResults(merged.slice(0, 30));
