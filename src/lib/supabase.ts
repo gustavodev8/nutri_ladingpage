@@ -202,7 +202,27 @@ export async function uploadVideo(file: File): Promise<string | null> {
   return urlData.publicUrl;
 }
 
-// ─── Clínica – Types ──────────────────────────────────────────────────────────────
+// ─── Alimentos (Catálogo) ─────────────────────────────────────────────────────────
+
+export async function searchFoodsInSupabase(query: string): Promise<import("./foodDatabase").FoodItem[]> {
+  const { data, error } = await supabase
+    .from("foods")
+    .select("*")
+    .ilike("name", `%${query}%`)
+    .limit(30);
+  if (error) {
+    console.error("[Supabase] searchFoodsInSupabase error:", error.message);
+    return [];
+  }
+  return (data ?? []).map(f => ({
+    ...f,
+    kcal: f.kcal_per_100g || f.kcal, // Normalize if column names differ
+    protein: f.protein_per_100g || f.protein,
+    carbs: f.carbs_per_100g || f.carbs,
+    fat: f.fat_per_100g || f.fat,
+  }));
+}
+
 
 export interface Patient {
   id?: number;
