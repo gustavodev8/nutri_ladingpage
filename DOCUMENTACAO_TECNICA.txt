@@ -1,0 +1,52 @@
+# DOCUMENTAÇÃO DE FLUXO DE AGENDAMENTOS - NUTRIVIDA
+
+Esta documentação detalha exclusivamente a dinâmica de agendamentos, cobrindo a jornada do paciente e a gestão administrativa no painel.
+
+## 1. Jornada do Paciente (Usuário Comum)
+
+1.  **Seleção de Serviço:** O paciente navega pelo site e escolhe um serviço (Consulta ou Protocolo).
+2.  **Agendamento:** O paciente seleciona data e hora disponíveis.
+3.  **Coleta de Dados:** O sistema solicita nome, e-mail, telefone e CPF. O CPF é o identificador chave para unificar o histórico.
+4.  **Pagamento e Confirmação:** O sistema processa o pagamento (PIX/Cartão).
+    - Se aprovado automaticamente (via Webhook), o status do agendamento vira `confirmed`.
+    - Se pendente, o status permanece `pending`.
+5.  **Notificação:** O paciente recebe confirmação automática do agendamento.
+
+## 2. Visão e Ações do Administrador (Nutricionista)
+
+O administrador gerencia tudo via `src/pages/admin/AdminAgendamentos.tsx`.
+
+### 2.1. Visão Geral (Dashboard)
+- O admin visualiza todos os agendamentos em uma lista centralizada, filtrável por:
+    - Status (Confirmados, Pendentes, Cancelados, etc.)
+    - Modalidade (Online/Presencial)
+    - Data
+    - Busca por nome ou plano.
+
+### 2.2. Criação de Agendamentos (Nova Consulta Manual)
+Caso o paciente entre em contato por fora do site, o admin utiliza o botão "Nova Consulta":
+- **Modo Manual:** Cadastro de novos dados (Nome, Email, Telefone).
+- **Modo Paciente Existente:** O admin seleciona um paciente da base de dados (`fetchPatients`). Ao selecionar, o sistema preenche automaticamente os dados do prontuário, evitando duplicidade.
+
+### 2.3. Gestão e Acompanhamento
+- **Reagendamento:** O admin pode alterar a data/hora de uma sessão, disparando um email automático ao paciente.
+- **Alteração de Modalidade:** Possibilidade de alternar entre Online e Presencial.
+- **Gestão de Faltas/Cancelamento:** O admin marca como "Não compareceu" (`no_show`) ou "Cancelado", alterando o fluxo financeiro e de agenda.
+
+### 2.4. Conclusão e Prontuário
+Ao finalizar uma sessão (`Concluir`), o fluxo administrativo é:
+1.  **Prontuário:** Preenchimento de observações, peso, altura, próximos passos e upload de arquivos (exames/planos).
+2.  **Automação de Retorno:** O sistema verifica o número de sessões do plano. Se houver sessões restantes, o sistema abre o calendário de disponibilidade para o admin agendar o próximo retorno diretamente.
+3.  **Finalização:** O status vira `completed`, e o histórico é consolidado no prontuário do paciente.
+
+## 3. Dinâmica do CPF
+- O CPF é crucial para a integridade:
+    - Se o sistema encontrar um paciente com o mesmo CPF na base, ele vincula o novo agendamento ao paciente existente.
+    - Se for um paciente novo (sem CPF na base), o sistema sugere a criação de um novo registro ou vinculação manual caso encontre similaridade (nome/email).
+
+## 4. Resumo de Estados (Status)
+- `pending`: Aguardando pagamento (bloqueia agenda, mas mantém reservado).
+- `confirmed`: Agendado e pago.
+- `completed`: Consulta realizada e prontuário preenchido.
+- `no_show`: Paciente faltou.
+- `cancelled`: Agendamento cancelado.
