@@ -204,23 +204,68 @@ export async function uploadVideo(file: File): Promise<string | null> {
 
 // ─── Alimentos (Catálogo) ─────────────────────────────────────────────────────────
 
-export async function searchFoodsInSupabase(query: string): Promise<import("./foodDatabase").FoodItem[]> {
-  const { data, error } = await supabase
-    .from("foods")
-    .select("*")
-    .ilike("name", `%${query}%`)
-    .limit(30);
+export async function fetchFoodsFromSupabase(query?: string, category?: string): Promise<import("./foodDatabase").FoodItem[]> {
+  let q = supabase.from("foods").select("*");
+  
+  if (query) {
+    q = q.ilike("name", `%${query}%`);
+  }
+  
+  if (category && category !== "Todos") {
+    q = q.eq("category", category);
+  }
+  
+  const { data, error } = await q.order("name").limit(500);
+  
   if (error) {
-    console.error("[Supabase] searchFoodsInSupabase error:", error.message);
+    console.error("[Supabase] fetchFoodsFromSupabase error:", error.message);
     return [];
   }
+  
   return (data ?? []).map(f => ({
-    ...f,
-    kcal: f.kcal_per_100g || f.kcal, // Normalize if column names differ
-    protein: f.protein_per_100g || f.protein,
-    carbs: f.carbs_per_100g || f.carbs,
-    fat: f.fat_per_100g || f.fat,
+    id: f.id.toString(),
+    name: f.name,
+    category: f.category || "Personalizado",
+    kcal: Number(f.kcal_per_100g) || 0,
+    protein: Number(f.protein_per_100g) || 0,
+    carbs: Number(f.carbs_per_100g) || 0,
+    fat: Number(f.fat_per_100g) || 0,
   }));
+}
+
+export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase").FoodItem>): Promise<boolean> {
+  const { id, ...fields } = food;
+  
+  // Se tiver ID numérico (ex: do banco), é update. Se for string (ex: custom_...), é novo ou precisa ser tratado.
+  // No nosso sistema simplificado, vamos tratar tudo como upsert pelo nome se não tiver id real.
+  
+  const payload = {
+    name: fields.name,
+    category: fields.category,
+    kcal: fields.kcal,
+    protein: fields.protein,
+    carbs: fields.carbs,
+    fat: fields.fat,
+    household_measures: fields.household_measures || [],
+  };
+
+  if (typeof id === 'number') {
+    const { error } = await supabase.from("foods").update(payload).eq("id", id);
+    return !error;
+  } else {
+    const { error } = await supabase.from("foods").insert(payload);
+    return !error;
+  }
+}
+
+export async function deleteFoodFromSupabase(id: number | string): Promise<boolean> {
+  if (typeof id !== 'number') return false; // Só deleta do banco se for ID real
+  const { error } = await supabase.from("foods").delete().eq("id", id);
+  return !error;
+}
+
+export async function searchFoodsInSupabase(query: string): Promise<import("./foodDatabase").FoodItem[]> {
+  return fetchFoodsFromSupabase(query);
 }
 
 
