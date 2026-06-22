@@ -65,3 +65,16 @@ export function searchFoods(query: string, limit = 20): FoodItem[] {
     return name.includes(q);
   }).slice(0, limit);
 }
+
+function normalizeFoodName(value: string): string {
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+export function findBuiltInFoodByName(name: string): FoodItem | undefined {
+  const normalized = normalizeFoodName(name);
+  return BUILT_IN_FOODS.find((food) => normalizeFoodName(food.name) === normalized);
+}
+
+export function getFoodHouseholdMeasures(name: string): HouseholdMeasure[] | undefined {
+  return findBuiltInFoodByName(name)?.household_measures;
+}

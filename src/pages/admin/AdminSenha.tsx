@@ -11,6 +11,7 @@ const AdminSenha = () => {
   const [show, setShow] = useState({ current: false, next: false });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const set = (key: keyof typeof form, value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -18,22 +19,27 @@ const AdminSenha = () => {
     setSuccess(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess(false);
 
     if (form.next !== form.confirm) {
       setError("As senhas não coincidem.");
       return;
     }
 
-    const result = changePassword(form.current, form.next);
+    setLoading(true);
+    const result = await changePassword(form.current, form.next);
+    setLoading(false);
+
     if (result === true) {
       setSuccess(true);
       setForm({ current: "", next: "", confirm: "" });
-    } else {
-      setError(typeof result === "string" ? result : "Erro ao alterar a senha.");
+      return;
     }
+
+    setError(typeof result === "string" ? result : "Erro ao alterar a senha.");
   };
 
   return (
@@ -44,18 +50,16 @@ const AdminSenha = () => {
       </div>
 
       <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 space-y-6">
-        {/* Security tip */}
         <div className="flex items-start gap-2.5 p-3.5 bg-primary/5 border border-primary/15 rounded-xl text-sm">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <div className="text-muted-foreground leading-relaxed">
             A nova senha deve ter <strong className="text-foreground">mínimo 8 caracteres</strong>,
-            pelo menos <strong className="text-foreground">uma letra maiúscula</strong> e
-            um <strong className="text-foreground">número</strong>.
+            pelo menos <strong className="text-foreground">uma letra maiúscula</strong> e um{" "}
+            <strong className="text-foreground">número</strong>.
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 max-w-sm">
-          {/* Current password */}
           <div className="space-y-2">
             <Label htmlFor="current">Senha atual</Label>
             <div className="relative">
@@ -79,7 +83,6 @@ const AdminSenha = () => {
             </div>
           </div>
 
-          {/* New password */}
           <div className="space-y-2">
             <Label htmlFor="next">Nova senha</Label>
             <div className="relative">
@@ -104,7 +107,6 @@ const AdminSenha = () => {
             </div>
           </div>
 
-          {/* Confirm */}
           <div className="space-y-2">
             <Label htmlFor="confirm">Confirmar nova senha</Label>
             <Input
@@ -135,9 +137,9 @@ const AdminSenha = () => {
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90"
-            disabled={!form.current || !form.next || !form.confirm}
+            disabled={loading || !form.current || !form.next || !form.confirm}
           >
-            Salvar nova senha
+            {loading ? "Salvando..." : "Salvar nova senha"}
           </Button>
         </form>
       </div>

@@ -204,8 +204,10 @@ export async function uploadVideo(file: File): Promise<string | null> {
 
 // ─── Alimentos (Catálogo) ─────────────────────────────────────────────────────────
 
+const FOOD_TABLE = "master_foods";
+
 export async function fetchFoodsFromSupabase(query?: string, category?: string): Promise<import("./foodDatabase").FoodItem[]> {
-  let q = supabase.from("foods").select("*");
+  let q = supabase.from(FOOD_TABLE).select("*");
   
   if (query) {
     q = q.ilike("name", `%${query}%`);
@@ -215,7 +217,7 @@ export async function fetchFoodsFromSupabase(query?: string, category?: string):
     q = q.eq("category", category);
   }
   
-  const { data, error } = await q.order("name").limit(500);
+  const { data, error } = await q.order("name");
   
   if (error) {
     console.error("[Supabase] fetchFoodsFromSupabase error:", error.message);
@@ -230,6 +232,7 @@ export async function fetchFoodsFromSupabase(query?: string, category?: string):
     protein: Number(f.protein_per_100g) || 0,
     carbs: Number(f.carbs_per_100g) || 0,
     fat: Number(f.fat_per_100g) || 0,
+    fiber: Number(f.fiber_per_100g) || undefined,
   }));
 }
 
@@ -246,21 +249,22 @@ export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase"
     protein: fields.protein,
     carbs: fields.carbs,
     fat: fields.fat,
-    household_measures: fields.household_measures || [],
   };
 
-  if (typeof id === 'number') {
-    const { error } = await supabase.from("foods").update(payload).eq("id", id);
+  const numericId = typeof id === "number" ? id : Number(id);
+  if (Number.isFinite(numericId) && numericId > 0) {
+    const { error } = await supabase.from(FOOD_TABLE).update(payload).eq("id", numericId);
     return !error;
   } else {
-    const { error } = await supabase.from("foods").insert(payload);
+    const { error } = await supabase.from(FOOD_TABLE).insert(payload);
     return !error;
   }
 }
 
 export async function deleteFoodFromSupabase(id: number | string): Promise<boolean> {
-  if (typeof id !== 'number') return false; // Só deleta do banco se for ID real
-  const { error } = await supabase.from("foods").delete().eq("id", id);
+  const numericId = typeof id === "number" ? id : Number(id);
+  if (!Number.isFinite(numericId) || numericId <= 0) return false;
+  const { error } = await supabase.from(FOOD_TABLE).delete().eq("id", numericId);
   return !error;
 }
 
@@ -280,6 +284,7 @@ export interface Patient {
   city?: string;
   cpf?: string;
   notes?: string;
+  report_text?: string;
   created_at?: string;
 }
 
@@ -289,6 +294,16 @@ export interface PatientPhoto {
   url: string;
   label?: string;
   created_at?: string;
+}
+
+export interface PatientReport {
+  id?: number;
+  patient_id: number;
+  title: string;
+  report_date: string;
+  report_text: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // ─── Epic 6: Triagem Clínica Estruturada ───────────────────────────────────────────
@@ -476,6 +491,7 @@ export interface MealFood {
   protein_per_100g?: number;
   carbs_per_100g?: number;
   fat_per_100g?: number;
+  household_measures?: { unit: string; grams: number }[];
   // Epic 7: medidas caseiras
   household_measure?: string;   // ex: "colher de sopa", "unidade média"
   measure_amount?: number;      // ex: 1, 2, 0.5
@@ -575,6 +591,40 @@ export async function insertPatientPhoto(photo: Omit<PatientPhoto, "id" | "creat
 export async function deletePatientPhoto(id: number): Promise<boolean> {
   const { error } = await supabaseAdmin.from("patient_photos").delete().eq("id", id);
   if (error) { console.error("[Supabase] deletePatientPhoto:", error.message); return false; }
+  return true;
+}
+
+// Patient Reports
+export async function fetchPatientReports(patientId: number): Promise<PatientReport[]> {
+  const { data, error } = await supabaseAdmin
+    .from("patient_reports")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("report_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[Supabase] fetchPatientReports:", error.message); return []; }
+  return data ?? [];
+}
+
+export async function upsertPatientReport(report: PatientReport): Promise<PatientReport | null> {
+  const payload = {
+    ...report,
+    updated_at: new Date().toISOString(),
+  };
+  if (report.id) {
+    const { id, ...fields } = payload;
+    const { error } = await supabaseAdmin.from("patient_reports").update(fields).eq("id", id);
+    if (error) { console.error("[Supabase] upsertPatientReport update:", error.message); return null; }
+    return { id, ...fields };
+  }
+  const { data, error } = await supabaseAdmin.from("patient_reports").insert(payload).select().single();
+  if (error) { console.error("[Supabase] upsertPatientReport insert:", error.message); return null; }
+  return data;
+}
+
+export async function deletePatientReport(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("patient_reports").delete().eq("id", id);
+  if (error) { console.error("[Supabase] deletePatientReport:", error.message); return false; }
   return true;
 }
 

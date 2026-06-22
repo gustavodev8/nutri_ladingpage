@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Activity,
   BookOpen,
+  FileText,
   Save,
   Plus,
   Trash2,
@@ -20,10 +21,13 @@ import {
   MapPin,
   MessageSquareQuote,
   Pencil,
+  Download,
+  Send,
 } from "lucide-react";
 import { ExamProtocolsTab } from "@/components/admin/ExamProtocolsTab";
 import { PrescriptionBuilder } from "@/components/admin/PrescriptionBuilder";
 import { AnamnesisForm } from "@/components/admin/AnamnesisForm";
+import { EmailPatientReportModal } from "@/components/admin/EmailPatientReportModal";
 import { AnthropometryWizard, type MeasurementForm } from "@/components/admin/AnthropometryWizard";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { StrategyModal } from "@/components/admin/StrategyModal";
@@ -32,8 +36,10 @@ import { type EnergyInput } from "@/lib/energyUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { generatePatientReportPdf } from "@/lib/generatePatientReportPdf";
 import type { SkinfoldProtocol } from "@/lib/anthropometryUtils";
 import {
   fetchPatient,
@@ -49,10 +55,14 @@ import {
   insertPatientPhoto,
   deletePatientPhoto,
   uploadPatientPhoto,
+  fetchPatientReports,
+  upsertPatientReport,
+  deletePatientReport,
   type Patient,
   type Measurement,
   type MealPlan,
   type PatientPhoto,
+  type PatientReport,
 } from "@/lib/supabase";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,11 +135,12 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type TabKey = "perfil" | "anamnese" | "antropometria" | "planos" | "protocolos" | "prescricao";
+type TabKey = "perfil" | "anamnese" | "relatorio" | "antropometria" | "planos" | "protocolos" | "prescricao";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
   { key: "anamnese",     label: "Anamnese",              icon: <ClipboardList size={16} /> },
+  { key: "relatorio",    label: "Relatório",            icon: <FileText size={16} /> },
   { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
   { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
@@ -508,6 +519,9 @@ export default function AdminPaciente() {
             {activeTab === "anamnese" && (
               <AnamnesisForm patientId={id!} onSaved={ctxSetAnamnesis} />
             )}
+            {activeTab === "relatorio" && (
+              <ReportTab patient={patient} onSaved={setPatient} />
+            )}
             {activeTab === "planos" && (
               <PlanosTab patientId={id!} patientRouteId={id!} navigate={navigate} patient={patient} />
             )}
@@ -548,6 +562,10 @@ function PerfilTab({
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setForm({ ...patient });
+  }, [patient]);
 
   useEffect(() => {
     if (!patient.id) return;
@@ -793,6 +811,296 @@ function PerfilTab({
 
 
 
+
+function ReportTab({
+  patient,
+  onSaved,
+}: {
+  patient: Patient;
+  onSaved: (p: Patient) => void;
+}) {
+  const [reports, setReports] = useState<PatientReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [draft, setDraft] = useState<PatientReport>(() => ({
+    patient_id: Number(patient.id ?? 0),
+    title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+    report_date: todayISO(),
+    report_text: patient.report_text ?? "",
+  }));
+
+  useEffect(() => {
+    setDraft({
+      patient_id: Number(patient.id ?? 0),
+      title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+      report_date: todayISO(),
+      report_text: patient.report_text ?? "",
+    });
+    setLoadingReports(true);
+    fetchPatientReports(Number(patient.id)).then((data) => {
+      setReports(data);
+      if (data.length > 0) {
+        setDraft(data[0]);
+      }
+      setLoadingReports(false);
+    });
+  }, [patient.id, patient.report_text]);
+
+  const selectReport = (report: PatientReport) => {
+    setDraft(report);
+  };
+
+  const createNewReport = () => {
+    setDraft({
+      patient_id: Number(patient.id ?? 0),
+      title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+      report_date: todayISO(),
+      report_text: "",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!draft.title.trim()) {
+      toast.error("Informe um título para o relatório.");
+      return;
+    }
+    if (!draft.report_text.trim()) {
+      toast.error("Escreva o conteúdo do relatório.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const saved = await upsertPatientReport({
+        ...draft,
+        patient_id: Number(patient.id),
+      });
+      if (!saved) {
+        toast.error("Erro ao salvar relatório.");
+        return;
+      }
+
+      setDraft(saved);
+      const freshList = await fetchPatientReports(Number(patient.id));
+      setReports(freshList);
+      toast.success("Relatório salvo com sucesso!");
+      onSaved({ ...patient, report_text: draft.report_text });
+    } catch {
+      toast.error("Erro inesperado ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!draft.id) return;
+    const ok = window.confirm(`Excluir o relatório "${draft.title}"?`);
+    if (!ok) return;
+    const deleted = await deletePatientReport(draft.id);
+    if (!deleted) {
+      toast.error("Erro ao excluir relatório.");
+      return;
+    }
+    toast.success("Relatório excluído.");
+    const freshList = await fetchPatientReports(Number(patient.id));
+    setReports(freshList);
+    if (freshList[0]) setDraft(freshList[0]);
+    else createNewReport();
+  };
+
+  const handleDownloadPdf = () => {
+    const doc = generatePatientReportPdf(patient, draft);
+    doc.save(`${draft.title.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+  };
+
+  const handlePreviewPdf = () => {
+    const doc = generatePatientReportPdf(patient, draft);
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank", "noopener,noreferrer");
+    if (!win) toast.info("Permita pop-ups para abrir a visualização do PDF.");
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
+  const reportDateLabel = new Date(`${draft.report_date}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside className="space-y-3 rounded-[28px] border border-border/60 bg-card p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Documentos</p>
+            <h3 className="text-lg font-bold text-foreground">Relatórios salvos</h3>
+            <p className="text-xs text-muted-foreground">
+              {reports.length} documento{reports.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="outline" className="rounded-xl gap-2" onClick={createNewReport}>
+            <Plus size={14} />
+            Novo
+          </Button>
+        </div>
+
+        <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+          {loadingReports ? (
+            <div className="flex items-center justify-center rounded-2xl border border-dashed border-border/70 p-8 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Carregando relatórios...
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-center">
+              <FileText className="mx-auto mb-3 h-9 w-9 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-foreground">Nenhum relatório salvo</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Crie o primeiro documento para registrar a situação atual do paciente.
+              </p>
+            </div>
+          ) : (
+            reports.map((report) => {
+              const isActive = draft.id === report.id;
+              const labelDate = new Date(`${report.report_date}T12:00:00`).toLocaleDateString("pt-BR");
+              return (
+                <button
+                  key={report.id}
+                  type="button"
+                  onClick={() => selectReport(report)}
+                  className={cn(
+                    "w-full rounded-2xl border px-4 py-3 text-left transition-all",
+                    isActive
+                      ? "border-primary/30 bg-primary/5 shadow-sm"
+                      : "border-border/60 bg-background hover:border-primary/20 hover:bg-muted/20"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{report.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{labelDate}</p>
+                    </div>
+                    {isActive && (
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                        Aberto
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                    {report.report_text || "Sem conteúdo"}
+                  </p>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </aside>
+
+      <section className="space-y-5 rounded-[28px] border border-border/60 bg-card p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Relatório clínico</p>
+            <h2 className="text-2xl font-black tracking-tight text-foreground">{draft.title || "Novo relatório"}</h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Registre aqui a evolução, adesão ao plano, intercorrências, conduta e qualquer observação clínica importante.
+              Cada relatório fica salvo como um documento separado por data.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" className="h-10 rounded-xl gap-2" onClick={handlePreviewPdf}>
+              <Download size={15} />
+              Visualizar / imprimir
+            </Button>
+            <Button type="button" variant="outline" className="h-10 rounded-xl gap-2" onClick={handleDownloadPdf}>
+              <Download size={15} />
+              Baixar PDF
+            </Button>
+            <Button
+              type="button"
+              className="h-10 rounded-xl gap-2"
+              onClick={() => setShowEmail(true)}
+              disabled={!patient.email}
+              title={patient.email ? "Enviar relatório por e-mail" : "Cadastre um e-mail no perfil primeiro"}
+            >
+              <Send size={15} />
+              Enviar por Gmail
+            </Button>
+            <Button type="button" variant="destructive" className="h-10 rounded-xl gap-2" onClick={handleDelete} disabled={!draft.id}>
+              <Trash2 size={15} />
+              Excluir
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-[1fr_220px]">
+          <div className="space-y-2">
+            <Label htmlFor="report_title" className="text-sm font-semibold text-foreground">
+              Título
+            </Label>
+            <Input
+              id="report_title"
+              value={draft.title}
+              onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+              className="h-11 rounded-2xl"
+              placeholder="Ex.: Relatório 22/06/2026"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="report_date" className="text-sm font-semibold text-foreground">
+              Data
+            </Label>
+            <Input
+              id="report_date"
+              type="date"
+              value={draft.report_date}
+              onChange={(e) => setDraft((prev) => ({ ...prev, report_date: e.target.value }))}
+              className="h-11 rounded-2xl"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="report_text" className="text-sm font-semibold text-foreground">
+              Texto do relatório
+            </Label>
+            <span className="text-xs text-muted-foreground">
+              {draft.report_text.trim().length > 0 ? `${draft.report_text.trim().length} caracteres` : "Campo vazio"}
+            </span>
+          </div>
+          <Textarea
+            id="report_text"
+            minRows={16}
+            value={draft.report_text}
+            onChange={(e) => setDraft((prev) => ({ ...prev, report_text: e.target.value }))}
+            placeholder="Ex.: Paciente evoluiu bem, com boa adesão ao plano, redução de compulsão no período noturno e melhora do padrão intestinal..."
+            className="min-h-[420px] rounded-[24px] border-border/70 text-[15px] leading-7"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-end">
+          <p className="text-xs text-muted-foreground sm:mr-auto">
+            {draft.id ? `Documento aberto: ${draft.title} · ${reportDateLabel}` : "Novo documento ainda não salvo."}
+          </p>
+          <Button onClick={handleSave} disabled={saving} className="h-11 rounded-xl px-8 font-bold">
+            {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
+            Salvar relatório
+          </Button>
+        </div>
+      </section>
+
+      {showEmail && (
+        <EmailPatientReportModal
+          patient={patient}
+          report={draft}
+          onClose={() => setShowEmail(false)}
+        />
+      )}
+    </div>
+  );
+}
 
 function AntropometriaTab({ patientId, patient, onViewDetail }: {
   patientId: string;

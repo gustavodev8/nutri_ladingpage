@@ -1,12 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap,
-  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer,
+  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -14,7 +24,7 @@ import {
   type Meal, type MealFood, type MealPlan,
 } from "@/lib/supabase";
 import {
-  MealSection, EditorMeal, sumFoods, n0, n1,
+  MealSection, EditorMeal, sumFoods, n0, n1, getMealCalorieTargets,
 } from "@/components/admin/MealTableEditor";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
@@ -23,7 +33,11 @@ import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { DietPlanPrintView } from "@/components/admin/DietPlanPrintView";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
-import { type MacroGoals } from "@/lib/planningUtils";
+import {
+  getMealNutritionTargets,
+  generateMealPlanConsistencyAlerts,
+  type MacroGoals,
+} from "@/lib/planningUtils";
 import {
   calcEnergy, applyAdjustment, auditDiet,
   canUseCunningham,
@@ -31,18 +45,18 @@ import {
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DEFAULT_MEALS = [
-  { meal_name: "Café da manhã",   time_suggestion: "07:00 – 08:00" },
-  { meal_name: "Lanche da manhã", time_suggestion: "10:00 – 10:30" },
-  { meal_name: "Almoço",          time_suggestion: "12:00 – 13:00" },
-  { meal_name: "Lanche da tarde", time_suggestion: "15:30 – 16:00" },
-  { meal_name: "Jantar",          time_suggestion: "19:00 – 20:00" },
-  { meal_name: "Ceia",            time_suggestion: "21:30 – 22:00" },
+  { meal_name: "Café da manhã",   time_suggestion: "07:00 - 08:00" },
+  { meal_name: "Lanche da manhã", time_suggestion: "10:00 - 10:30" },
+  { meal_name: "Almoço",          time_suggestion: "12:00 - 13:00" },
+  { meal_name: "Lanche da tarde", time_suggestion: "15:30 - 16:00" },
+  { meal_name: "Jantar",          time_suggestion: "19:00 - 20:00" },
+  { meal_name: "Ceia",            time_suggestion: "21:30 - 22:00" },
 ];
 
-// ─── Converters: Meal ↔ EditorMeal ────────────────────────────────────────────
+// â”€â”€â”€ Converters: Meal â†” EditorMeal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const mealToEditor = (m: Meal): EditorMeal => ({
   _dbId:              m.id,
@@ -63,7 +77,7 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   substitution_items: m.substitution_items ?? [],
 });
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function AdminPlanoAlimentar() {
   const { id, planId } = useParams<{ id: string; planId: string }>();
@@ -90,8 +104,12 @@ export default function AdminPlanoAlimentar() {
   const [saving, setSaving]   = useState(false);
   const [showEmail, setShowEmail]       = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [templateScope, setTemplateScope] = useState<"plan" | "meal">("plan");
+  const [templateTargetMealIndex, setTemplateTargetMealIndex] = useState<number | null>(null);
+  const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const [showPrint, setShowPrint]       = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
+  const [previousPlan, setPreviousPlan]  = useState<MealPlan | null>(null);
 
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
@@ -100,26 +118,68 @@ export default function AdminPlanoAlimentar() {
   const loadPlan = useCallback(async () => {
     setLoading(true);
     try {
+      const plans = await fetchMealPlans(patientId);
+      const priorPlan = plans.find((p) => (isNew ? true : p.id !== resolvedPlanId)) ?? null;
+      setPreviousPlan(priorPlan);
+
       if (isNew) {
         setMeals(DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] })));
-      } else {
-        const [plans, loadedMeals] = await Promise.all([
-          fetchMealPlans(patientId),
-          fetchFullMealPlan(resolvedPlanId),
-        ]);
-        const found = plans.find((p) => p.id === resolvedPlanId);
-        if (found) setPlan(found);
-        setMeals(
-          loadedMeals.length > 0
-            ? loadedMeals.map(mealToEditor)
-            : DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] }))
-        );
+        return;
       }
+
+      const loadedMeals = await fetchFullMealPlan(resolvedPlanId);
+      const found = plans.find((p) => p.id === resolvedPlanId);
+      if (found) setPlan(found);
+      setMeals(
+        loadedMeals.length > 0
+          ? loadedMeals.map(mealToEditor)
+          : DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] }))
+      );
     } catch { toast.error("Erro ao carregar o plano."); }
     finally { setLoading(false); }
   }, [isNew, patientId, resolvedPlanId]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
+
+  const handleClonePreviousPlan = () => {
+    if (!previousPlan?.id) {
+      toast.info("Nenhum plano anterior encontrado para clonar.");
+      return;
+    }
+    setShowCloneConfirm(true);
+  };
+
+  const confirmClonePreviousPlan = async () => {
+    if (!previousPlan?.id) {
+      toast.info("Nenhum plano anterior encontrado para clonar.");
+      setShowCloneConfirm(false);
+      return;
+    }
+
+    const sourceMeals = await fetchFullMealPlan(previousPlan.id);
+    setPlan((current) => ({
+      ...current,
+      title: previousPlan.title ? `${previousPlan.title} (cópia)` : current.title,
+      start_date: previousPlan.start_date ?? current.start_date,
+      end_date: previousPlan.end_date ?? current.end_date,
+      daily_calories: previousPlan.daily_calories ?? current.daily_calories,
+      notes: previousPlan.notes ?? current.notes,
+      strategy_type: previousPlan.strategy_type ?? current.strategy_type,
+      target_calories: previousPlan.target_calories ?? current.target_calories,
+      target_protein_g: previousPlan.target_protein_g ?? current.target_protein_g,
+      target_carbs_g: previousPlan.target_carbs_g ?? current.target_carbs_g,
+      target_fat_g: previousPlan.target_fat_g ?? current.target_fat_g,
+      measurement_id: previousPlan.measurement_id ?? current.measurement_id,
+      get_kcal: previousPlan.get_kcal ?? current.get_kcal,
+    }));
+    setMeals(
+      sourceMeals.length > 0
+        ? sourceMeals.map(mealToEditor)
+        : DEFAULT_MEALS.map((p) => ({ meal_name: p.meal_name, time_suggestion: p.time_suggestion, foods: [] }))
+    );
+    toast.success("Plano anterior clonado para o rascunho atual.");
+    setShowCloneConfirm(false);
+  };
 
   const handleSave = async () => {
     if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
@@ -154,9 +214,52 @@ export default function AdminPlanoAlimentar() {
     setMeals((prev) => mode === "replace" ? editorMeals : [...prev, ...editorMeals]);
   };
 
+  const handleMealBlockImport = (importedMeal: Meal, mode: "replace" | "append") => {
+    if (templateTargetMealIndex == null) return;
+    setMeals((prev) => {
+      const next = [...prev];
+      const current = next[templateTargetMealIndex];
+      if (!current) return prev;
+
+      if (mode === "replace") {
+        next[templateTargetMealIndex] = mealToEditor(importedMeal);
+        return next;
+      }
+
+      next[templateTargetMealIndex] = {
+        ...current,
+        meal_name: current.meal_name.trim() ? current.meal_name : importedMeal.meal_name,
+        time_suggestion: current.time_suggestion || importedMeal.time_suggestion,
+        notes: current.notes ?? importedMeal.notes,
+        foods: [...(current.foods ?? []), ...(importedMeal.foods ?? [])],
+      };
+      return next;
+    });
+  };
+
   const grand = meals.reduce(
     (a, m) => { const t = sumFoods(m.foods); return { cal: a.cal + t.cal, prot: a.prot + t.prot, carbs: a.carbs + t.carbs, fat: a.fat + t.fat }; },
     { cal: 0, prot: 0, carbs: 0, fat: 0 }
+  );
+
+  const mealTargets = useMemo(
+    () => getMealCalorieTargets(meals, plan.daily_calories),
+    [meals, plan.daily_calories]
+  );
+
+  const mealNutritionTargets = useMemo(
+    () => (macroGoals ? getMealNutritionTargets(meals, macroGoals) : []),
+    [meals, macroGoals]
+  );
+
+  const consistencyAlerts = useMemo(
+    () => generateMealPlanConsistencyAlerts({
+      plan,
+      meals,
+      mealTargets,
+      macroGoals,
+    }),
+    [plan, meals, mealTargets, macroGoals]
   );
 
   const goalPct = plan.daily_calories && grand.cal > 0
@@ -197,7 +300,7 @@ export default function AdminPlanoAlimentar() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
           <Loader2 size={24} className="animate-spin text-primary" />
-          <p className="text-sm">Carregando plano…</p>
+          <p className="text-sm">Carregando plano...</p>
         </div>
       </div>
     );
@@ -206,7 +309,7 @@ export default function AdminPlanoAlimentar() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-5xl mx-auto px-3 sm:px-6 flex items-center gap-2 sm:gap-3 py-3">
           <Link to={`/admin/pacientes/${id}?tab=planos`}
@@ -247,9 +350,19 @@ export default function AdminPlanoAlimentar() {
               <Mail size={13} />
               <span className="hidden sm:inline">Enviar</span>
             </button>
+            <button
+              type="button"
+              onClick={handleClonePreviousPlan}
+              disabled={!previousPlan?.id}
+              title={!previousPlan?.id ? "Nenhum plano anterior disponível" : "Clonar o plano anterior"}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Copy size={13} />
+              <span className="hidden sm:inline">Clonar anterior</span>
+            </button>
             <Button onClick={handleSave} disabled={saving} size="sm" className="gap-1.5 px-3">
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              <span className="hidden xs:inline sm:inline">{saving ? "Salvando…" : "Salvar"}</span>
+              <span className="hidden xs:inline sm:inline">{saving ? "Salvando..." : "Salvar"}</span>
             </Button>
           </div>
         </div>
@@ -257,7 +370,7 @@ export default function AdminPlanoAlimentar() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* ── Metadados ───────────────────────────────────────────────────── */}
+        {/* â”€â”€ Metadados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Dados do Plano</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -278,17 +391,25 @@ export default function AdminPlanoAlimentar() {
             </div>
             <div className="sm:col-span-3 space-y-1.5">
               <Label className="text-xs text-muted-foreground">Observações / Restrições</Label>
-              <textarea rows={2} placeholder="Orientações gerais, substituições permitidas, alergias…"
+              <textarea rows={2} placeholder="Orientações gerais, substituições permitidas, alergias..."
                 value={plan.notes ?? ""} onChange={(e) => setPF("notes", e.target.value)}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
           </div>
         </section>
 
-        {/* ── Alertas Clínicos da Anamnese ────────────────────────────────── */}
+        {/* Alertas Clínicos da Anamnese */}
         <ClinicalInsightsPanel alerts={clinicalAlerts} />
 
-        {/* ── Painel de Metas Energéticas ─────────────────────────────────── */}
+        {/* Alertas de inconsistência do plano */}
+        <ClinicalInsightsPanel
+          alerts={consistencyAlerts}
+          defaultOpen={false}
+          title="Alertas de Inconsistencia do Plano"
+          subtitle="Gerado automaticamente a partir da distribuição, metas e refeições do plano."
+        />
+
+        {/* Painel de Metas Energéticas */}
         <section className="bg-card border border-border/60 rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border/60 bg-muted/30">
             <Zap size={14} className="text-primary" />
@@ -365,7 +486,7 @@ export default function AdminPlanoAlimentar() {
                     onChange={e => setAdjustment(Number(e.target.value))}
                     className="w-full accent-primary cursor-pointer" />
                   <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
-                    <span>−40% (corte agressivo)</span><span>+40% (bulk)</span>
+                    <span>âˆ’40% (corte agressivo)</span><span>+40% (bulk)</span>
                   </div>
                 </div>
               </div>
@@ -397,7 +518,7 @@ export default function AdminPlanoAlimentar() {
           )}
         </section>
 
-        {/* ── Planejamento Dietético (travamento de macros) ───────────────── */}
+        {/* Planejamento Dietético (travamento de macros) */}
         <DietaryPlanningPanel
           weightKg={latestMeasurement?.weight}
           totalKcal={plan.daily_calories}
@@ -405,7 +526,7 @@ export default function AdminPlanoAlimentar() {
           onGoalsChange={setMacroGoals}
         />
 
-        {/* ── Resumo nutricional ──────────────────────────────────────────── */}
+        {/* â”€â”€ Resumo nutricional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="bg-card border border-border/60 rounded-lg p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">Resumo Nutricional do Dia</p>
 
@@ -517,14 +638,92 @@ export default function AdminPlanoAlimentar() {
           </div>
         </section>
 
-        {/* ── Refeições ───────────────────────────────────────────────────── */}
+        {plan.daily_calories && mealTargets.length > 0 && (
+          <section className="bg-card border border-border/60 rounded-lg p-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4">
+              Distribuição sugerida por refeição
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {meals.map((meal, idx) => {
+                const target = mealTargets[idx];
+                const macroTarget = mealNutritionTargets[idx];
+                if (!target) return null;
+                const actual = sumFoods(meal.foods).cal;
+                const actualMacros = sumFoods(meal.foods);
+                const pct = target.targetCalories > 0 ? Math.round((actual / target.targetCalories) * 100) : 0;
+                const status =
+                  actual >= target.targetCalories * 0.9 && actual <= target.targetCalories * 1.1
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : actual > target.targetCalories * 1.1
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700";
+
+                return (
+                  <div key={`${meal.meal_name}-${idx}`} className={`rounded-xl border px-4 py-3 ${status}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {meal.meal_name || `Refeição ${idx + 1}`}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {Math.round(target.share * 100)}% do total diário
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold tabular-nums">{n0(target.targetCalories)} kcal</p>
+                        {actual > 0 && (
+                          <p className="text-[10px] tabular-nums">
+                            atual {n0(actual)} kcal · {pct}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/70 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-current transition-all duration-500"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    {macroTarget && (
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                        <div className="rounded-md bg-white/70 px-2 py-1">
+                          <p className="text-muted-foreground uppercase tracking-wider">PTN</p>
+                          <p className="font-semibold tabular-nums text-foreground">
+                            {n1(actualMacros.prot)} / {n1(macroTarget.protein_g)} g
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white/70 px-2 py-1">
+                          <p className="text-muted-foreground uppercase tracking-wider">CHO</p>
+                          <p className="font-semibold tabular-nums text-foreground">
+                            {n1(actualMacros.carbs)} / {n1(macroTarget.carbs_g)} g
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-white/70 px-2 py-1">
+                          <p className="text-muted-foreground uppercase tracking-wider">LIP</p>
+                          <p className="font-semibold tabular-nums text-foreground">
+                            {n1(actualMacros.fat)} / {n1(macroTarget.fat_g)} g
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+        {/* Refeições */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Refeições — {meals.length} cadastradas
             </p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setShowTemplate(true)}
+              <button type="button" onClick={() => {
+                setTemplateScope("plan");
+                setTemplateTargetMealIndex(null);
+                setShowTemplate(true);
+              }}
                 className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
                 <LayoutList size={13} />
                 <span className="hidden sm:inline">Importar template</span>
@@ -540,22 +739,86 @@ export default function AdminPlanoAlimentar() {
 
           <div className="space-y-2">
             {meals.map((meal, i) => (
-              <MealSection key={i} meal={meal} idx={i}
-                onUpdate={(m) => updateMeal(i, m)}
-                onRemove={() => removeMeal(i)}
-              />
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemplateScope("meal");
+                      setTemplateTargetMealIndex(i);
+                      setShowTemplate(true);
+                    }}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <LayoutList size={12} />
+                    Importar bloco
+                  </button>
+                </div>
+                <MealSection key={i} meal={meal} idx={i}
+                  onUpdate={(m) => updateMeal(i, m)}
+                  onRemove={() => removeMeal(i)}
+                  targetCalories={mealTargets[i]?.targetCalories}
+                />
+              </div>
             ))}
           </div>
         </div>
 
-        {/* ── Salvar ──────────────────────────────────────────────────────── */}
+        {/* â”€â”€ Salvar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex justify-end pb-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-6">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {saving ? "Salvando…" : "Salvar plano alimentar"}
+            {saving ? "Salvando..." : "Salvar plano alimentar"}
           </Button>
         </div>
       </main>
+
+      <AlertDialog open={showCloneConfirm} onOpenChange={setShowCloneConfirm}>
+        <AlertDialogContent className="max-w-xl overflow-hidden rounded-3xl border-border/60 p-0">
+          <div className="bg-gradient-to-br from-primary/10 via-card to-amber-500/10 px-6 pt-6 pb-5">
+            <AlertDialogHeader className="space-y-4 text-left sm:text-left">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-600 shadow-sm">
+                  <Copy className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <AlertDialogTitle className="text-xl font-semibold tracking-tight">
+                    Clonar plano anterior
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                    O conteúdo do rascunho atual será substituído pelas informações do último plano salvo para este paciente.
+                    Você ainda poderá editar tudo depois de importar.
+                  </AlertDialogDescription>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="space-y-1">
+                    <p className="font-medium">Atenção: isso vai sobrescrever o rascunho atual.</p>
+                    <p className="text-muted-foreground">
+                      Refeições, observações e metas do plano anterior serão trazidas para a tela atual.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogHeader>
+          </div>
+          <div className="px-6 pb-6 pt-5">
+            <AlertDialogFooter className="gap-3 sm:gap-3">
+              <AlertDialogCancel className="mt-0 rounded-xl border-border/70 px-4">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmClonePreviousPlan}
+                className="rounded-xl bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                Clonar plano
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showEmail && (
         <EmailPlanModal
@@ -568,9 +831,16 @@ export default function AdminPlanoAlimentar() {
 
       <TemplateImportModal
         open={showTemplate}
-        hasMeals={meals.some((m) => m.foods.length > 0)}
+        scope={templateScope}
+        targetMealLabel={templateTargetMealIndex != null ? meals[templateTargetMealIndex]?.meal_name : undefined}
+        hasMeals={
+          templateScope === "meal"
+            ? !!(templateTargetMealIndex != null && meals[templateTargetMealIndex]?.foods?.some((food) => food.food_name.trim() !== ""))
+            : meals.some((m) => m.foods.length > 0)
+        }
         onClose={() => setShowTemplate(false)}
         onImport={handleTemplateImport}
+        onImportMealBlock={handleMealBlockImport}
       />
 
       {showPrint && (
@@ -584,3 +854,5 @@ export default function AdminPlanoAlimentar() {
     </div>
   );
 }
+
+

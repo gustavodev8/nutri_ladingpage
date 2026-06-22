@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Search, Plus, X, ChevronRight, Sparkles, Globe, Loader2 } from "lucide-react";
 import { searchFoodsInSupabase } from "@/lib/supabase";
-import { type FoodItem, FOOD_CATEGORIES } from "@/lib/foodDatabase";
+import { FOOD_CATEGORIES, getFoodHouseholdMeasures, type FoodItem, type HouseholdMeasure } from "@/lib/foodDatabase";
 import { searchOpenFoodFacts } from "@/lib/openFoodFacts";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +59,7 @@ interface FoodSearchInputProps {
     protein_per_100g: number;
     carbs_per_100g: number;
     fat_per_100g: number;
+    household_measures?: HouseholdMeasure[];
   }) => void;
   onCustomName: (name: string) => void;
 }
@@ -204,6 +205,7 @@ export function FoodSearchInput({ value, onSelect, onCustomName }: FoodSearchInp
       protein_per_100g: food.protein,
       carbs_per_100g: food.carbs,
       fat_per_100g: food.fat,
+      household_measures: food.household_measures ?? getFoodHouseholdMeasures(food.name),
     });
   };
 
