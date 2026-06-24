@@ -53,6 +53,21 @@ const StatusPill = ({ status }: { status: string }) => {
   );
 };
 
+const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
+  pending:   { label: "Pagamento pendente", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  paid:      { label: "Pagamento aprovado", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cancelled: { label: "Pagamento cancelado", color: "bg-red-50 text-red-600 border-red-200" },
+};
+
+const PaymentPill = ({ status }: { status: string }) => {
+  const s = PAYMENT_STATUS[status] || PAYMENT_STATUS.pending;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${s.color}`}>
+      {s.label}
+    </span>
+  );
+};
+
 const formatDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 
@@ -107,6 +122,12 @@ const BORDER_COLOR: Record<string, string> = {
   completed: "border-l-blue-400",
   no_show:   "border-l-orange-400",
   cancelled: "border-l-red-400",
+};
+
+const PAYMENT_GROUP_STATUS = (sessions: Booking[]): "pending" | "paid" | "cancelled" => {
+  if (sessions.length > 0 && sessions.every(s => s.status === "cancelled")) return "cancelled";
+  if (sessions.some(s => ["confirmed", "completed", "no_show"].includes(s.status || ""))) return "paid";
+  return "pending";
 };
 
 const AdminAgendamentos = () => {
@@ -883,6 +904,7 @@ const AdminAgendamentos = () => {
     { id: "all",       label: "Todos" },
     { id: "confirmed", label: "Confirmados" },
     { id: "pending",   label: "Pendentes" },
+    { id: "retornos",  label: "Retornos" },
     { id: "completed", label: "Concluídos" },
     { id: "cancelled", label: "Cancelados" },
   ];
@@ -895,6 +917,9 @@ const AdminAgendamentos = () => {
       if (filter === "completed") return complete;
       if (complete) return false;
       if (filter === "cancelled") return sessions.every(b => b.status === "cancelled");
+      if (filter === "retornos") {
+        return sessions.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed");
+      }
       return sessions.some(b => b.status === filter);
     })
     .map(([id]) => id);
@@ -942,6 +967,23 @@ const AdminAgendamentos = () => {
   const detailNotes: ClinicalNotes = (() => {
     try { return JSON.parse(detailFirst?.notes || "{}"); } catch { return {}; }
   })();
+
+  const upcomingReturnSessions = Object.entries(allGrouped)
+    .flatMap(([groupId, sessions]) => {
+      const first = sessions[0];
+      return sessions
+        .filter(session => (session.session_number ?? 1) > 1 && session.status === "confirmed")
+        .map(session => ({
+          groupId,
+          first,
+          session,
+        }));
+    })
+    .sort((a, b) => {
+      const dateDiff = a.session.appointment_date.localeCompare(b.session.appointment_date);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.session.appointment_time || "").localeCompare(b.session.appointment_time || "");
+    });
 
   return (
     <div className="space-y-5">
@@ -1072,6 +1114,59 @@ const AdminAgendamentos = () => {
         </div>
       </div>
 
+      {upcomingReturnSessions.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Próximos retornos</p>
+              <p className="text-sm text-muted-foreground">
+                {upcomingReturnSessions.length} retorno{upcomingReturnSessions.length > 1 ? "s" : ""} já agendado{upcomingReturnSessions.length > 1 ? "s" : ""}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilter("retornos")}
+              className="h-8 rounded-md"
+            >
+              Ver retornos
+            </Button>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {upcomingReturnSessions.slice(0, 6).map(({ groupId, first, session }) => {
+              const sessionLabel = session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`;
+              return (
+                <button
+                  key={`${groupId}-${session.id}`}
+                  onClick={() => openDetail(groupId)}
+                  className="text-left rounded-lg border border-border bg-background/60 hover:bg-primary/5 hover:border-primary/30 transition-colors p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{first.plan_name}</p>
+                    </div>
+                    <StatusPill status={session.status || "pending"} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarCheck className="h-3 w-3" />
+                      {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {(session.appointment_time || "").substring(0, 5)}
+                    </span>
+                    <span className="text-primary font-medium">{sessionLabel}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1107,6 +1202,7 @@ const AdminAgendamentos = () => {
               : sessions.some(s => s.status === "confirmed") ? "confirmed"
               : sessions.some(s => s.status === "no_show") ? "no_show"
               : sessions.some(s => s.status === "cancelled") ? "cancelled" : "pending";
+            const paymentStatus = PAYMENT_GROUP_STATUS(sessions);
 
             // Extrair goal das notas clínicas
             const clinicalNotes: ClinicalNotes = (() => {
@@ -1142,6 +1238,16 @@ const AdminAgendamentos = () => {
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
                       </span>
+                      {totalSess > 1 && (
+                        <>
+                          <span className="text-muted-foreground/30">·</span>
+                          <span className="text-xs text-primary font-medium">
+                            {totalSess - 1} retorno{totalSess - 1 > 1 ? "s" : ""} no plano
+                          </span>
+                        </>
+                      )}
+                      <span className="text-muted-foreground/30">·</span>
+                      <PaymentPill status={paymentStatus} />
                     </div>
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -1178,6 +1284,16 @@ const AdminAgendamentos = () => {
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
                         </span>
+                        {totalSess > 1 && (
+                          <>
+                            <span className="text-muted-foreground/30">·</span>
+                            <span className="text-xs text-primary font-medium">
+                              {totalSess - 1} retorno{totalSess - 1 > 1 ? "s" : ""} no plano
+                            </span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground/30">·</span>
+                        <PaymentPill status={paymentStatus} />
                       </div>
                     </div>
                   </div>
@@ -1240,6 +1356,10 @@ const AdminAgendamentos = () => {
                   <span className="opacity-30 shrink-0">·</span>
                   <span className="shrink-0">{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusPill status={groupStatus(detailGroup)} />
+                  <PaymentPill status={PAYMENT_GROUP_STATUS(detailGroup)} />
+                </div>
               </div>
 
               {/* Actions */}

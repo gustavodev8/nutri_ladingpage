@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-  ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap,
+  ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap, Soup, ChevronUp, ChevronDown,
   AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
-  type Meal, type MealFood, type MealPlan,
+  upsertMealPreset, saveMealPresetFoods,
+  type Meal, type MealFood, type MealPlan, type MealPresetFood,
 } from "@/lib/supabase";
 import {
   MealSection, EditorMeal, sumFoods, n0, n1, getMealCalorieTargets,
@@ -30,6 +32,7 @@ import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
+import { MealPresetImportModal } from "@/components/admin/MealPresetImportModal";
 import { DietPlanPrintView } from "@/components/admin/DietPlanPrintView";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
@@ -77,6 +80,7 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   substitution_items: m.substitution_items ?? [],
 });
 
+
 // â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function AdminPlanoAlimentar() {
@@ -106,7 +110,14 @@ export default function AdminPlanoAlimentar() {
   const [showTemplate, setShowTemplate] = useState(false);
   const [templateScope, setTemplateScope] = useState<"plan" | "meal">("plan");
   const [templateTargetMealIndex, setTemplateTargetMealIndex] = useState<number | null>(null);
+  const [showMealPresetImport, setShowMealPresetImport] = useState(false);
+  const [presetTargetMealIndex, setPresetTargetMealIndex] = useState(0);
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
+  const [showSaveMealPresetDialog, setShowSaveMealPresetDialog] = useState(false);
+  const [mealPresetSourceMealIndex, setMealPresetSourceMealIndex] = useState<number | null>(null);
+  const [mealPresetDraftName, setMealPresetDraftName] = useState("");
+  const [mealPresetDraftDescription, setMealPresetDraftDescription] = useState("");
+  const [savingMealPreset, setSavingMealPreset] = useState(false);
   const [showPrint, setShowPrint]       = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
   const [previousPlan, setPreviousPlan]  = useState<MealPlan | null>(null);
@@ -140,6 +151,12 @@ export default function AdminPlanoAlimentar() {
   }, [isNew, patientId, resolvedPlanId]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
+
+  useEffect(() => {
+    if (presetTargetMealIndex >= meals.length) {
+      setPresetTargetMealIndex(0);
+    }
+  }, [meals.length, presetTargetMealIndex]);
 
   const handleClonePreviousPlan = () => {
     if (!previousPlan?.id) {
@@ -206,6 +223,124 @@ export default function AdminPlanoAlimentar() {
     setMeals((prev) => prev.filter((_, fi) => fi !== i));
   const addMeal = () =>
     setMeals((prev) => [...prev, { meal_name: "Nova refeição", time_suggestion: "", foods: [] }]);
+  const moveMeal = (from: number, to: number) => {
+    setMeals((prev) => {
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
+  const duplicateMeal = (i: number) => {
+    setMeals((prev) => {
+      const source = prev[i];
+      if (!source) return prev;
+      const clone: EditorMeal = {
+        ...source,
+        _dbId: undefined,
+        meal_name: source.meal_name.trim() ? `${source.meal_name} (cópia)` : "Nova refeição",
+        foods: source.foods.map((food) => ({ ...food })),
+        substitution_items: source.substitution_items?.map((item) => ({ ...item })),
+        substitutions: source.substitutions?.map((sub) => ({
+          ...sub,
+          _dbId: undefined,
+          foods: sub.foods.map((food) => ({ ...food })),
+          substitution_items: sub.substitution_items?.map((item) => ({ ...item })),
+          substitutions: sub.substitutions?.map((nested) => ({
+            ...nested,
+            _dbId: undefined,
+            foods: nested.foods.map((food) => ({ ...food })),
+            substitution_items: nested.substitution_items?.map((item) => ({ ...item })),
+          })),
+        })),
+      };
+      const next = [...prev];
+      next.splice(i + 1, 0, clone);
+      return next;
+    });
+    toast.success("Refeição duplicada no plano atual.");
+  };
+  const openSaveMealPresetDialog = (i: number) => {
+    const source = meals[i];
+    if (!source) return;
+    setMealPresetSourceMealIndex(i);
+    setMealPresetDraftName(source.meal_name?.trim() || `Refeição ${i + 1}`);
+    setMealPresetDraftDescription(`Modelo salvo a partir do plano ${plan.title || "atual"}.`);
+    setShowSaveMealPresetDialog(true);
+  };
+
+  const confirmSaveMealAsPreset = async () => {
+    if (mealPresetSourceMealIndex == null) return;
+    const source = meals[mealPresetSourceMealIndex];
+    if (!source) return;
+    if (source.foods.length === 0) {
+      toast.error("Adicione ao menos um alimento para salvar como modelo.");
+      return;
+    }
+
+    const name = mealPresetDraftName.trim();
+    if (!name) {
+      toast.error("Informe um nome para o modelo.");
+      return;
+    }
+
+    const totals = sumFoods(source.foods);
+    const foods: MealPresetFood[] = source.foods
+      .filter((food) => food.food_name.trim() !== "")
+      .map((food, sort_order) => ({
+        preset_id: 0,
+        food_name: food.food_name,
+        quantity: food.quantity,
+        unit: food.unit,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        notes: food.notes,
+        sort_order,
+        household_measure: food.household_measure,
+        measure_amount: food.measure_amount,
+        food_group: food.food_group,
+      }));
+
+    setSavingMealPreset(true);
+    try {
+      const savedPreset = await upsertMealPreset({
+        name,
+        description: mealPresetDraftDescription.trim() || undefined,
+        meal_name: source.meal_name.trim() || name,
+        time_suggestion: source.time_suggestion || undefined,
+        notes: source.notes || undefined,
+        strategy: plan.strategy_type || undefined,
+        total_kcal: totals.cal > 0 ? parseFloat(totals.cal.toFixed(1)) : undefined,
+        protein_g: totals.prot > 0 ? parseFloat(totals.prot.toFixed(1)) : undefined,
+        carbs_g: totals.carbs > 0 ? parseFloat(totals.carbs.toFixed(1)) : undefined,
+        fat_g: totals.fat > 0 ? parseFloat(totals.fat.toFixed(1)) : undefined,
+        is_active: true,
+      });
+
+      if (!savedPreset?.id) {
+        toast.error("Erro ao salvar o modelo.");
+        return;
+      }
+
+      const ok = await saveMealPresetFoods(savedPreset.id, foods.map((food) => ({
+        ...food,
+        preset_id: savedPreset.id,
+      })));
+
+      if (!ok) {
+        toast.error("Modelo criado, mas houve erro ao salvar os alimentos.");
+        return;
+      }
+
+      toast.success("Modelo de refeição salvo para reutilização.");
+      setShowSaveMealPresetDialog(false);
+    } finally {
+      setSavingMealPreset(false);
+    }
+  };
   const setPF = <K extends keyof MealPlan>(k: K, v: MealPlan[K]) =>
     setPlan((p) => ({ ...p, [k]: v }));
 
@@ -214,19 +349,19 @@ export default function AdminPlanoAlimentar() {
     setMeals((prev) => mode === "replace" ? editorMeals : [...prev, ...editorMeals]);
   };
 
-  const handleMealBlockImport = (importedMeal: Meal, mode: "replace" | "append") => {
-    if (templateTargetMealIndex == null) return;
+  const handleMealPresetImport = (importedMeal: Meal, mode: "replace" | "append") => {
+    if (presetTargetMealIndex == null) return;
     setMeals((prev) => {
       const next = [...prev];
-      const current = next[templateTargetMealIndex];
+      const current = next[presetTargetMealIndex];
       if (!current) return prev;
 
       if (mode === "replace") {
-        next[templateTargetMealIndex] = mealToEditor(importedMeal);
+        next[presetTargetMealIndex] = mealToEditor(importedMeal);
         return next;
       }
 
-      next[templateTargetMealIndex] = {
+      next[presetTargetMealIndex] = {
         ...current,
         meal_name: current.meal_name.trim() ? current.meal_name : importedMeal.meal_name,
         time_suggestion: current.time_suggestion || importedMeal.time_suggestion,
@@ -246,6 +381,9 @@ export default function AdminPlanoAlimentar() {
     () => getMealCalorieTargets(meals, plan.daily_calories),
     [meals, plan.daily_calories]
   );
+
+  const presetTargetCalories = mealTargets[presetTargetMealIndex]?.targetCalories;
+  const presetMealNames = meals.map((meal) => meal.meal_name || "Refeição");
 
   const mealNutritionTargets = useMemo(
     () => (macroGoals ? getMealNutritionTargets(meals, macroGoals) : []),
@@ -712,13 +850,14 @@ export default function AdminPlanoAlimentar() {
             </div>
           </section>
         )}
+
         {/* Refeições */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Refeições — {meals.length} cadastradas
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => {
                 setTemplateScope("plan");
                 setTemplateTargetMealIndex(null);
@@ -726,8 +865,14 @@ export default function AdminPlanoAlimentar() {
               }}
                 className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
                 <LayoutList size={13} />
-                <span className="hidden sm:inline">Importar template</span>
-                <span className="sm:hidden">Template</span>
+                <span className="hidden sm:inline">Importar dieta</span>
+                <span className="sm:hidden">Dieta</span>
+              </button>
+              <button type="button" onClick={() => setShowMealPresetImport(true)}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <Soup size={13} />
+                <span className="hidden sm:inline">Importar refeição</span>
+                <span className="sm:hidden">Refeição</span>
               </button>
               <button type="button" onClick={addMeal}
                 className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
@@ -740,18 +885,58 @@ export default function AdminPlanoAlimentar() {
           <div className="space-y-2">
             {meals.map((meal, i) => (
               <div key={i} className="space-y-2">
-                <div className="flex items-center justify-end">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setTemplateScope("meal");
-                      setTemplateTargetMealIndex(i);
-                      setShowTemplate(true);
-                    }}
+                    onClick={() => moveMeal(i, Math.max(0, i - 1))}
+                    disabled={i === 0}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronUp size={12} />
+                    Subir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveMeal(i, Math.min(meals.length - 1, i + 1))}
+                    disabled={i === meals.length - 1}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronDown size={12} />
+                    Descer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveMeal(i, 0)}
+                    disabled={i === 0}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronUp size={12} />
+                    Topo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveMeal(i, meals.length - 1)}
+                    disabled={i === meals.length - 1}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronDown size={12} />
+                    Fim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateMeal(i)}
+                    className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Copy size={12} />
+                    Duplicar refeição
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openSaveMealPresetDialog(i)}
                     className="flex items-center gap-1.5 text-[11px] font-medium border border-border rounded-lg px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
                     <LayoutList size={12} />
-                    Importar bloco
+                    Salvar como modelo
                   </button>
                 </div>
                 <MealSection key={i} meal={meal} idx={i}
@@ -820,6 +1005,52 @@ export default function AdminPlanoAlimentar() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={showSaveMealPresetDialog} onOpenChange={setShowSaveMealPresetDialog}>
+        <DialogContent className="max-w-xl rounded-3xl border-border/60">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">Salvar refeição como modelo</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              Este bloco ficará disponível para importar em outros pacientes e em consultas futuras.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="template_name" className="text-sm font-medium">Nome do modelo</Label>
+              <Input
+                id="template_name"
+                value={mealPresetDraftName}
+                onChange={(e) => setMealPresetDraftName(e.target.value)}
+                className="h-11 rounded-2xl"
+                placeholder="Ex.: Café da manhã prático"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="template_description" className="text-sm font-medium">Descrição</Label>
+              <textarea
+                id="template_description"
+                value={mealPresetDraftDescription}
+                onChange={(e) => setMealPresetDraftDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+                placeholder="Ex.: bloco salvo para usar em consultas com rotina corrida."
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowSaveMealPresetDialog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={confirmSaveMealAsPreset} disabled={savingMealPreset} className="gap-2">
+              {savingMealPreset ? <Loader2 size={14} className="animate-spin" /> : <LayoutList size={14} />}
+              Salvar modelo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {showEmail && (
         <EmailPlanModal
           plan={plan}
@@ -840,7 +1071,17 @@ export default function AdminPlanoAlimentar() {
         }
         onClose={() => setShowTemplate(false)}
         onImport={handleTemplateImport}
-        onImportMealBlock={handleMealBlockImport}
+      />
+
+      <MealPresetImportModal
+        open={showMealPresetImport}
+        hasMeals={!!(meals[presetTargetMealIndex]?.foods?.some((food) => food.food_name.trim() !== ""))}
+        mealNames={presetMealNames}
+        targetMealIndex={presetTargetMealIndex}
+        targetCalories={presetTargetCalories}
+        onTargetMealIndexChange={setPresetTargetMealIndex}
+        onClose={() => setShowMealPresetImport(false)}
+        onImport={handleMealPresetImport}
       />
 
       {showPrint && (

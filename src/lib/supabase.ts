@@ -813,6 +813,16 @@ export interface Booking {
   notes?: string;
 }
 
+const PENDING_BOOKING_EXPIRY_MINUTES = 30;
+
+export function isPendingBookingExpired(booking: Pick<Booking, "status" | "created_at">): boolean {
+  if (booking.status !== "pending") return false;
+  const createdAt = booking.created_at ? new Date(booking.created_at) : null;
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return true;
+  const ageMinutes = (Date.now() - createdAt.getTime()) / (1000 * 60);
+  return ageMinutes > PENDING_BOOKING_EXPIRY_MINUTES;
+}
+
 /** Fetch all active slots from today onwards */
 export async function fetchAvailabilitySlots(): Promise<AvailabilitySlot[]> {
   const today = new Date().toISOString().split('T')[0];
@@ -877,15 +887,17 @@ export async function fetchBookings(): Promise<Booking[]> {
   return data || [];
 }
 
-export async function fetchBookingsForDate(date: string, type: string): Promise<Booking[]> {
+export async function fetchBookingsForDate(date: string, type: string, excludeGroupId?: string): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select('appointment_time')
+    .select('appointment_time, status, created_at, booking_group_id')
     .eq('appointment_date', date)
     .eq('type', type)
     .neq('status', 'cancelled');
   if (error) { console.error("fetchBookingsForDate error:", error); return []; }
-  return data || [];
+  return (data || [])
+    .filter(b => !isPendingBookingExpired(b))
+    .filter(b => !excludeGroupId || b.booking_group_id !== excludeGroupId);
 }
 
 export async function insertBooking(booking: Booking): Promise<boolean> {
@@ -927,14 +939,9 @@ export async function deleteBookingGroup(bookingGroupId: string): Promise<boolea
   return true;
 }
 
-/** Filtra bookings com status 'pending' criados há mais de 24h (client-side, sem delete via anon key) */
+/** Filtra bookings com status 'pending' criados há mais de 30 minutos (client-side, sem delete via anon key) */
 export async function autoExpirePendingBookings(bookings: Booking[]): Promise<Booking[]> {
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return bookings.filter(b => {
-    if (b.status !== 'pending') return true;
-    const created = new Date(b.created_at || 0);
-    return created >= cutoff;
-  });
+  return bookings.filter(b => !isPendingBookingExpired(b));
 }
 
 export async function autoCompleteBookings(bookings: Booking[]): Promise<Booking[]> {
@@ -1273,6 +1280,146 @@ export async function saveDietTemplateMeals(
     return true;
   } catch (err) {
     console.error("[Supabase] saveDietTemplateMeals exception:", err);
+    return false;
+  }
+}
+
+// ─── Meal Presets ─────────────────────────────────────────────────────────────
+
+export interface MealPresetFood {
+  id?: number;
+  preset_id: number;
+  food_name: string;
+  quantity?: number;
+  unit?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  notes?: string;
+  sort_order?: number;
+  household_measure?: string;
+  measure_amount?: number;
+  food_group?: string;
+  created_at?: string;
+}
+
+export interface MealPreset {
+  id: number;
+  name: string;
+  description?: string;
+  meal_name: string;
+  time_suggestion?: string;
+  notes?: string;
+  strategy?: string;
+  total_kcal?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  is_active?: boolean;
+  source_template_id?: number | null;
+  source_template_meal_id?: number | null;
+  created_at?: string;
+  foods?: MealPresetFood[];
+}
+
+export async function fetchMealPresets(): Promise<MealPreset[]> {
+  const { data, error } = await supabase
+    .from("meal_presets")
+    .select("*, foods:meal_preset_foods(*)")
+    .eq("is_active", true)
+    .order("name");
+
+  if (error) {
+    console.error("[Supabase] fetchMealPresets:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((preset: MealPreset & { foods?: MealPresetFood[] }) => ({
+    ...preset,
+    foods: (preset.foods ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+  }));
+}
+
+export async function upsertMealPreset(
+  preset: Omit<MealPreset, "foods" | "created_at"> & { id?: number },
+): Promise<MealPreset | null> {
+  const { id, ...fields } = preset;
+
+  if (id) {
+    const { error } = await supabaseAdmin.from("meal_presets").update(fields).eq("id", id);
+    if (error) {
+      console.error("[Supabase] upsertMealPreset update:", error.message);
+      return null;
+    }
+    return { id, ...(fields as Omit<MealPreset, "foods" | "created_at">) } as MealPreset;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("meal_presets")
+    .insert(fields)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[Supabase] upsertMealPreset insert:", error.message);
+    return null;
+  }
+
+  return data as MealPreset;
+}
+
+export async function deleteMealPreset(id: number): Promise<boolean> {
+  const { error } = await supabaseAdmin.from("meal_presets").delete().eq("id", id);
+  if (error) {
+    console.error("[Supabase] deleteMealPreset:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function saveMealPresetFoods(presetId: number, foods: MealPresetFood[]): Promise<boolean> {
+  try {
+    const { error: deleteError } = await supabaseAdmin
+      .from("meal_preset_foods")
+      .delete()
+      .eq("preset_id", presetId);
+
+    if (deleteError) {
+      console.error("[Supabase] saveMealPresetFoods delete:", deleteError.message);
+      return false;
+    }
+
+    const validFoods = foods.filter((food) => food.food_name.trim() !== "");
+    if (validFoods.length === 0) {
+      return true;
+    }
+
+    const rows = validFoods.map((food, index) => ({
+      preset_id: presetId,
+      food_name: food.food_name,
+      quantity: food.quantity ?? null,
+      unit: food.unit ?? "g",
+      calories: food.calories ?? null,
+      protein: food.protein ?? null,
+      carbs: food.carbs ?? null,
+      fat: food.fat ?? null,
+      notes: food.notes ?? null,
+      sort_order: food.sort_order ?? index,
+      household_measure: food.household_measure ?? null,
+      measure_amount: food.measure_amount ?? null,
+      food_group: food.food_group ?? null,
+    }));
+
+    const { error: insertError } = await supabaseAdmin.from("meal_preset_foods").insert(rows);
+    if (insertError) {
+      console.error("[Supabase] saveMealPresetFoods insert:", insertError.message);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("[Supabase] saveMealPresetFoods exception:", err);
     return false;
   }
 }

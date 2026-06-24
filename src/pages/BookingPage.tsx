@@ -117,6 +117,7 @@ const BookingPage = () => {
   const [bookingGroupId] = useState(generateGroupId);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const brickRendered = useRef(false);
+  const currentSession = sessions[currentSessionIdx];
 
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
 
@@ -300,6 +301,14 @@ const BookingPage = () => {
   };
 
   const handleTimeSelect = (time: string) => {
+    if (bookedTimes.includes(time)) {
+      toast({
+        title: "Horário indisponível",
+        description: "Esse horário acabou de ser ocupado. Escolha outro slot.",
+        variant: "destructive",
+      });
+      return;
+    }
     const newSessions = [...sessions];
     newSessions[currentSessionIdx] = { ...newSessions[currentSessionIdx], time };
     setSessions(newSessions);
@@ -318,6 +327,12 @@ const BookingPage = () => {
     return availSlots.filter(s => s.date === toLocalISO(date) && s.type === sessionType).map(s => s.start_time.substring(0, 5)).sort();
   };
 
+  const hasSlotConflict = async (date: Date, time: string, type: "online" | "presencial") => {
+    const dateISO = toLocalISO(date);
+    const booked = await fetchBookingsForDate(dateISO, type, bookingGroupId);
+    return booked.some(b => (b.appointment_time || "").substring(0, 5) === time);
+  };
+
   const handleSessionTypeChange = (type: "online" | "presencial") => {
     const newSessions = [...sessions];
     newSessions[currentSessionIdx] = { date: null, time: null, type };
@@ -329,6 +344,16 @@ const BookingPage = () => {
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i];
       if (!s.date || !s.time) continue;
+      const type = (s.type || consultationType)!;
+      const conflict = await hasSlotConflict(s.date, s.time, type);
+      if (conflict) {
+        toast({
+          title: "Conflito de agenda",
+          description: "Esse horário foi ocupado por outra pessoa enquanto você fazia o agendamento. Escolha outro horário.",
+          variant: "destructive",
+        });
+        return false;
+      }
       const notes = JSON.stringify({
         birthDate, sex, goal, allergies, restrictions,
         healthConditions, medications, hadNutritionist, howFound,
@@ -348,7 +373,7 @@ const BookingPage = () => {
         plan_index: idx,
         appointment_date: toLocalISO(s.date),
         appointment_time: s.time,
-        type: (s.type || consultationType)!,
+        type,
         status,
         notes,
       };
@@ -484,7 +509,6 @@ const BookingPage = () => {
   const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); };
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); };
 
-  const currentSession = sessions[currentSessionIdx];
   const availTimes = getTimesForDate(currentSession?.date || null);
   const allPicked = sessions.every(s => s.date && s.time);
   const todayISO = toLocalISO(new Date());
@@ -507,6 +531,14 @@ const BookingPage = () => {
                   {isFree ? "Agendamento salvo! Um email de confirmação será enviado para" : "Pagamento aprovado. Um email de confirmação foi enviado para"}
                 </p>
                 <p className="text-sm font-semibold bg-muted px-3 py-1.5 rounded-lg inline-block">{clientEmail}</p>
+              </div>
+              <div className="w-full text-left space-y-2 bg-card border border-border rounded-xl p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Próximos passos</p>
+                <div className="space-y-1.5 text-sm text-muted-foreground">
+                  <p>1. Confira seu email e WhatsApp para ver a confirmação final.</p>
+                  <p>2. Se a consulta for paga, o horário já ficou reservado no sistema.</p>
+                  <p>3. Se o plano tiver retornos, eles serão organizados pelo nutricionista depois de cada atendimento.</p>
+                </div>
               </div>
               {/* Data da consulta */}
               {sessions[0]?.date && sessions[0]?.time && (
@@ -551,6 +583,33 @@ const BookingPage = () => {
                 Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} serão agendados pelo nutricionista após cada consulta
               </p>
             )}
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Resumo do agendamento</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {totalSessions} sessão{totalSessions > 1 ? "es" : ""} no total
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {totalReturns > 0
+                    ? "Você marca a consulta inicial agora e o nutricionista agenda os retornos depois."
+                    : "Você escolhe um horário único e segue para o pagamento."}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Selecionado</p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {currentSession?.date && currentSession?.time
+                    ? `${currentSession.date.toLocaleDateString("pt-BR")} · ${currentSession.time}`
+                    : "Nenhum horário"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {currentSession?.type === "presencial" ? `Presencial · ${selectedCity}` : "Online"}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Steps indicator */}
@@ -707,8 +766,12 @@ const BookingPage = () => {
                             const isSelected = currentSession.time === time;
                             return (
                               <button key={time}
-                                disabled={isBooked}
-                                onClick={() => !isBooked && handleTimeSelect(time)}
+                                aria-disabled={isBooked}
+                                onClick={() => isBooked ? toast({
+                                  title: "Horário indisponível",
+                                  description: "Esse horário já está ocupado. Escolha outro slot.",
+                                  variant: "destructive",
+                                }) : handleTimeSelect(time)}
                                 className={`relative px-4 py-2 rounded-xl text-sm font-medium border transition-all overflow-hidden ${
                                   isBooked
                                     ? "bg-muted/30 border-border/40 text-muted-foreground/30 cursor-not-allowed"

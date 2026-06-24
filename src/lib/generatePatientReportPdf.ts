@@ -1,4 +1,4 @@
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import type { Patient, PatientReport } from "@/lib/supabase";
 
 const RGB = {
@@ -29,6 +29,7 @@ function formatIsoDate(iso?: string | null) {
 function formatBirthDate(iso?: string | null) {
   if (!iso) return null;
   const [year, month, day] = iso.split("-");
+  if (!year || !month || !day) return null;
   return `${day}/${month}/${year}`;
 }
 
@@ -43,12 +44,60 @@ function ageYears(birthDate?: string | null) {
   return years;
 }
 
+function wrapParagraph(doc: jsPDF, paragraph: string, maxWidth: number): string[] {
+  const normalized = paragraph.replace(/\s+/g, " ").trim();
+  if (!normalized) return [""];
+
+  const measure = (value: string) => doc.getTextWidth(value);
+  const lines: string[] = [];
+  let current = "";
+
+  const flushCurrent = () => {
+    if (current) lines.push(current);
+    current = "";
+  };
+
+  const pushLongWord = (word: string) => {
+    let chunk = "";
+    for (const char of word) {
+      const candidate = chunk + char;
+      if (measure(candidate) <= maxWidth) {
+        chunk = candidate;
+      } else {
+        if (chunk) lines.push(chunk);
+        chunk = char;
+      }
+    }
+    if (chunk) lines.push(chunk);
+  };
+
+  for (const word of normalized.split(" ")) {
+    if (measure(word) > maxWidth) {
+      flushCurrent();
+      pushLongWord(word);
+      continue;
+    }
+
+    const candidate = current ? `${current} ${word}` : word;
+    if (measure(candidate) <= maxWidth) {
+      current = candidate;
+    } else {
+      flushCurrent();
+      current = word;
+    }
+  }
+
+  flushCurrent();
+  return lines;
+}
+
 export function generatePatientReportPdf(patient: Patient, report: PatientReport): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
   const contentWidth = pageWidth - margin * 2;
+  const bodyWidth = contentWidth - 18;
 
   const age = ageYears(patient.birth_date);
   const info = [
@@ -58,7 +107,6 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
   ].filter(Boolean) as string[];
 
   const text = report.report_text.trim();
-  const lines = doc.splitTextToSize(text || "Relatório sem conteúdo.", contentWidth);
   const lineHeight = 5;
   const headerHeight = 34;
   const footerHeight = 12;
@@ -77,7 +125,7 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
   doc.setTextColor(...RGB.greenSoft);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.text("RELATÓRIO CLÍNICO PERSONALIZADO", margin, 9);
+  doc.text("RELATORIO CLINICO PERSONALIZADO", margin, 9);
 
   doc.setTextColor(...RGB.bg);
   doc.setFontSize(18);
@@ -96,27 +144,17 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
     doc.text([...meta, ...info].join("  ·  "), pageWidth - margin, 27, { align: "right" });
   }
 
-  doc.setFillColor(...RGB.bg);
-  doc.setDrawColor(...RGB.border);
-  doc.roundedRect(margin, y - 2, contentWidth, 14, 3, 3, "FD");
-  doc.setTextColor(...RGB.muted);
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.text("Conteúdo do relatório", margin + 4, y + 3);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...RGB.text);
-  doc.text("Use este espaço para descrever a evolução, adesão, intercorrências e conduta.", margin + 4, y + 8);
-  y += 18;
+  y += 4;
 
   if (text) {
     text.split(/\n+/).forEach((paragraph) => {
-      const paragraphLines = doc.splitTextToSize(paragraph.trim(), contentWidth);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const paragraphLines = wrapParagraph(doc, paragraph, bodyWidth);
       const paragraphHeight = Math.max(1, paragraphLines.length) * lineHeight + 2;
       ensureSpace(paragraphHeight);
       doc.setTextColor(...RGB.text);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(paragraphLines, margin, y);
+      doc.text(paragraphLines, margin + 2, y);
       y += paragraphHeight;
     });
   } else {
@@ -127,7 +165,7 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
     doc.setTextColor(...RGB.muted);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
-    doc.text("O relatório ainda está em branco.", margin + 4, y + 9);
+    doc.text("O relatorio ainda esta em branco.", margin + 4, y + 9);
     y += 18;
   }
 
@@ -137,8 +175,8 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
     doc.setTextColor(...RGB.muted);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.text("Documento clínico confidencial", margin, pageHeight - 4);
-    doc.text(`Página ${page} de ${totalPages}`, pageWidth - margin, pageHeight - 4, { align: "right" });
+    doc.text("Documento clinico confidencial", margin, pageHeight - 4);
+    doc.text(`Pagina ${page} de ${totalPages}`, pageWidth - margin, pageHeight - 4, { align: "right" });
   }
 
   return doc;

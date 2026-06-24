@@ -218,7 +218,7 @@ export function TemplateImportModal({
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <LayoutList size={16} className="text-primary" />
-            {scope === "meal" ? "Importar bloco por refeicao" : "Importar Template de Cardapio"}
+            {scope === "meal" ? "Importar bloco de refeição" : "Importar dieta"}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
             {scope === "meal"
@@ -236,7 +236,7 @@ export function TemplateImportModal({
           ) : templates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
               <FileText size={32} className="opacity-30" />
-              <p className="text-sm">Nenhum template disponivel.</p>
+              <p className="text-sm">Nenhuma dieta disponivel.</p>
               <p className="text-xs opacity-60">Execute a migration Epic 7 no Supabase para criar os templates demo.</p>
             </div>
           ) : (

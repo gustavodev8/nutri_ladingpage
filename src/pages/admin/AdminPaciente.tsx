@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -65,7 +65,7 @@ import {
   type PatientReport,
 } from "@/lib/supabase";
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const initials = (name: string) =>
   name
@@ -80,7 +80,7 @@ const calcBMI = (weight?: number, height?: number): string | null => {
   return (weight / Math.pow(height / 100, 2)).toFixed(1);
 };
 
-// ─── CPF helpers ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ CPF helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatCPF(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
@@ -133,21 +133,21 @@ const formatDate = (dateStr: string) =>
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Tab config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type TabKey = "perfil" | "anamnese" | "relatorio" | "antropometria" | "planos" | "protocolos" | "prescricao";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
   { key: "anamnese",     label: "Anamnese",              icon: <ClipboardList size={16} /> },
-  { key: "relatorio",    label: "Relatório",            icon: <FileText size={16} /> },
+  { key: "relatorio",    label: "RelatÃ³rio",            icon: <FileText size={16} /> },
   { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
   { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
-  { key: "prescricao",   label: "Prescrição Magistral",  icon: <BookOpen size={16} /> },
+  { key: "prescricao",   label: "PrescriÃ§Ã£o Magistral",  icon: <BookOpen size={16} /> },
 ];
 
-// ─── Shared Textarea ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Shared Textarea â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -161,7 +161,7 @@ const Textarea = ({ minRows = 3, className = "", ...props }: TextareaProps) => (
   />
 );
 
-// ─── BMI Badge ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ BMI Badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const BMIBadge = ({ bmi }: { bmi: string }) => {
   const num = parseFloat(bmi);
@@ -173,7 +173,7 @@ const BMIBadge = ({ bmi }: { bmi: string }) => {
   );
 };
 
-// ─── Page Component ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function AdminPaciente() {
   const { id } = useParams<{ id: string }>();
@@ -181,13 +181,13 @@ export default function AdminPaciente() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as TabKey) || "perfil";
 
-  // ── ConsultationContext — ctxSetAnamnesis passado para AnamnesisForm ───
+  // â”€â”€ ConsultationContext â€” ctxSetAnamnesis passado para AnamnesisForm â”€â”€â”€
   const { setAnamnesis: ctxSetAnamnesis } = useConsultation();
 
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
 
-  // ─── FULL PAGE DETAIL VIEW STATE ───
+  // â”€â”€â”€ FULL PAGE DETAIL VIEW STATE â”€â”€â”€
   const [selectedMeasurement, setSelectedMeasurement] = useState<Measurement | null>(null);
 
   useEffect(() => {
@@ -221,7 +221,7 @@ export default function AdminPaciente() {
   if (!patient) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">Paciente não encontrado.</p>
+        <p className="text-muted-foreground">Paciente nÃ£o encontrado.</p>
         <Link to="/admin/pacientes">
           <Button variant="outline">
             <ArrowLeft size={16} className="mr-2" />
@@ -232,7 +232,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: FULL PAGE REPORT VIEW ───────────────────────────────────────────────
+  // â”€â”€â”€ RENDER: FULL PAGE REPORT VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (selectedMeasurement) {
     const m = selectedMeasurement;
     const bmi = calcBMI(m.weight, m.height);
@@ -247,7 +247,7 @@ export default function AdminPaciente() {
           <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-black text-foreground tabular-nums">{value ?? "—"}</span>
+          <span className="text-3xl font-black text-foreground tabular-nums">{value ?? "â€”"}</span>
           {value && unit && <span className="text-sm font-bold text-muted-foreground">{unit}</span>}
         </div>
       </div>
@@ -256,14 +256,14 @@ export default function AdminPaciente() {
     const ComparisonRow = ({ label, right, left }: any) => (
       <div className="grid grid-cols-7 gap-2 py-3 border-b border-border/40 items-center last:border-0">
         <div className="col-span-3 text-right">
-          <span className="text-sm font-bold text-foreground tabular-nums">{right ?? "—"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{right ?? "â€”"}</span>
           <span className="text-[10px] ml-1 text-muted-foreground font-medium">cm</span>
         </div>
         <div className="col-span-1 text-center">
           <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">{label}</span>
         </div>
         <div className="col-span-3 text-left">
-          <span className="text-sm font-bold text-foreground tabular-nums">{left ?? "—"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{left ?? "â€”"}</span>
           <span className="text-[10px] ml-1 text-muted-foreground font-medium">cm</span>
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function AdminPaciente() {
       <div className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <div className="flex items-baseline gap-1">
-          <span className="text-sm font-bold text-foreground tabular-nums">{value ?? "—"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{value ?? "â€”"}</span>
           {value && <span className="text-[10px] font-medium text-muted-foreground/60">{unit}</span>}
         </div>
       </div>
@@ -290,12 +290,12 @@ export default function AdminPaciente() {
               className="h-11 px-4 rounded-2xl hover:bg-muted font-bold flex gap-2 transition-all"
             >
               <ArrowLeft size={18} />
-              Voltar ao Prontuário
+              Voltar ao ProntuÃ¡rio
             </Button>
             <div className="h-6 w-px bg-border/60 mx-2" />
             <div>
               <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-                Relatório Antropométrico
+                RelatÃ³rio AntropomÃ©trico
                 <span className="text-primary opacity-30">/</span>
                 <span className="text-muted-foreground font-medium">{formatDate(m.assessment_date)}</span>
               </h2>
@@ -316,8 +316,8 @@ export default function AdminPaciente() {
             <div className="lg:col-span-4 bg-primary rounded-[40px] p-8 text-primary-foreground shadow-2xl shadow-primary/20 flex flex-col justify-between overflow-hidden relative group">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
               <div className="relative z-10">
-                <p className="text-[11px] font-black uppercase tracking-[0.25em] opacity-70 mb-1">Status Metabólico</p>
-                <h3 className="text-6xl font-black tracking-tighter tabular-nums mb-4">{bmi ?? "—"}</h3>
+                <p className="text-[11px] font-black uppercase tracking-[0.25em] opacity-70 mb-1">Status MetabÃ³lico</p>
+                <h3 className="text-6xl font-black tracking-tighter tabular-nums mb-4">{bmi ?? "â€”"}</h3>
                 {bmiInfo && (
                   <div className="inline-flex items-center px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 text-xs font-black uppercase tracking-widest">
                     {bmiInfo.label}
@@ -325,7 +325,7 @@ export default function AdminPaciente() {
                 )}
               </div>
               <div className="relative z-10 pt-10">
-                <p className="text-sm opacity-80 font-medium max-w-[200px]">Índice de massa corporal calculado com base no peso e altura atuais.</p>
+                <p className="text-sm opacity-80 font-medium max-w-[200px]">Ãndice de massa corporal calculado com base no peso e altura atuais.</p>
               </div>
             </div>
 
@@ -347,11 +347,11 @@ export default function AdminPaciente() {
                   <h4 className="text-sm font-black uppercase tracking-[0.15em] text-foreground/80">Tronco & Tronco</h4>
                 </div>
                 <div className="space-y-1">
-                  <MeasureRow label="Pescoço" value={m.neck} />
+                  <MeasureRow label="PescoÃ§o" value={m.neck} />
                   <MeasureRow label="Ombro" value={m.shoulder} />
                   <MeasureRow label="Peitoral" value={m.chest} />
                   <MeasureRow label="Cintura" value={m.waist} />
-                  <MeasureRow label="Abdômen" value={m.abdomen} />
+                  <MeasureRow label="AbdÃ´men" value={m.abdomen} />
                   <MeasureRow label="Quadril" value={m.hip} />
                   <div className="pt-4 mt-4 border-t border-border/40">
                     <MeasureRow label="Gordura Visceral" value={m.visceral_fat} unit="" />
@@ -374,9 +374,9 @@ export default function AdminPaciente() {
               </div>
 
               <div className="space-y-2">
-                <ComparisonRow label="Braço Relax." right={m.arm_relax_r} left={m.arm_relax_l} />
-                <ComparisonRow label="Braço Contr." right={m.arm_contract_r} left={m.arm_contract_l} />
-                <ComparisonRow label="Antebraço" right={m.forearm_r} left={m.forearm_l} />
+                <ComparisonRow label="BraÃ§o Relax." right={m.arm_relax_r} left={m.arm_relax_l} />
+                <ComparisonRow label="BraÃ§o Contr." right={m.arm_contract_r} left={m.arm_contract_l} />
+                <ComparisonRow label="AntebraÃ§o" right={m.forearm_r} left={m.forearm_l} />
                 <ComparisonRow label="Punho" right={m.wrist_r} left={m.wrist_l} />
                 <div className="h-4" />
                 <ComparisonRow label="Coxa Prox." right={m.thigh_prox_r} left={m.thigh_prox_l} />
@@ -387,7 +387,7 @@ export default function AdminPaciente() {
               <div className="mt-10 flex items-center justify-center gap-2 py-4 px-6 bg-muted/30 rounded-2xl border border-dashed border-border/60">
                 <Scale size={16} className="text-muted-foreground/40" />
                 <p className="text-[11px] font-bold text-muted-foreground/60 italic uppercase tracking-tighter text-center">
-                  Diferenças entre os lados podem indicar desequilíbrios musculares ou dominância motora.
+                  DiferenÃ§as entre os lados podem indicar desequilÃ­brios musculares ou dominÃ¢ncia motora.
                 </p>
               </div>
             </div>
@@ -402,7 +402,7 @@ export default function AdminPaciente() {
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4 text-primary">
                   <MessageSquareQuote size={20} />
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">Parecer Técnico Nutricional</h4>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">Parecer TÃ©cnico Nutricional</h4>
                 </div>
                 <p className="text-lg text-foreground/80 leading-relaxed font-medium italic">
                   "{m.notes}"
@@ -415,7 +415,7 @@ export default function AdminPaciente() {
     );
   }
 
-  // ─── RENDER: MAIN PROFILE VIEW (WITH TABS) ──────────────────────────────────────
+  // â”€â”€â”€ RENDER: MAIN PROFILE VIEW (WITH TABS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="px-4 sm:px-6 py-8 space-y-6">
       {/* Breadcrumbs & Navigation */}
@@ -423,7 +423,7 @@ export default function AdminPaciente() {
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <Link to="/admin/pacientes" className="hover:text-primary transition-colors">Pacientes</Link>
           <ChevronRight size={12} className="opacity-50" />
-          <span className="text-foreground/70">Prontuário</span>
+          <span className="text-foreground/70">ProntuÃ¡rio</span>
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
@@ -541,9 +541,9 @@ export default function AdminPaciente() {
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// TAB 1: Perfil (Cadastro Básico)
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 1: Perfil (Cadastro BÃ¡sico)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PerfilTab({
   patient,
@@ -581,14 +581,14 @@ function PerfilTab({
     // Valida CPF se preenchido
     const rawCpf = (form.cpf ?? "").replace(/\D/g, "");
     if (rawCpf && !validateCPF(rawCpf)) {
-      setCpfError("CPF inválido — verifique os dígitos.");
+      setCpfError("CPF invÃ¡lido â€” verifique os dÃ­gitos.");
       return;
     }
     setCpfError(null);
 
     setSaving(true);
     try {
-      // Persiste apenas dígitos (sem máscara)
+      // Persiste apenas dÃ­gitos (sem mÃ¡scara)
       const payload: Patient = { ...form, cpf: rawCpf || undefined };
       const updated = await upsertPatient(payload);
       if (updated) {
@@ -703,25 +703,25 @@ function PerfilTab({
           />
         </div>
 
-        {/* Gênero */}
+        {/* GÃªnero */}
         <div className="space-y-1.5">
-          <Label htmlFor="gender">Gênero</Label>
+          <Label htmlFor="gender">GÃªnero</Label>
           <select
             id="gender"
             value={form.gender || ""}
             onChange={(e) => set("gender", e.target.value)}
             className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Selecionar…</option>
+            <option value="">Selecionarâ€¦</option>
             <option value="M">Masculino</option>
             <option value="F">Feminino</option>
             <option value="outro">Outro</option>
           </select>
         </div>
 
-        {/* Ocupação */}
+        {/* OcupaÃ§Ã£o */}
         <div className="space-y-1.5">
-          <Label htmlFor="occupation">Ocupação</Label>
+          <Label htmlFor="occupation">OcupaÃ§Ã£o</Label>
           <Input
             id="occupation"
             value={form.occupation || ""}
@@ -729,9 +729,9 @@ function PerfilTab({
           />
         </div>
 
-        {/* Observações */}
+        {/* ObservaÃ§Ãµes */}
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="notes">Observações Gerais</Label>
+          <Label htmlFor="notes">ObservaÃ§Ãµes Gerais</Label>
           <Textarea
             id="notes"
             minRows={4}
@@ -753,7 +753,7 @@ function PerfilTab({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-foreground font-bold">
             <Camera size={20} className="text-primary" />
-            Galeria de Evolução
+            Galeria de EvoluÃ§Ã£o
           </div>
           <Button
             size="sm"
@@ -773,7 +773,7 @@ function PerfilTab({
         ) : photos.length === 0 ? (
           <div className="h-40 border-2 border-dashed border-border rounded-[24px] flex flex-col items-center justify-center text-muted-foreground/60 gap-3">
             <ImageIcon size={40} className="opacity-20" />
-            <p className="text-sm font-medium">Nenhuma foto de evolução anexada.</p>
+            <p className="text-sm font-medium">Nenhuma foto de evoluÃ§Ã£o anexada.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -800,13 +800,13 @@ function PerfilTab({
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// TAB 2: Anamnese (Histórico Clínico)
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 2: Anamnese (HistÃ³rico ClÃ­nico)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Field auxiliar da Anamnese — fora do componente para não perder foco
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Field auxiliar da Anamnese â€” fora do componente para nÃ£o perder foco
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 
@@ -825,17 +825,17 @@ function ReportTab({
   const [showEmail, setShowEmail] = useState(false);
   const [draft, setDraft] = useState<PatientReport>(() => ({
     patient_id: Number(patient.id ?? 0),
-    title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+    title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
     report_date: todayISO(),
-    report_text: patient.report_text ?? "",
+    report_text: patient.report_text ?? '',
   }));
 
   useEffect(() => {
     setDraft({
       patient_id: Number(patient.id ?? 0),
-      title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+      title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
       report_date: todayISO(),
-      report_text: patient.report_text ?? "",
+      report_text: patient.report_text ?? '',
     });
     setLoadingReports(true);
     fetchPatientReports(Number(patient.id)).then((data) => {
@@ -854,19 +854,19 @@ function ReportTab({
   const createNewReport = () => {
     setDraft({
       patient_id: Number(patient.id ?? 0),
-      title: `Relatório ${new Date().toLocaleDateString("pt-BR")}`,
+      title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
       report_date: todayISO(),
-      report_text: "",
+      report_text: '',
     });
   };
 
   const handleSave = async () => {
     if (!draft.title.trim()) {
-      toast.error("Informe um título para o relatório.");
+      toast.error('Informe um titulo para o relatorio.');
       return;
     }
     if (!draft.report_text.trim()) {
-      toast.error("Escreva o conteúdo do relatório.");
+      toast.error('Escreva o conteudo do relatorio.');
       return;
     }
 
@@ -877,17 +877,17 @@ function ReportTab({
         patient_id: Number(patient.id),
       });
       if (!saved) {
-        toast.error("Erro ao salvar relatório.");
+        toast.error('Erro ao salvar relatorio.');
         return;
       }
 
       setDraft(saved);
       const freshList = await fetchPatientReports(Number(patient.id));
       setReports(freshList);
-      toast.success("Relatório salvo com sucesso!");
+      toast.success('Relatorio salvo com sucesso!');
       onSaved({ ...patient, report_text: draft.report_text });
     } catch {
-      toast.error("Erro inesperado ao salvar.");
+      toast.error('Erro inesperado ao salvar.');
     } finally {
       setSaving(false);
     }
@@ -895,14 +895,14 @@ function ReportTab({
 
   const handleDelete = async () => {
     if (!draft.id) return;
-    const ok = window.confirm(`Excluir o relatório "${draft.title}"?`);
+    const ok = window.confirm(`Excluir o relatorio "${draft.title}"?`);
     if (!ok) return;
     const deleted = await deletePatientReport(draft.id);
     if (!deleted) {
-      toast.error("Erro ao excluir relatório.");
+      toast.error('Erro ao excluir relatorio.');
       return;
     }
-    toast.success("Relatório excluído.");
+    toast.success('Relatorio excluido.');
     const freshList = await fetchPatientReports(Number(patient.id));
     setReports(freshList);
     if (freshList[0]) setDraft(freshList[0]);
@@ -911,84 +911,111 @@ function ReportTab({
 
   const handleDownloadPdf = () => {
     const doc = generatePatientReportPdf(patient, draft);
-    doc.save(`${draft.title.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+    doc.save(`${draft.title.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   };
 
   const handlePreviewPdf = () => {
     const doc = generatePatientReportPdf(patient, draft);
-    const blob = doc.output("blob");
+    const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank", "noopener,noreferrer");
-    if (!win) toast.info("Permita pop-ups para abrir a visualização do PDF.");
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) toast.info('Permita pop-ups para abrir a visualizacao do PDF.');
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
-  const reportDateLabel = new Date(`${draft.report_date}T12:00:00`).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  const reportDateLabel = new Date(`${draft.report_date}T12:00:00`).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
+  const reportWordCount = draft.report_text.trim() ? draft.report_text.trim().split(/\s+/).length : 0;
+  const estimatedReadMinutes = Math.max(1, Math.ceil(reportWordCount / 180));
+  const latestReport = reports[0];
+  const selectedIndex = draft.id ? reports.findIndex((report) => report.id === draft.id) + 1 : 0;
+  const selectedSummary = draft.report_text.trim()
+    ? draft.report_text.trim().slice(0, 220)
+    : 'Use esse espaco para registrar a evolucao clinica, adesao ao plano e conduta definida.';
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="space-y-3 rounded-[28px] border border-border/60 bg-card p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Documentos</p>
-            <h3 className="text-lg font-bold text-foreground">Relatórios salvos</h3>
-            <p className="text-xs text-muted-foreground">
-              {reports.length} documento{reports.length === 1 ? "" : "s"}
-            </p>
+    <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="overflow-hidden rounded-[32px] border border-border/60 bg-card shadow-sm">
+        <div className="border-b border-border/60 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Documentos</p>
+              <h3 className="text-xl font-black tracking-tight text-foreground">Relatorios clinicos</h3>
+              <p className="text-sm text-muted-foreground">
+                {reports.length} registro{reports.length === 1 ? '' : 's'} disponivel{reports.length === 1 ? '' : 'eis'}
+              </p>
+            </div>
+            <Button type="button" size="sm" variant="outline" className="h-10 rounded-full gap-2" onClick={createNewReport}>
+              <Plus size={14} />
+              Novo
+            </Button>
           </div>
-          <Button type="button" size="sm" variant="outline" className="rounded-xl gap-2" onClick={createNewReport}>
-            <Plus size={14} />
-            Novo
-          </Button>
+
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border/60 bg-background/80 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total</p>
+              <p className="mt-1 text-2xl font-black text-foreground">{reports.length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/80 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Ultimo</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {latestReport ? new Date(`${latestReport.report_date}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data'}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-[68vh] space-y-3 overflow-y-auto p-4 pr-3">
           {loadingReports ? (
-            <div className="flex items-center justify-center rounded-2xl border border-dashed border-border/70 p-8 text-muted-foreground">
+            <div className="flex items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-muted/20 p-8 text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Carregando relatórios...
+              Carregando relatorios...
             </div>
           ) : reports.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-center">
+            <div className="rounded-[24px] border border-dashed border-border/70 bg-muted/20 p-5 text-center">
               <FileText className="mx-auto mb-3 h-9 w-9 text-muted-foreground/40" />
-              <p className="text-sm font-medium text-foreground">Nenhum relatório salvo</p>
+              <p className="text-sm font-semibold text-foreground">Nenhum relatorio salvo</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Crie o primeiro documento para registrar a situação atual do paciente.
+                Crie o primeiro documento para registrar a evolucao do paciente.
               </p>
             </div>
           ) : (
-            reports.map((report) => {
+            reports.map((report, index) => {
               const isActive = draft.id === report.id;
-              const labelDate = new Date(`${report.report_date}T12:00:00`).toLocaleDateString("pt-BR");
+              const labelDate = new Date(`${report.report_date}T12:00:00`).toLocaleDateString('pt-BR');
               return (
                 <button
                   key={report.id}
                   type="button"
                   onClick={() => selectReport(report)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-3 text-left transition-all",
+                    'group w-full rounded-[24px] border p-4 text-left transition-all',
                     isActive
-                      ? "border-primary/30 bg-primary/5 shadow-sm"
-                      : "border-border/60 bg-background hover:border-primary/20 hover:bg-muted/20"
+                      ? 'border-primary/30 bg-primary/8 shadow-[0_10px_30px_rgba(0,0,0,0.06)] ring-1 ring-primary/20'
+                      : 'border-border/60 bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{report.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{labelDate}</p>
+                      <p className="truncate text-sm font-bold text-foreground">{report.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{labelDate}</p>
                     </div>
-                    {isActive && (
-                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                        Aberto
-                      </span>
-                    )}
+                    <span
+                      className={cn(
+                        'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em]',
+                        isActive
+                          ? 'border border-primary/20 bg-primary/12 text-primary'
+                          : 'border border-border/60 bg-muted/30 text-muted-foreground'
+                      )}
+                    >
+                      {isActive ? 'Aberto' : `#${index + 1}`}
+                    </span>
                   </div>
                   <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                    {report.report_text || "Sem conteúdo"}
+                    {report.report_text || 'Sem conteudo'}
                   </p>
                 </button>
               );
@@ -997,107 +1024,157 @@ function ReportTab({
         </div>
       </aside>
 
-      <section className="space-y-5 rounded-[28px] border border-border/60 bg-card p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Relatório clínico</p>
-            <h2 className="text-2xl font-black tracking-tight text-foreground">{draft.title || "Novo relatório"}</h2>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Registre aqui a evolução, adesão ao plano, intercorrências, conduta e qualquer observação clínica importante.
-              Cada relatório fica salvo como um documento separado por data.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-[32px] border border-border/60 bg-card shadow-sm">
+        <div className="border-b border-border/60 bg-gradient-to-br from-foreground/5 via-background to-primary/5 p-5 md:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-primary">
+                <MessageSquareQuote size={12} />
+                Relatorio clinico
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-foreground">{draft.title || 'Novo relatorio'}</h2>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Registre a evolucao, adesao ao plano, intercorrencias, conduta e observacoes clinicas importantes.
+                Cada relatorio fica salvo como um documento separado por data.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {draft.report_date ? reportDateLabel : 'Sem data definida'}
+                </span>
+                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {reportWordCount} palavras
+                </span>
+                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+                  Leitura em aprox. {estimatedReadMinutes} min
+                </span>
+              </div>
+            </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" className="h-10 rounded-xl gap-2" onClick={handlePreviewPdf}>
-              <Download size={15} />
-              Visualizar / imprimir
-            </Button>
-            <Button type="button" variant="outline" className="h-10 rounded-xl gap-2" onClick={handleDownloadPdf}>
-              <Download size={15} />
-              Baixar PDF
-            </Button>
-            <Button
-              type="button"
-              className="h-10 rounded-xl gap-2"
-              onClick={() => setShowEmail(true)}
-              disabled={!patient.email}
-              title={patient.email ? "Enviar relatório por e-mail" : "Cadastre um e-mail no perfil primeiro"}
-            >
-              <Send size={15} />
-              Enviar por Gmail
-            </Button>
-            <Button type="button" variant="destructive" className="h-10 rounded-xl gap-2" onClick={handleDelete} disabled={!draft.id}>
-              <Trash2 size={15} />
-              Excluir
-            </Button>
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              <Button type="button" variant="outline" className="h-11 rounded-full gap-2" onClick={handlePreviewPdf}>
+                <Eye size={15} />
+                Visualizar
+              </Button>
+              <Button type="button" variant="outline" className="h-11 rounded-full gap-2" onClick={handleDownloadPdf}>
+                <Download size={15} />
+                PDF
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-full gap-2"
+                onClick={() => setShowEmail(true)}
+                disabled={!patient.email}
+                title={patient.email ? 'Enviar relatorio por e-mail' : 'Cadastre um e-mail no perfil primeiro'}
+              >
+                <Send size={15} />
+                Enviar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="h-11 rounded-full gap-2"
+                onClick={handleDelete}
+                disabled={!draft.id}
+              >
+                <Trash2 size={15} />
+                Excluir
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-          <div className="space-y-2">
-            <Label htmlFor="report_title" className="text-sm font-semibold text-foreground">
-              Título
-            </Label>
-            <Input
-              id="report_title"
-              value={draft.title}
-              onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-              className="h-11 rounded-2xl"
-              placeholder="Ex.: Relatório 22/06/2026"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="report_date" className="text-sm font-semibold text-foreground">
-              Data
-            </Label>
-            <Input
-              id="report_date"
-              type="date"
-              value={draft.report_date}
-              onChange={(e) => setDraft((prev) => ({ ...prev, report_date: e.target.value }))}
-              className="h-11 rounded-2xl"
-            />
-          </div>
-        </div>
+        <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="space-y-2">
+                <Label htmlFor="report_title" className="text-sm font-semibold text-foreground">
+                  Titulo do relatorio
+                </Label>
+                <Input
+                  id="report_title"
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  className="h-12 rounded-2xl border-border/70 bg-background/80"
+                  placeholder="Ex.: Relatorio 22/06/2026"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="report_date" className="text-sm font-semibold text-foreground">
+                  Data do relatorio
+                </Label>
+                <Input
+                  id="report_date"
+                  type="date"
+                  value={draft.report_date}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, report_date: e.target.value }))}
+                  className="h-12 rounded-2xl border-border/70 bg-background/80"
+                />
+              </div>
+            </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="report_text" className="text-sm font-semibold text-foreground">
-              Texto do relatório
-            </Label>
-            <span className="text-xs text-muted-foreground">
-              {draft.report_text.trim().length > 0 ? `${draft.report_text.trim().length} caracteres` : "Campo vazio"}
-            </span>
-          </div>
-          <Textarea
-            id="report_text"
-            minRows={16}
-            value={draft.report_text}
-            onChange={(e) => setDraft((prev) => ({ ...prev, report_text: e.target.value }))}
-            placeholder="Ex.: Paciente evoluiu bem, com boa adesão ao plano, redução de compulsão no período noturno e melhora do padrão intestinal..."
-            className="min-h-[420px] rounded-[24px] border-border/70 text-[15px] leading-7"
-          />
-        </div>
+            <div className="space-y-3 rounded-[28px] border border-border/60 bg-gradient-to-b from-muted/20 to-background p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="report_text" className="text-sm font-semibold text-foreground">
+                  Texto do relatorio
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {draft.report_text.trim().length > 0 ? `${draft.report_text.trim().length} caracteres` : 'Campo vazio'}
+                </span>
+              </div>
+              <Textarea
+                id="report_text"
+                minRows={16}
+                value={draft.report_text}
+                onChange={(e) => setDraft((prev) => ({ ...prev, report_text: e.target.value }))}
+                placeholder="Ex.: Paciente evoluiu bem, com boa adesao ao plano, reducao de compulsao noturna e melhora do padrao intestinal..."
+                className="min-h-[420px] rounded-[24px] border-border/70 bg-background/95 text-[15px] leading-7 shadow-inner"
+              />
+            </div>
 
-        <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-end">
-          <p className="text-xs text-muted-foreground sm:mr-auto">
-            {draft.id ? `Documento aberto: ${draft.title} · ${reportDateLabel}` : "Novo documento ainda não salvo."}
-          </p>
-          <Button onClick={handleSave} disabled={saving} className="h-11 rounded-xl px-8 font-bold">
-            {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
-            Salvar relatório
-          </Button>
+            <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {draft.id ? `Documento aberto: ${draft.title} · ${reportDateLabel}` : 'Novo documento ainda nao salvo.'}
+              </p>
+              <Button onClick={handleSave} disabled={saving} className="h-11 rounded-full px-8 font-bold">
+                {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
+                Salvar relatorio
+              </Button>
+            </div>
+          </div>
+
+          <aside className="space-y-4 rounded-[28px] border border-border/60 bg-card p-4 md:p-5">
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Resumo rapido</p>
+              <h3 className="text-lg font-bold text-foreground">Visao geral do documento</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Uma referencia visual para conferir se o conteudo esta completo antes de salvar ou enviar.
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Palavras</p>
+                <p className="mt-2 text-2xl font-black text-foreground">{reportWordCount}</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Leitura</p>
+                <p className="mt-2 text-2xl font-black text-foreground">{estimatedReadMinutes} min</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Posicao</p>
+                <p className="mt-2 text-2xl font-black text-foreground">{selectedIndex > 0 ? `#${selectedIndex}` : 'Novo'}</p>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-border/60 bg-gradient-to-br from-primary/8 via-background to-background p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Previa</p>
+              <p className="mt-3 text-sm leading-7 text-foreground/90">{selectedSummary}</p>
+            </div>
+          </aside>
         </div>
       </section>
 
-      {showEmail && (
-        <EmailPatientReportModal
-          patient={patient}
-          report={draft}
-          onClose={() => setShowEmail(false)}
-        />
-      )}
+      {showEmail && <EmailPatientReportModal patient={patient} report={draft} onClose={() => setShowEmail(false)} />}
     </div>
   );
 }
@@ -1128,7 +1205,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 
     const payload: Record<string, unknown> = { patient_id: pid, assessment_date: form.assessment_date };
 
-    // Medidas básicas e circunferências
+    // Medidas bÃ¡sicas e circunferÃªncias
     const numFields = [
       "weight", "height",
       "neck", "shoulder", "chest", "waist", "abdomen", "hip",
@@ -1146,7 +1223,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     // Gordura visceral (sempre salva se preenchida, vem da bio)
     if (form.visceral_fat) payload.visceral_fat = parseFloat(form.visceral_fat);
 
-    // Dobras cutâneas — salvar todos os campos preenchidos independente do protocolo
+    // Dobras cutÃ¢neas â€” salvar todos os campos preenchidos independente do protocolo
     const sfValues = {
       sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
       sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
@@ -1160,7 +1237,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     };
     Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
 
-    // Calcular resultado do adipômetro (independe de ser oficial)
+    // Calcular resultado do adipÃ´metro (independe de ser oficial)
     const { calcBodyFat } = await import("@/lib/anthropometryUtils");
     const sfResult = calcBodyFat(protocol, sfValues, patientAge, genderKey);
     if (sfResult) {
@@ -1169,7 +1246,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         ? parseFloat(sfResult.density.toFixed(6)) : 0;
     }
 
-    // Resultado oficial — determina body_fat e lean_mass salvos
+    // Resultado oficial â€” determina body_fat e lean_mass salvos
     const weight = form.weight ? parseFloat(form.weight) : null;
     if (officialSource === "bio" && form.bio_fat_pct) {
       payload.body_fat = parseFloat(form.bio_fat_pct);
@@ -1184,7 +1261,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         ? parseFloat((weight * (1 - sfResult.fatPct / 100)).toFixed(2))
         : undefined;
     } else if (officialSource === null) {
-      // Auto-detect: usa adipômetro se disponível, senão bio
+      // Auto-detect: usa adipÃ´metro se disponÃ­vel, senÃ£o bio
       if (sfResult) {
         payload.body_fat  = parseFloat(sfResult.fatPct.toFixed(2));
         payload.lean_mass = weight != null
@@ -1218,24 +1295,24 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         if (res) {
           setMeasurements((p) => p.map((m) => m.id === editingId ? res : m));
           ctxSetMeasurement(res);
-          toast.success("Avaliação atualizada!");
+          toast.success("AvaliaÃ§Ã£o atualizada!");
           setEditingMeasurement(null);
         } else {
-          toast.error("Erro ao atualizar avaliação.");
+          toast.error("Erro ao atualizar avaliaÃ§Ã£o.");
         }
       } else {
         const res = await insertMeasurement(payload as Measurement);
         if (res) {
           setMeasurements((p) => [res, ...p]);
           ctxSetMeasurement(res);
-          toast.success("Avaliação registrada!");
+          toast.success("AvaliaÃ§Ã£o registrada!");
         } else {
-          toast.error("Erro ao salvar avaliação.");
+          toast.error("Erro ao salvar avaliaÃ§Ã£o.");
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[handleSave] excessão:", err);
+      console.error("[handleSave] excessÃ£o:", err);
       toast.error(`Erro ao salvar: ${msg}`);
     } finally {
       setSaving(false);
@@ -1243,7 +1320,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   };
 
   const handleDelete = async (mid: number) => {
-    if (!confirm("Excluir avaliação?")) return;
+    if (!confirm("Excluir avaliaÃ§Ã£o?")) return;
     if (await deleteMeasurement(mid)) {
       setMeasurements(p => p.filter(m => m.id !== mid));
       toast.success("Removida.");
@@ -1256,21 +1333,21 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   return (
     <div className="space-y-4">
 
-      {/* ── Latest metrics strip ── */}
+      {/* â”€â”€ Latest metrics strip â”€â”€ */}
       {latest && (
         <div className="flex items-stretch gap-0 border border-border rounded-md overflow-hidden">
           <div className="px-4 py-3.5 bg-muted/50 border-r border-border flex flex-col justify-center shrink-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Púltima</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">PÃºltima</p>
             <p className="text-sm font-medium text-foreground mt-0.5">
-              {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
+              {latest.assessment_date ? formatDate(latest.assessment_date) : "â€”"}
             </p>
           </div>
           {([
-            { label: "Peso",      value: latest.weight   != null ? `${latest.weight} kg` : "—", badge: null      },
-            { label: "Altura",    value: latest.height   != null ? `${latest.height} cm` : "—", badge: null      },
-            { label: "IMC",       value: latestBmi ?? "—",                                       badge: latestBmi },
-            { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%`  : "—", badge: null      },
-            { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`   : "—", badge: null      },
+            { label: "Peso",      value: latest.weight   != null ? `${latest.weight} kg` : "â€”", badge: null      },
+            { label: "Altura",    value: latest.height   != null ? `${latest.height} cm` : "â€”", badge: null      },
+            { label: "IMC",       value: latestBmi ?? "â€”",                                       badge: latestBmi },
+            { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%`  : "â€”", badge: null      },
+            { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`   : "â€”", badge: null      },
           ] as { label: string; value: string; badge: string | null }[]).map((s, i) => (
             <div key={s.label} className={`flex-1 px-4 py-3.5 bg-card flex flex-col justify-center min-w-0${i > 0 ? " border-l border-border" : ""}`}>
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{s.label}</p>
@@ -1283,18 +1360,18 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         </div>
       )}
 
-      {/* ── Botão Ver Relatório (quando há histórico) ── */}
+      {/* â”€â”€ BotÃ£o Ver RelatÃ³rio (quando hÃ¡ histÃ³rico) â”€â”€ */}
       {measurements.length > 0 && (
         <div className="flex justify-end">
           <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
             <Button variant="outline" size="sm" className="h-8 rounded-md text-sm gap-1.5">
-              <Eye size={13} /> Ver Relatório
+              <Eye size={13} /> Ver RelatÃ³rio
             </Button>
           </Link>
         </div>
       )}
 
-      {/* ── Form de avaliação (nova ou edição) ── */}
+      {/* â”€â”€ Form de avaliaÃ§Ã£o (nova ou ediÃ§Ã£o) â”€â”€ */}
       <AnthropometryWizard
         patient={patient}
         latestMeasurement={measurements[0] ?? null}
@@ -1305,7 +1382,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       />
 
 
-      {/* ── History table ── */}
+      {/* â”€â”€ History table â”€â”€ */}
       {loading ? (
         <div className="flex items-center justify-center h-24">
           <Loader2 className="animate-spin text-primary" size={22} />
@@ -1313,14 +1390,14 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       ) : measurements.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 gap-2 border border-border rounded-md bg-card text-muted-foreground">
           <Scale size={26} className="opacity-30" />
-          <p className="text-sm">Nenhuma avaliação registrada.</p>
+          <p className="text-sm">Nenhuma avaliaÃ§Ã£o registrada.</p>
         </div>
       ) : (
         <div className="border border-border rounded-md overflow-hidden bg-card">
           <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-2">
             <Activity size={15} className="text-muted-foreground" />
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Histórico — {measurements.length} avaliação{measurements.length !== 1 ? "ões" : ""}
+              HistÃ³rico â€” {measurements.length} avaliaÃ§Ã£o{measurements.length !== 1 ? "Ãµes" : ""}
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -1342,22 +1419,22 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                       <td className="px-4 py-3 text-sm font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {idx === 0 && <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">Recente</span>}
-                          {m.assessment_date ? formatDate(m.assessment_date) : "—"}
+                          {m.assessment_date ? formatDate(m.assessment_date) : "â€”"}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.weight ? `${m.weight} kg` : "—"}</td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.height ? `${m.height} cm` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.weight ? `${m.weight} kg` : "â€”"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.height ? `${m.height} cm` : "â€”"}</td>
                       <td className="px-4 py-3 text-right text-sm">
                         {bmi ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <span className="font-semibold tabular-nums">{bmi}</span>
                             <BMIBadge bmi={bmi} />
                           </div>
-                        ) : "—"}
+                        ) : "â€”"}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "—"}</td>
-                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{m.sf_protocol ?? "—"}</td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.waist ? `${m.waist} cm` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "â€”"}</td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{m.sf_protocol ?? "â€”"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.waist ? `${m.waist} cm` : "â€”"}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
@@ -1366,7 +1443,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                           <button
                             onClick={() => { setEditingMeasurement(m); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                             className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                            title="Editar avaliação"
+                            title="Editar avaliaÃ§Ã£o"
                           >
                             <Pencil size={14} />
                           </button>
@@ -1383,7 +1460,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
           </div>
           <div className="px-4 py-2.5 border-t border-border/60 bg-muted/30">
             <p className="text-xs text-muted-foreground">
-              {measurements.length} avaliação{measurements.length !== 1 ? "ões" : ""} registrada{measurements.length !== 1 ? "s" : ""}
+              {measurements.length} avaliaÃ§Ã£o{measurements.length !== 1 ? "Ãµes" : ""} registrada{measurements.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -1392,14 +1469,14 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // TAB 4: Planos Alimentares
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
-  deficit:     { label: "Déficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  maintenance: { label: "Manutenção",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  surplus:     { label: "Superávit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  deficit:     { label: "DÃ©ficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  maintenance: { label: "ManutenÃ§Ã£o",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  surplus:     { label: "SuperÃ¡vit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
 };
 
 function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
@@ -1419,7 +1496,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
     }).finally(() => setLoading(false));
   }, [pid]);
 
-  // Monta EnergyInput a partir da medição mais recente + dados do paciente
+  // Monta EnergyInput a partir da mediÃ§Ã£o mais recente + dados do paciente
   const energyInput: EnergyInput | undefined = (() => {
     if (!latestMeasurement?.weight || !latestMeasurement?.height) return undefined;
     if (!patient?.birth_date) return undefined;
@@ -1492,7 +1569,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                     <BookOpen size={24} />
                   </div>
                   <div className="space-y-1">
-                    <p className="font-black text-foreground">{p.title || "Plano sem título"}</p>
+                    <p className="font-black text-foreground">{p.title || "Plano sem tÃ­tulo"}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {strategyInfo && (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${strategyInfo.cls}`}>
@@ -1501,7 +1578,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                       )}
                       {p.target_calories && (
                         <span className="text-[10px] text-muted-foreground font-semibold">
-                          {p.target_calories} kcal · {p.target_protein_g}g PTN · {p.target_carbs_g}g CHO · {p.target_fat_g}g LIP
+                          {p.target_calories} kcal Â· {p.target_protein_g}g PTN Â· {p.target_carbs_g}g CHO Â· {p.target_fat_g}g LIP
                         </span>
                       )}
                       {!p.target_calories && (
@@ -1527,3 +1604,4 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
     </>
   );
 }
+
