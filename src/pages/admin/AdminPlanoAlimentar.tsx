@@ -33,9 +33,9 @@ import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel"
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { MealPresetImportModal } from "@/components/admin/MealPresetImportModal";
-import { DietPlanPrintView } from "@/components/admin/DietPlanPrintView";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
+import { generateMealPlanPdf } from "@/lib/generateMealPlanPdf";
 import {
   getMealNutritionTargets,
   generateMealPlanConsistencyAlerts,
@@ -118,7 +118,6 @@ export default function AdminPlanoAlimentar() {
   const [mealPresetDraftName, setMealPresetDraftName] = useState("");
   const [mealPresetDraftDescription, setMealPresetDraftDescription] = useState("");
   const [savingMealPreset, setSavingMealPreset] = useState(false);
-  const [showPrint, setShowPrint]       = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
   const [previousPlan, setPreviousPlan]  = useState<MealPlan | null>(null);
 
@@ -215,6 +214,38 @@ export default function AdminPlanoAlimentar() {
     if (saveErr) { toast.error(`Erro ao salvar as refeições: ${saveErr}`); return; }
     toast.success("Plano salvo com sucesso.");
     if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
+  };
+
+  const handleDownloadPdf = () => {
+    if (isNew || !plan.id) {
+      toast.info("Salve o plano antes de gerar o PDF.");
+      return;
+    }
+
+    try {
+      const doc = generateMealPlanPdf(
+        plan,
+        meals.map((m) => editorToMeal(m, plan.id ?? 0)),
+        patient,
+      );
+      const safeTitle = plan.title
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const fileName = `${safeTitle || "plano-alimentar"}-${patient?.name
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "paciente"}.pdf`;
+      doc.save(fileName);
+      toast.success("PDF gerado com sucesso.");
+    } catch (error) {
+      toast.error("Não foi possível gerar o PDF.");
+      console.error("[AdminPlanoAlimentar] handleDownloadPdf:", error);
+    }
   };
 
   const updateMeal = (i: number, m: EditorMeal) =>
@@ -470,9 +501,9 @@ export default function AdminPlanoAlimentar() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
-              onClick={() => setShowPrint(true)}
+              onClick={handleDownloadPdf}
               disabled={isNew}
-              title={isNew ? "Salve o plano primeiro" : "Imprimir / Salvar PDF"}
+              title={isNew ? "Salve o plano primeiro" : "Baixar PDF"}
               className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Printer size={13} />
@@ -1084,14 +1115,6 @@ export default function AdminPlanoAlimentar() {
         onImport={handleMealPresetImport}
       />
 
-      {showPrint && (
-        <DietPlanPrintView
-          plan={plan}
-          meals={meals.map((m) => editorToMeal(m, plan.id ?? 0))}
-          patient={patient}
-          onClose={() => setShowPrint(false)}
-        />
-      )}
     </div>
   );
 }

@@ -164,11 +164,6 @@ function buildDocument(plan: MealPlan, meals: Meal[], patient: Patient | null) {
     </div>
   </div>
 
-  <script>
-    window.addEventListener('load', () => {
-      setTimeout(() => window.print(), 300);
-    });
-  </script>
 </body>
 </html>`;
 }
@@ -181,37 +176,17 @@ export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
     openedRef.current = true;
 
     const html = buildDocument(plan, meals, patient);
-    const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=1100");
+    const popup = window.open(
+      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+      "_blank",
+      "width=900,height=1100"
+    );
 
     if (!popup) {
       onClose();
       return;
     }
-
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
     popup.focus();
-
-    const cleanup = () => {
-      try {
-        popup.close();
-      } catch {
-        // ignore
-      }
-      onClose();
-    };
-
-    popup.addEventListener("afterprint", cleanup, { once: true });
-    const timer = window.setTimeout(() => {
-      if (!popup.closed) {
-        cleanup();
-      }
-    }, 1500);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
   }, [meals, onClose, patient, plan]);
 
   return null;

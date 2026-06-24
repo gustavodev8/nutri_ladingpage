@@ -5,19 +5,13 @@ import type { MealPlan, Meal, Patient } from "@/lib/supabase";
 type RGB = [number, number, number];
 
 const C = {
-  brand: [8, 95, 70] as RGB,
-  brandSoft: [204, 251, 241] as RGB,
-  brandDark: [4, 47, 46] as RGB,
-  ink: [15, 23, 42] as RGB,
+  ink: [17, 24, 39] as RGB,
   muted: [100, 116, 139] as RGB,
-  line: [226, 232, 240] as RGB,
-  card: [255, 255, 255] as RGB,
-  soft: [248, 250, 252] as RGB,
-  soft2: [236, 253, 245] as RGB,
-  accentBlue: [37, 99, 235] as RGB,
-  accentAmber: [217, 119, 6] as RGB,
-  accentRose: [225, 29, 72] as RGB,
-  accentEmerald: [5, 150, 105] as RGB,
+  line: [229, 231, 235] as RGB,
+  lineStrong: [209, 213, 219] as RGB,
+  soft: [249, 250, 251] as RGB,
+  soft2: [243, 244, 246] as RGB,
+  accent: [15, 118, 110] as RGB,
   white: [255, 255, 255] as RGB,
 };
 
@@ -36,17 +30,6 @@ function formatToday() {
   });
 }
 
-function ageYears(birthDate?: string | null) {
-  if (!birthDate) return null;
-  const birth = new Date(`${birthDate}T12:00:00`);
-  if (Number.isNaN(birth.getTime())) return null;
-  const now = new Date();
-  let years = now.getFullYear() - birth.getFullYear();
-  const monthDelta = now.getMonth() - birth.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) years--;
-  return years;
-}
-
 function sum(foods: Meal["foods"]) {
   return (foods ?? []).reduce(
     (acc, food) => ({
@@ -59,171 +42,113 @@ function sum(foods: Meal["foods"]) {
   );
 }
 
+function ageYears(birthDate?: string | null) {
+  if (!birthDate) return null;
+  const birth = new Date(`${birthDate}T12:00:00`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) years--;
+  return years;
+}
+
 function roundRect(doc: jsPDF, x: number, y: number, w: number, h: number, r: number, fill: RGB, stroke?: RGB) {
   doc.setFillColor(...fill);
   if (stroke) doc.setDrawColor(...stroke);
   doc.roundedRect(x, y, w, h, r, r, stroke ? "FD" : "F");
 }
 
-function pill(doc: jsPDF, x: number, y: number, label: string, fill: RGB, text: RGB = C.ink) {
-  const w = Math.max(16, doc.getTextWidth(label) + 8);
-  roundRect(doc, x, y, w, 6.5, 3, fill, fill);
-  doc.setTextColor(...text);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
-  doc.text(label, x + w / 2, y + 4.5, { align: "center" });
-  return w;
-}
-
-function sectionText(
+function labelValue(
   doc: jsPDF,
   x: number,
   y: number,
   w: number,
-  title: string,
-  text: string,
-  fill: RGB,
-  textColor: RGB,
-  pageHeight: number,
+  label: string,
+  value: string,
 ) {
-  const lines = doc.splitTextToSize(text, w - 10);
-  const h = 12 + lines.length * 4;
-  if (y + h > pageHeight - 18) return null;
-
-  roundRect(doc, x, y, w, h, 2.5, fill, C.line);
-  doc.setTextColor(...textColor);
+  roundRect(doc, x, y, w, 18, 2.2, C.white, C.lineStrong);
+  doc.setFillColor(...C.soft2);
+  doc.rect(x, y, w, 2, "F");
+  doc.setTextColor(...C.muted);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.text(title.toUpperCase(), x + 4, y + 5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(lines, x + 4, y + 10);
-  return h;
-}
-
-function header(doc: jsPDF, plan: MealPlan, patient: Patient | null, pageWidth: number, margin: number) {
-  const headerHeight = 38;
-  doc.setFillColor(...C.brandDark);
-  doc.rect(0, 0, pageWidth, headerHeight, "F");
-
-  doc.setTextColor(...C.brandSoft);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("PLANO ALIMENTAR PERSONALIZADO", margin, 9);
-
-  doc.setTextColor(...C.white);
-  doc.setFontSize(18);
-  doc.text(patient?.name || "Paciente", margin, 19);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...C.brandSoft);
-  doc.text(`Gerado em ${formatToday()}`, margin, 28);
-
-  const right = [plan.title || "Plano alimentar", fmtDate(plan.start_date), fmtDate(plan.end_date)]
-    .filter(Boolean)
-    .join("  ·  ");
-  doc.text(right, pageWidth - margin, 28, { align: "right" });
-}
-
-function summaryCards(
-  doc: jsPDF,
-  pageWidth: number,
-  margin: number,
-  startY: number,
-  grand: { cal: number; prot: number; carbs: number; fat: number },
-) {
-  const w = (pageWidth - margin * 2 - 9) / 4;
-  const cards = [
-    { label: "Energia total", value: grand.cal > 0 ? `${Math.round(grand.cal)} kcal` : "0 kcal", color: C.accentEmerald },
-    { label: "Proteínas", value: grand.prot > 0 ? `${grand.prot.toFixed(1)} g` : "0 g", color: C.accentBlue },
-    { label: "Carboidratos", value: grand.carbs > 0 ? `${grand.carbs.toFixed(1)} g` : "0 g", color: C.accentAmber },
-    { label: "Gorduras", value: grand.fat > 0 ? `${grand.fat.toFixed(1)} g` : "0 g", color: C.accentRose },
-  ] as const;
-
-  cards.forEach((card, idx) => {
-    const x = margin + idx * (w + 3);
-    roundRect(doc, x, startY, w, 20, 2.5, C.card, C.line);
-    doc.setFillColor(...card.color);
-    doc.rect(x, startY + 18.5, w, 1.5, "F");
-    doc.setTextColor(...C.muted);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(6);
-    doc.text(card.label.toUpperCase(), x + w / 2, startY + 5.3, { align: "center" });
-    doc.setTextColor(...card.color);
-    doc.setFontSize(13);
-    doc.text(card.value, x + w / 2, startY + 13, { align: "center" });
-  });
+  doc.setFontSize(6.2);
+  doc.text(label.toUpperCase(), x + 4, y + 6);
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(10.5);
+  doc.text(value, x + 4, y + 13);
 }
 
 function mealHeight(meal: Meal) {
   const foods = meal.foods ?? [];
   const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
-  return 28 + foods.length * 5.2 + (notesLines ? 10 + notesLines * 4 : 0) + (subs ? 10 + subs * 4.2 : 0);
+  return 30 + foods.length * 7.2 + (notesLines ? 10 + notesLines * 4.4 : 0) + (subs ? 10 + subs * 4 : 0);
 }
 
-function drawMealCard(
+function mealQty(food: NonNullable<Meal["foods"]>[number]) {
+  if (!food.quantity) return "—";
+  return `${food.quantity}${food.unit ?? "g"}`;
+}
+
+function drawMeal(
   doc: jsPDF,
   meal: Meal,
-  idx: number,
+  index: number,
   pageWidth: number,
   pageHeight: number,
   margin: number,
-  currentY: number,
+  y: number,
 ) {
   const contentW = pageWidth - margin * 2;
   const estH = mealHeight(meal);
-  if (currentY + estH > pageHeight - 18) {
+  if (y + estH > pageHeight - 16) {
     doc.addPage();
-    currentY = 14;
+    y = 14;
   }
 
   const foods = meal.foods ?? [];
   const totals = sum(foods);
-  const isSubstitution = /substitui/i.test(meal.meal_name);
+  const notes = (meal.notes ?? "").trim();
+  const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim());
 
-  roundRect(doc, margin, currentY, contentW, estH, 3, C.card, C.line);
+  roundRect(doc, margin, y, contentW, estH, 2.4, C.white, C.lineStrong);
   doc.setFillColor(...C.soft);
-  doc.rect(margin, currentY, contentW, 11, "F");
-  doc.setDrawColor(...C.line);
-  doc.setLineWidth(0.25);
-  doc.line(margin, currentY + 11, margin + contentW, currentY + 11);
+  doc.rect(margin, y, contentW, 9, "F");
+  doc.setDrawColor(...C.lineStrong);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y + 9, margin + contentW, y + 9);
 
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.text(`${String(idx + 1).padStart(2, "0")} · ${meal.meal_name || "Refeição"}`, margin + 4, currentY + 7.1);
-
-  if (isSubstitution) {
-    pill(doc, margin + 72, currentY + 2.4, "Substituição", [255, 247, 237] as RGB, [194, 65, 12] as RGB);
-  }
+  doc.setFontSize(9.2);
+  doc.text(`${String(index + 1).padStart(2, "0")} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
   if (meal.time_suggestion) {
-    const w = doc.getTextWidth(meal.time_suggestion) + 8;
-    pill(doc, pageWidth - margin - w, currentY + 2.4, meal.time_suggestion, C.white, C.muted);
+    doc.setTextColor(...C.muted);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    const timeW = doc.getTextWidth(meal.time_suggestion) + 6;
+    roundRect(doc, pageWidth - margin - timeW - 1, y + 2, timeW, 5.2, 2.4, C.soft2, C.line);
+    doc.text(meal.time_suggestion, pageWidth - margin - timeW / 2 - 1, y + 5.8, { align: "center" });
   }
 
-  const kcalText = `${Math.round(totals.cal)} kcal`;
-  pill(doc, pageWidth - margin - 4 - Math.min(44, doc.getTextWidth(kcalText) + 8), currentY + 2.4, kcalText, C.brandSoft, C.brandDark);
-
-  let y = currentY + 13.5;
+  let cursorY = y + 11;
 
   if (foods.length === 0) {
-    roundRect(doc, margin + 4, y + 1, contentW - 8, 10, 2, C.soft2, C.line);
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8.5);
-    doc.text("Nenhum alimento adicionado.", pageWidth / 2, y + 7.6, { align: "center" });
-    y += 14;
+    doc.text("Nenhum alimento cadastrado.", margin + 4, cursorY + 4.5);
+    cursorY += 9;
   } else {
     autoTable(doc, {
-      startY: y,
+      startY: cursorY,
       margin: { left: margin + 4, right: margin + 4 },
       theme: "grid",
       head: [["Alimento", "Qtd", "kcal", "P", "C", "G"]],
       body: foods.map((food) => [
         food.food_name || "-",
-        food.quantity ? `${food.quantity}${food.unit ?? "g"}` : "-",
+        mealQty(food),
         food.calories ? food.calories.toFixed(0) : "-",
         food.protein ? food.protein.toFixed(1) : "-",
         food.carbs ? food.carbs.toFixed(1) : "-",
@@ -235,39 +160,53 @@ function drawMealCard(
         textColor: C.ink,
         lineColor: C.line,
         lineWidth: 0.15,
-        cellPadding: 2.2,
+        cellPadding: 2.1,
       },
       headStyles: {
         fillColor: C.soft2,
         textColor: C.muted,
         fontStyle: "bold",
-        fontSize: 6.8,
+        fontSize: 6.6,
       },
-      alternateRowStyles: { fillColor: C.soft },
+      alternateRowStyles: {
+        fillColor: [253, 253, 253],
+      },
       columnStyles: {
         0: { cellWidth: "auto" },
-        1: { cellWidth: 26, halign: "right" },
-        2: { cellWidth: 16, halign: "right" },
-        3: { cellWidth: 16, halign: "right" },
-        4: { cellWidth: 16, halign: "right" },
-        5: { cellWidth: 16, halign: "right" },
+        1: { cellWidth: 24, halign: "right" },
+        2: { cellWidth: 15, halign: "right" },
+        3: { cellWidth: 15, halign: "right" },
+        4: { cellWidth: 15, halign: "right" },
+        5: { cellWidth: 15, halign: "right" },
       },
       didParseCell(data) {
         if (data.section === "body" && data.row.index === foods.length - 1) {
-          data.cell.styles.fillColor = [236, 253, 245];
+          data.cell.styles.fillColor = [248, 250, 252];
           data.cell.styles.fontStyle = "bold";
         }
       },
     });
-    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 2.5;
+    cursorY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 2.6;
   }
 
-  if (meal.notes?.trim()) {
-    const block = sectionText(doc, margin + 4, y, contentW - 8, "Observações", meal.notes.trim(), [255, 251, 235], [124, 45, 18], pageHeight);
-    if (block) y += block + 2;
+  if (notes) {
+    const lines = doc.splitTextToSize(notes, contentW - 10);
+    const h = 8 + lines.length * 3.8;
+    if (cursorY + h > pageHeight - 16) {
+      doc.addPage();
+      cursorY = 14;
+    }
+    roundRect(doc, margin + 4, cursorY, contentW - 8, h, 2, C.soft, C.line);
+    doc.setTextColor(...C.ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text("Observações", margin + 8, cursorY + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.7);
+    doc.text(lines, margin + 8, cursorY + 9);
+    cursorY += h + 2;
   }
 
-  const subs = (meal.substitution_items ?? []).filter((s) => s.food_name.trim());
   if (subs.length > 0) {
     const text = subs
       .map((sub, i) => {
@@ -277,11 +216,34 @@ function drawMealCard(
         return `${prefix}${qty}${sub.food_name}${note}`;
       })
       .join("\n");
-    const block = sectionText(doc, margin + 4, y, contentW - 8, "Substituições", text, [255, 247, 237], [154, 52, 18], pageHeight);
-    if (block) y += block + 2;
+    const lines = doc.splitTextToSize(text, contentW - 10);
+    const h = 8 + lines.length * 3.8;
+    if (cursorY + h > pageHeight - 16) {
+      doc.addPage();
+      cursorY = 14;
+    }
+    roundRect(doc, margin + 4, cursorY, contentW - 8, h, 2, [251, 251, 251], C.line);
+    doc.setTextColor(...C.ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text("Substituições", margin + 8, cursorY + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.7);
+    doc.text(lines, margin + 8, cursorY + 9);
+    cursorY += h + 2;
   }
 
-  return y + 4;
+  const totalY = cursorY + 1.2;
+  if (totalY + 6 > pageHeight - 16) {
+    doc.addPage();
+    cursorY = 14;
+  }
+  doc.setTextColor(...C.muted);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.text(`Total da refeição: ${Math.round(totals.cal)} kcal`, margin + 4, totalY);
+
+  return totalY + 8;
 }
 
 export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Patient | null): jsPDF {
@@ -303,66 +265,96 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
     { cal: 0, prot: 0, carbs: 0, fat: 0 },
   );
 
-  header(doc, plan, patient, pageWidth, margin);
-
-  let y = 42;
-  summaryCards(doc, pageWidth, margin, y, grand);
-  y += 26;
-
-  const start = fmtDate(plan.start_date);
-  const end = fmtDate(plan.end_date);
+  const period = [fmtDate(plan.start_date), fmtDate(plan.end_date)].filter(Boolean).join(" - ");
   const age = ageYears(patient?.birth_date);
 
-  const infoText = [
-    plan.title || "Plano alimentar",
-    start && end ? `Período: ${start} - ${end}` : start ? `Início: ${start}` : null,
-    patient?.city ? patient.city : null,
-    age != null ? `${age} anos` : null,
-  ].filter(Boolean).join("  ·  ");
+  // Header
+  doc.setFillColor(...C.white);
+  doc.rect(0, 0, pageWidth, pageHeight, "F");
+  doc.setDrawColor(...C.accent);
+  doc.setLineWidth(1.3);
+  doc.line(0, 0, pageWidth, 0);
 
-  const infoHeight = sectionText(
+  doc.setTextColor(...C.accent);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("PLANO ALIMENTAR PERSONALIZADO", margin, 10);
+
+  doc.setTextColor(...C.ink);
+  doc.setFontSize(18);
+  doc.text(patient?.name || "Paciente", margin, 18);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
+  doc.setTextColor(...C.muted);
+  doc.text(`Gerado em ${formatToday()}`, margin, 24.5);
+  if (plan.title) doc.text(plan.title, pageWidth - margin, 24.5, { align: "right" });
+
+  // Summary
+  const boxY = 30;
+  const boxW = (pageWidth - margin * 2 - 6) / 4;
+  const summary = [
+    { label: "Energia", value: `${Math.round(grand.cal)} kcal` },
+    { label: "Proteínas", value: `${grand.prot.toFixed(1)} g` },
+    { label: "Carboidratos", value: `${grand.carbs.toFixed(1)} g` },
+    { label: "Gorduras", value: `${grand.fat.toFixed(1)} g` },
+  ];
+  summary.forEach((item, idx) => {
+    labelValue(doc, margin + idx * (boxW + 2), boxY, boxW, item.label, item.value);
+  });
+
+  let y = 53;
+  labelValue(doc, margin, y, (pageWidth - margin * 2 - 4) / 3, "Período", period || "Sem período");
+  labelValue(
     doc,
-    margin,
+    margin + ((pageWidth - margin * 2 - 4) / 3) + 2,
     y,
-    pageWidth - margin * 2,
-    "Resumo clínico",
-    infoText,
-    C.card,
-    C.ink,
-    pageHeight,
+    (pageWidth - margin * 2 - 4) / 3,
+    "Meta diária",
+    plan.daily_calories ? `${plan.daily_calories} kcal/dia` : "Não informada",
   );
-  y += (infoHeight ?? 0) + 4;
+  labelValue(
+    doc,
+    margin + 2 * (((pageWidth - margin * 2 - 4) / 3) + 2),
+    y,
+    (pageWidth - margin * 2 - 4) / 3,
+    "Paciente",
+    age != null ? `${age} anos` : "Não informado",
+  );
+
+  y += 23;
 
   if (plan.notes?.trim()) {
-    const notesHeight = sectionText(
-      doc,
-      margin,
-      y,
-      pageWidth - margin * 2,
-      "Orientações gerais",
-      plan.notes.trim(),
-      [247, 252, 250],
-      [6, 95, 70],
-      pageHeight,
-    );
-    y += (notesHeight ?? 0) + 4;
+    const lines = doc.splitTextToSize(plan.notes.trim(), pageWidth - margin * 2 - 10);
+    const h = 10 + lines.length * 3.7;
+    roundRect(doc, margin, y, pageWidth - margin * 2, h, 2.2, C.soft, C.line);
+    doc.setTextColor(...C.muted);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text("Orientações gerais", margin + 4, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.7);
+    doc.setTextColor(...C.ink);
+    doc.text(lines, margin + 4, y + 9);
+    y += h + 4;
   }
 
-  meals.forEach((meal, idx) => {
-    y = drawMealCard(doc, meal, idx, pageWidth, pageHeight, margin, y);
+  meals.forEach((meal, index) => {
+    y = drawMeal(doc, meal, index, pageWidth, pageHeight, margin, y);
   });
 
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    const footerY = pageHeight - 9;
-    doc.setFillColor(...C.brand);
-    doc.rect(0, footerY, pageWidth, 9, "F");
-    doc.setTextColor(...C.white);
+    const footerY = pageHeight - 8;
+    doc.setDrawColor(...C.lineStrong);
+    doc.setLineWidth(0.2);
+    doc.line(margin, footerY - 2, pageWidth - margin, footerY - 2);
+    doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.7);
-    doc.text(`Gerado em ${formatToday()}  ·  Documento clínico confidencial`, margin, footerY + 5.3);
-    doc.text(`Página ${p} de ${totalPages}`, pageWidth - margin, footerY + 5.3, { align: "right" });
+    doc.setFontSize(6.8);
+    doc.text("Documento clínico confidencial", margin, footerY);
+    doc.text(`Página ${p} de ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
   return doc;
