@@ -63,7 +63,17 @@ const AdminPagamentos = () => {
   const getInitials = (name: string) =>
     name?.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase() || "?";
 
-  const generateReceiptPdf = (log: PaymentLog) => {
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = url;
+    });
+  };
+
+  const generateReceiptPdf = async (log: PaymentLog) => {
     try {
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -150,6 +160,19 @@ const AdminPagamentos = () => {
       // Signature Area
       const sigLineW = 60;
       const sigLineX = boxX + boxW - sigLineW - 6;
+
+      // Desenha imagem da assinatura se existir
+      try {
+        const sigImg = await loadImage("/assinatura.png");
+        const sigW = 40; // largura em mm
+        const sigH = 15; // altura em mm
+        const sigX = sigLineX + (sigLineW - sigW) / 2;
+        const sigY = y - sigH - 1; // posiciona 1mm acima da linha
+        doc.addImage(sigImg, "PNG", sigX, sigY, sigW, sigH);
+      } catch (err) {
+        console.warn("Assinatura predefinida (/assinatura.png) não foi encontrada ou falhou ao carregar.");
+      }
+
       doc.setDrawColor(100, 116, 139);
       doc.setLineWidth(0.2);
       doc.line(sigLineX, y, sigLineX + sigLineW, y);
