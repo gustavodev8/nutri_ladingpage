@@ -1,12 +1,12 @@
-﻿/**
- * MealTableEditor â€” componentes reutilizÃ¡veis de ediÃ§Ã£o de refeiÃ§Ãµes.
+/**
+ * MealTableEditor — componentes reutilizáveis de edição de refeições.
  *
  * Usado por AdminPlanoAlimentar (modo paciente) e AdminTemplateEditor (modo template).
- * ContÃ©m: FoodRow, MealSection, helpers de cÃ¡lculo e constantes de UI.
+ * Contém: FoodRow, MealSection, helpers de cálculo e constantes de UI.
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X, NotebookPen, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X, NotebookPen, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import type { MealFood, SubstitutionItem } from "@/lib/supabase";
 import { fetchSmartSubstitutions } from "@/lib/supabase";
 import { calculateSubstitutions, type SubstitutionRule, type FoodSubstitution } from "@/lib/smartSubstitutions";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 export const UNITS = ["g", "ml", "L", "kg", "un", "xícara", "col. sopa", "col. chá", "fatia", "porção"] as const;
 
@@ -46,7 +46,15 @@ export const FOOD_GROUPS = [
   "Vegetal", "Laticínio", "Leguminosa", "Outro",
 ] as const;
 
-// â”€â”€â”€ Shared types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared types ─────────────────────────────────────────────────────────────
+
+/** Rascunho de uma opção substituta completa para o editor de refeições */
+export interface AlternativeMealDraft {
+  meal_name:        string;
+  time_suggestion?: string;
+  notes?:           string;
+  foods:            MealFood[];
+}
 
 /** Refeição genérica usada tanto em planos de paciente quanto em templates */
 export interface EditorMeal {
@@ -59,9 +67,11 @@ export interface EditorMeal {
   substitution_items?: SubstitutionItem[];
   /** Refeições alternativas completas (apenas em templates) */
   substitutions?:      EditorMeal[];
+  /** Opções substitutas completas para planos de paciente */
+  alternative_meals?:  AlternativeMealDraft[];
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export const n0 = (v: number) => (v > 0 ? Math.round(v).toString() : "—");
 export const n1 = (v: number) => (v > 0 ? v.toFixed(1) : "—");
@@ -140,7 +150,7 @@ export function emptyFood(): MealFood {
   return { meal_id: 0, food_name: "", quantity: undefined, unit: "g" };
 }
 
-// â”€â”€â”€ Shared cell styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared cell styles ───────────────────────────────────────────────────────
 
 export const cellNum =
   "h-8 w-full bg-transparent border border-border/60 rounded px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary";
@@ -187,7 +197,7 @@ export function getMealCalorieTargets(
   });
 }
 
-// â”€â”€â”€ FoodRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── FoodRow ──────────────────────────────────────────────────────────────────
 
 export function FoodRow({
   food, idx, onChange, onRemove,
@@ -385,7 +395,7 @@ export function FoodRow({
   );
 }
 
-// â”€â”€â”€ MealSection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── MealSection ──────────────────────────────────────────────────────────────
 
 // Module-level cache so rules are fetched only once across all MealSections
 let _rulesCache: SubstitutionRule[] | null = null;
@@ -406,52 +416,55 @@ export function MealSection({
   onRemove: () => void;
   targetCalories?: number;
 }) {
-  const foods     = meal.foods ?? [];
-  const totals    = sumFoods(foods);
+  const alternatives  = meal.alternative_meals ?? [];
+  const totalOptions  = alternatives.length + 1; // principal + substitutas
+
+  const [activeOptionIdx, setActiveOptionIdx] = useState(0);
+  const [showNotes, setShowNotes]             = useState(false);
+  const subs                                  = meal.substitution_items ?? [];
+  const [showSubs, setShowSubs]               = useState(subs.length > 0);
+  const [suggestions, setSuggestions]         = useState<FoodSubstitution[]>([]);
+  const loaded                                = useRef(false);
+
+  // Garante que o índice não ultrapasse as opções existentes
+  const clampedIdx = Math.min(activeOptionIdx, totalOptions - 1);
+  const isMain     = clampedIdx === 0;
+
+  // Dados da opção ativa
+  const currentOption = isMain ? meal : (alternatives[clampedIdx - 1] ?? meal);
+  const foods         = currentOption.foods ?? [];
+  const totals        = sumFoods(foods);
+
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
-  const [showNotes, setShowNotes] = useState(!!meal.notes);
-  const subs = meal.substitution_items ?? [];
-  const [showSubs, setShowSubs]   = useState(subs.length > 0);
-  const [suggestions, setSuggestions] = useState<FoodSubstitution[]>([]);
-  const loaded = useRef(false);
+
   const targetState =
     targetCalories && targetCalories > 0 && totals.cal > 0
       ? totals.cal >= targetCalories * 0.9 && totals.cal <= targetCalories * 1.1
-        ? {
-            label: "Na meta",
-            className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-          }
+        ? { label: "Na meta",        className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
         : totals.cal > targetCalories * 1.1
-          ? {
-              label: "Acima da meta",
-              className: "border-red-200 bg-red-50 text-red-700",
-            }
-          : {
-              label: "Abaixo da meta",
-              className: "border-amber-200 bg-amber-50 text-amber-800",
-            }
-      : {
-          label: "Sem meta",
-          className: "border-border/40 bg-muted/20 text-muted-foreground",
-        };
+          ? { label: "Acima da meta", className: "border-red-200 bg-red-50 text-red-700" }
+          : { label: "Abaixo da meta", className: "border-amber-200 bg-amber-50 text-amber-800" }
+      : { label: "Sem meta",         className: "border-border/40 bg-muted/20 text-muted-foreground" };
 
-  // Load smart suggestions lazily when sub-panel is first opened
+  // ── Smart suggestions (calculadas sobre os alimentos da refeição principal) ──
+  const mainFoods = meal.foods ?? [];
+
   useEffect(() => {
     if (!showSubs || loaded.current) return;
     loaded.current = true;
     getRules().then((rules) => {
-      setSuggestions(calculateSubstitutions(foods.filter(f => f.food_name && f.quantity), rules));
+      setSuggestions(calculateSubstitutions(mainFoods.filter(f => f.food_name && f.quantity), rules));
     });
   }, [showSubs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-calculate when foods change (if panel already open)
   useEffect(() => {
     if (!showSubs || !loaded.current) return;
     getRules().then((rules) => {
-      setSuggestions(calculateSubstitutions(foods.filter(f => f.food_name && f.quantity), rules));
+      setSuggestions(calculateSubstitutions(mainFoods.filter(f => f.food_name && f.quantity), rules));
     });
-  }, [foods]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mainFoods]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Substitution items helpers (apenas refeição principal) ────────────────
   const addSub = (item?: Partial<SubstitutionItem>) =>
     onUpdate({ ...meal, substitution_items: [...subs, { food_name: "", quantity: undefined, unit: "g", notes: "", ...item }] });
 
@@ -466,18 +479,57 @@ export function MealSection({
   const isAlreadyAdded = (name: string) =>
     subs.some(s => s.food_name.toLowerCase() === name.toLowerCase());
 
-  const targetStatus =
-    targetCalories && targetCalories > 0 && totals.cal > 0
-      ? totals.cal >= targetCalories * 0.9 && totals.cal <= targetCalories * 1.1
-        ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-        : totals.cal > targetCalories * 1.1
-          ? "text-red-600 bg-red-50 border-red-200"
-          : "text-amber-700 bg-amber-50 border-amber-200"
-      : "text-muted-foreground bg-muted/20 border-border/40";
+  // ── Navegação entre opções ────────────────────────────────────────────────
+  const goToOption = (targetIdx: number) => {
+    const clamped = Math.max(0, Math.min(totalOptions - 1, targetIdx));
+    setActiveOptionIdx(clamped);
+    const t = clamped === 0 ? meal : alternatives[clamped - 1];
+    setShowNotes(!!t?.notes);
+  };
 
-  const updateFood = (i: number, f: MealFood) => { const n = [...foods]; n[i] = f; onUpdate({ ...meal, foods: n }); };
-  const removeFood = (i: number) => onUpdate({ ...meal, foods: foods.filter((_, fi) => fi !== i) });
-  const addFood    = () => onUpdate({ ...meal, foods: [...foods, emptyFood()] });
+  // ── Helpers para atualizar a opção ativa ─────────────────────────────────
+  const updateCurrentOption = (patch: Partial<Pick<AlternativeMealDraft, "meal_name" | "time_suggestion" | "notes" | "foods">>) => {
+    if (isMain) {
+      onUpdate({ ...meal, ...patch });
+    } else {
+      const newAlts = [...alternatives];
+      newAlts[clampedIdx - 1] = { ...alternatives[clampedIdx - 1], ...patch };
+      onUpdate({ ...meal, alternative_meals: newAlts });
+    }
+  };
+
+  const addAlternative = () => {
+    const newAlt: AlternativeMealDraft = {
+      meal_name:       `${meal.meal_name} — Opção ${alternatives.length + 2}`,
+      time_suggestion: meal.time_suggestion,
+      notes:           "",
+      foods:           [],
+    };
+    const newAlts = [...alternatives, newAlt];
+    onUpdate({ ...meal, alternative_meals: newAlts });
+    setActiveOptionIdx(newAlts.length);
+    setShowNotes(false);
+  };
+
+  const removeCurrentAlternative = () => {
+    if (isMain) return;
+    const newAlts = alternatives.filter((_, i) => i !== clampedIdx - 1);
+    onUpdate({ ...meal, alternative_meals: newAlts });
+    const newIdx = Math.max(0, clampedIdx - 1);
+    setActiveOptionIdx(newIdx);
+    const t = newIdx === 0 ? meal : newAlts[newIdx - 1];
+    setShowNotes(!!t?.notes);
+  };
+
+  // ── Operações sobre alimentos da opção ativa ─────────────────────────────
+  const updateFood = (i: number, f: MealFood) => {
+    const next = [...foods]; next[i] = f;
+    updateCurrentOption({ foods: next });
+  };
+  const removeFood = (i: number) => updateCurrentOption({ foods: foods.filter((_, fi) => fi !== i) });
+  const addFood    = () => updateCurrentOption({ foods: [...foods, emptyFood()] });
+
+  const optionLabel = isMain ? "Principal" : `Opção ${clampedIdx + 1}`;
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border border-border/60 border-l-[5px] bg-card shadow-sm transition-shadow hover:shadow-md ${borderCls}`}>
@@ -494,23 +546,55 @@ export function MealSection({
           <div className="min-w-0 flex-1 space-y-2">
             <input
               type="text"
-              value={meal.meal_name}
-              onChange={(e) => onUpdate({ ...meal, meal_name: e.target.value })}
+              value={currentOption.meal_name}
+              onChange={(e) => updateCurrentOption({ meal_name: e.target.value })}
               className="w-full border-0 bg-transparent p-0 text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground focus:outline-none"
               placeholder="Nome da refeição"
             />
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <Sparkles size={10} className="text-primary" />
-                Refeição {String(idx + 1).padStart(2, "0")}
-              </span>
-              {showNotes || meal.notes ? (
+              {/* Navegação entre opções */}
+              {totalOptions > 1 ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-1.5 py-1">
+                  <button
+                    type="button"
+                    onClick={() => goToOption(clampedIdx - 1)}
+                    disabled={clampedIdx === 0}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-primary disabled:opacity-30 hover:bg-primary/20 transition-colors"
+                    title="Opção anterior"
+                  >
+                    <ChevronLeft size={10} />
+                  </button>
+                  <span className="text-[10px] font-bold text-primary px-1">{optionLabel}</span>
+                  <span className="text-[10px] text-muted-foreground">/ {totalOptions}</span>
+                  <button
+                    type="button"
+                    onClick={() => goToOption(clampedIdx + 1)}
+                    disabled={clampedIdx === totalOptions - 1}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-primary disabled:opacity-30 hover:bg-primary/20 transition-colors"
+                    title="Próxima opção"
+                  >
+                    <ChevronRight size={10} />
+                  </button>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <Sparkles size={10} className="text-primary" />
+                  Refeição {String(idx + 1).padStart(2, "00")}
+                </span>
+              )}
+              {(showNotes || currentOption.notes) ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
                   <NotebookPen size={10} />
                   Com observação
                 </span>
               ) : null}
-              {showSubs || subs.length > 0 ? (
+              {alternatives.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  <ArrowLeftRight size={10} />
+                  {alternatives.length} {alternatives.length === 1 ? "substituta" : "substitutas"}
+                </span>
+              )}
+              {isMain && (showSubs || subs.length > 0) ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
                   <ArrowLeftRight size={10} />
                   {subs.length > 0 ? `${subs.length} substituição(ões)` : "Substituições"}
@@ -524,8 +608,8 @@ export function MealSection({
           <div className="hidden sm:flex flex-col items-end gap-1">
             <input
               type="text"
-              value={meal.time_suggestion ?? ""}
-              onChange={(e) => onUpdate({ ...meal, time_suggestion: e.target.value })}
+              value={currentOption.time_suggestion ?? ""}
+              onChange={(e) => updateCurrentOption({ time_suggestion: e.target.value })}
               className="w-32 rounded-xl border border-border/60 bg-background px-3 py-2 text-right text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary"
               placeholder="00:00 - 00:00"
             />
@@ -550,14 +634,27 @@ export function MealSection({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onRemove}
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground/50 transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Remover ${meal.meal_name || "refeição"}`}
-          >
-            <Trash2 size={14} />
-          </button>
+          {/* Botão remover: se é substituta remove a substituta, se é principal remove a refeição toda */}
+          {!isMain ? (
+            <button
+              type="button"
+              onClick={removeCurrentAlternative}
+              className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground/50 transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              title="Remover esta opção substituta"
+              aria-label="Remover esta opção substituta"
+            >
+              <Trash2 size={14} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground/50 transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Remover ${meal.meal_name || "refeição"}`}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -586,7 +683,7 @@ export function MealSection({
                     </div>
                     <p className="text-sm font-medium text-foreground">Nenhum alimento adicionado</p>
                     <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-                      Clique em <span className="font-semibold text-primary">Adicionar alimento</span> para começar a montar esta refeição.
+                      Clique em <span className="font-semibold text-primary">Adicionar alimento</span> para começar a montar esta {isMain ? "refeição" : "opção substituta"}.
                     </p>
                   </div>
                 </td>
@@ -627,43 +724,56 @@ export function MealSection({
             Adicionar alimento
           </button>
           <button type="button"
-            onClick={() => { setShowNotes(v => !v); if (showNotes) onUpdate({ ...meal, notes: "" }); }}
+            onClick={() => {
+              const next = !showNotes;
+              setShowNotes(next);
+              if (!next) updateCurrentOption({ notes: "" });
+            }}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-              showNotes || meal.notes
+              showNotes || currentOption.notes
                 ? "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15"
                 : "border-border/60 bg-background/80 text-muted-foreground/70 hover:text-foreground"
             )}>
             <MessageSquare size={12} />
             {showNotes ? "Remover observação" : "Adicionar observação"}
           </button>
-          <button type="button"
-            onClick={() => { setShowSubs(v => !v); if (!showSubs && subs.length === 0) addSub(); }}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-              showSubs || subs.length > 0
-                ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                : "border-border/60 bg-background/80 text-muted-foreground/70 hover:text-foreground"
-            )}>
-            <ArrowLeftRight size={12} />
-            Substituições {subs.length > 0 && `(${subs.length})`}
+          <button type="button" onClick={addAlternative}
+            className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-100">
+            <Plus size={12} />
+            Nova opção substituta
           </button>
+          {isMain && (
+            <button type="button"
+              onClick={() => { setShowSubs(v => !v); if (!showSubs && subs.length === 0) addSub(); }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                showSubs || subs.length > 0
+                  ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-border/60 bg-background/80 text-muted-foreground/70 hover:text-foreground"
+              )}>
+              <ArrowLeftRight size={12} />
+              Substituições {subs.length > 0 && `(${subs.length})`}
+            </button>
+          )}
         </div>
+
         {showNotes && (
           <div className="px-5 pb-4">
-            <textarea rows={2} value={meal.notes ?? ""}
-              onChange={e => onUpdate({ ...meal, notes: e.target.value })}
-                placeholder="Observações para esta refeição (substituições, preparo, orientações...)"
+            <textarea rows={2} value={currentOption.notes ?? ""}
+              onChange={e => updateCurrentOption({ notes: e.target.value })}
+              placeholder="Observações para esta refeição (substituições, preparo, orientações...)"
               className="w-full resize-none rounded-xl border border-border/50 bg-muted/30 px-3 py-2 text-sm text-foreground/80 placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary" />
           </div>
         )}
-        {showSubs && (
-          <div className="border-t border-amber-200/60 bg-gradient-to-b from-amber-50/30 to-background">
 
+        {/* Painel de substituições de alimentos — apenas na refeição principal */}
+        {isMain && showSubs && (
+          <div className="border-t border-amber-200/60 bg-gradient-to-b from-amber-50/30 to-background">
             {/* Smart suggestions */}
             {suggestions.length > 0 && (
               <div className="space-y-3 px-5 pb-3 pt-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 flex items-center gap-1.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 flex items-center gap-1.5">
                   <Sparkles size={10} /> Sugestões automáticas
                 </p>
                 {suggestions.map((sub) => (
@@ -706,7 +816,7 @@ export function MealSection({
               </div>
             )}
 
-            {/* Added substitution rows */}
+            {/* Linhas de substituição adicionadas */}
             <div className="px-5 pb-4 space-y-1.5">
               {suggestions.length === 0 && (
                 <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 pt-2.5 pb-1 flex items-center gap-1.5">
@@ -720,7 +830,6 @@ export function MealSection({
               )}
               {subs.map((sub, si) => (
                 <div key={si} className="rounded-2xl border border-amber-200/70 bg-white/90 px-3 py-2 space-y-1 shadow-sm">
-                   {/* Linha 1: qual alimento esta opção substitui */}
                   <div className="flex items-center gap-1.5">
                     <ArrowLeftRight size={10} className="text-amber-400 shrink-0" />
                     <span className="text-[10px] text-muted-foreground/70 shrink-0">Substitui:</span>
@@ -730,12 +839,11 @@ export function MealSection({
                       className="flex-1 min-w-0 text-xs bg-transparent border-0 focus:outline-none text-foreground/80 cursor-pointer"
                     >
                       <option value="">— selecionar alimento —</option>
-                      {foods.filter(f => f.food_name?.trim()).map((f, fi) => (
+                      {mainFoods.filter(f => f.food_name?.trim()).map((f, fi) => (
                         <option key={fi} value={f.food_name}>{f.food_name}</option>
                       ))}
                     </select>
                   </div>
-                  {/* Linha 2: alimento substituto + qtd + obs */}
                   <div className="flex items-center gap-1.5 pl-3.5">
                     <span className="text-[10px] text-muted-foreground/50 shrink-0">Por:</span>
                     <input
@@ -776,6 +884,3 @@ export function MealSection({
     </div>
   );
 }
-
-
-

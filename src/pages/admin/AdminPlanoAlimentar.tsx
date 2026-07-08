@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap, Soup, ChevronUp, ChevronDown,
@@ -23,10 +23,10 @@ import { cn } from "@/lib/utils";
 import {
   fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
   upsertMealPreset, saveMealPresetFoods,
-  type Meal, type MealFood, type MealPlan, type MealPresetFood,
+  type Meal, type MealFood, type MealPlan, type MealPresetFood, type AlternativeMeal
 } from "@/lib/supabase";
 import {
-  MealSection, EditorMeal, sumFoods, n0, n1, getMealCalorieTargets,
+  MealSection, EditorMeal, sumFoods, n0, n1, getMealCalorieTargets, type AlternativeMealDraft
 } from "@/components/admin/MealTableEditor";
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
@@ -48,7 +48,7 @@ import {
   type EnergyFormula, type ActivityLevel,
 } from "@/lib/energyUtils";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_MEALS = [
   { meal_name: "Café da manhã",   time_suggestion: "07:00 - 08:00" },
@@ -59,7 +59,7 @@ const DEFAULT_MEALS = [
   { meal_name: "Ceia",            time_suggestion: "21:30 - 22:00" },
 ];
 
-// â”€â”€â”€ Converters: Meal â†” EditorMeal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Converters: Meal ⇄ EditorMeal ───────────────────────────────────────────
 
 const mealToEditor = (m: Meal): EditorMeal => ({
   _dbId:              m.id,
@@ -68,6 +68,7 @@ const mealToEditor = (m: Meal): EditorMeal => ({
   notes:              m.notes,
   foods:              (m.foods ?? []) as MealFood[],
   substitution_items: m.substitution_items ?? [],
+  alternative_meals:  (m.alternative_meals ?? []) as AlternativeMealDraft[],
 });
 
 const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
@@ -78,6 +79,7 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   notes:              m.notes,
   foods:              m.foods,
   substitution_items: m.substitution_items ?? [],
+  alternative_meals:  (m.alternative_meals ?? []) as AlternativeMeal[],
 });
 
 
@@ -273,6 +275,10 @@ export default function AdminPlanoAlimentar() {
         meal_name: source.meal_name.trim() ? `${source.meal_name} (cópia)` : "Nova refeição",
         foods: source.foods.map((food) => ({ ...food })),
         substitution_items: source.substitution_items?.map((item) => ({ ...item })),
+        alternative_meals: source.alternative_meals?.map((alt) => ({
+          ...alt,
+          foods: alt.foods.map((food) => ({ ...food })),
+        })),
         substitutions: source.substitutions?.map((sub) => ({
           ...sub,
           _dbId: undefined,

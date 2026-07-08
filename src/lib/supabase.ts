@@ -463,6 +463,14 @@ export interface SubstitutionItem {
   replaces_food?: string;
 }
 
+/** Opção substituta completa de uma refeição (armazenada como JSONB em meals.alternative_meals) */
+export interface AlternativeMeal {
+  meal_name:        string;
+  time_suggestion?: string;
+  notes?:           string;
+  foods?:           MealFood[];
+}
+
 export interface Meal {
   id?: number;
   plan_id: number;
@@ -472,6 +480,8 @@ export interface Meal {
   notes?: string;
   foods?: MealFood[];
   substitution_items?: SubstitutionItem[];
+  /** Opções substitutas completas para esta refeição */
+  alternative_meals?: AlternativeMeal[];
 }
 
 export interface MealFood {
@@ -743,7 +753,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<string |
     const meal = meals[i];
     const { data: mealData, error: mealErr } = await supabaseAdmin
       .from("meals")
-      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "", substitution_items: meal.substitution_items ?? [] })
+      .insert({ plan_id: planId, meal_name: meal.meal_name, time_suggestion: meal.time_suggestion ?? "", sort_order: i, notes: meal.notes ?? "", substitution_items: meal.substitution_items ?? [], alternative_meals: meal.alternative_meals ?? [] })
       .select()
       .single();
     if (mealErr || !mealData) {

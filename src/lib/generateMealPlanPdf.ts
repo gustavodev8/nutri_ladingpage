@@ -94,7 +94,7 @@ function mealQty(food: NonNullable<Meal["foods"]>[number]) {
 function drawMeal(
   doc: jsPDF,
   meal: Meal,
-  index: number,
+  label: string,
   pageWidth: number,
   pageHeight: number,
   margin: number,
@@ -122,7 +122,7 @@ function drawMeal(
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.2);
-  doc.text(`${String(index + 1).padStart(2, "0")} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
+  doc.text(`${label} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
   if (meal.time_suggestion) {
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
@@ -340,7 +340,22 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
   }
 
   meals.forEach((meal, index) => {
-    y = drawMeal(doc, meal, index, pageWidth, pageHeight, margin, y);
+    const label = String(index + 1).padStart(2, "0");
+    y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y);
+
+    if (meal.alternative_meals && meal.alternative_meals.length > 0) {
+      meal.alternative_meals.forEach((alt, altIdx) => {
+        const altMeal: Meal = {
+          plan_id: meal.plan_id,
+          meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 2}`,
+          time_suggestion: alt.time_suggestion,
+          notes: alt.notes,
+          foods: alt.foods,
+        };
+        const subLabel = `${label}.${String.fromCharCode(97 + altIdx)}`; // e.g. "01.a", "01.b"
+        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y);
+      });
+    }
   });
 
   const totalPages = doc.getNumberOfPages();
