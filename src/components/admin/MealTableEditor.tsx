@@ -433,15 +433,16 @@ export function MealSection({
   // Dados da opção ativa
   const currentOption = isMain ? meal : (alternatives[clampedIdx - 1] ?? meal);
   const foods         = currentOption.foods ?? [];
-  const totals        = sumFoods(foods);
+  const totals        = sumFoods(foods); // totals da opção ativa para rodapé da tabela
+  const mainTotals    = sumFoods(meal.foods ?? []); // totals da principal para cabeçalho do card
 
   const borderCls = MEAL_BORDER[idx % MEAL_BORDER.length];
 
   const targetState =
-    targetCalories && targetCalories > 0 && totals.cal > 0
-      ? totals.cal >= targetCalories * 0.9 && totals.cal <= targetCalories * 1.1
+    targetCalories && targetCalories > 0 && mainTotals.cal > 0
+      ? mainTotals.cal >= targetCalories * 0.9 && mainTotals.cal <= targetCalories * 1.1
         ? { label: "Na meta",        className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
-        : totals.cal > targetCalories * 1.1
+        : mainTotals.cal > targetCalories * 1.1
           ? { label: "Acima da meta", className: "border-red-200 bg-red-50 text-red-700" }
           : { label: "Abaixo da meta", className: "border-amber-200 bg-amber-50 text-amber-800" }
       : { label: "Sem meta",         className: "border-border/40 bg-muted/20 text-muted-foreground" };
@@ -626,9 +627,9 @@ export function MealSection({
                 {n0(targetCalories)} kcal
               </span>
             )}
-            {totals.cal > 0 && (
+            {mainTotals.cal > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-foreground">
-                {n0(totals.cal)} kcal
+                {n0(mainTotals.cal)} kcal
                 <span className="text-muted-foreground/60">subtotal</span>
               </span>
             )}
