@@ -940,14 +940,19 @@ export function PrescriptionBuilder({ patientId }: Props) {
                         </button>
                       </div>
                     </div>
-                  {block.items.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic px-3 py-2">
-                      Nenhum ativo neste bloco.
-                    </p>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))
+
+              <button
+                type="button"
+                onClick={handleAddEmptyBlock}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-border/85 hover:border-primary/50 hover:bg-primary/5 rounded-xl text-xs font-semibold text-primary transition-all mt-4 cursor-pointer"
+              >
+                <Plus size={13} />
+                Criar Nova Fórmula (Bloco em Branco)
+              </button>
+            </>
           )}
         </div>
 
