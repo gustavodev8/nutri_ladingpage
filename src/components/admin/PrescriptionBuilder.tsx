@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Trash2, Printer, Save, Loader2, Search, FlaskConical,
-  ChevronDown, FileText, Beaker, History, ChevronRight, Pencil, X, BookmarkPlus,
+  ChevronDown, FileText, Beaker, History, ChevronRight, Pencil, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
   type Substrate, type ReadyFormula, type SavedPrescription,
 } from "@/lib/supabase";
 
-// ─── Local types ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Local types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface BlockItem {
   substrateId?: number;
@@ -39,11 +39,11 @@ interface Props {
   patientId: number;
 }
 
-// ─── Pharmaceutical form options ───────────────────────────────────────────────
+// â”€â”€â”€ Pharmaceutical form options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const PHARMA_FORMS = ["Cápsulas", "Sachê", "Solução oral", "Comprimidos", "Creme", "Gel"];
+const PHARMA_FORMS = ["CÃ¡psulas", "SachÃª", "SoluÃ§Ã£o oral", "Comprimidos", "Creme", "Gel"];
 
-// ─── PDF generator ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ PDF generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
   const today = new Date().toLocaleDateString("pt-BR", {
@@ -74,7 +74,7 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<title>Receituário Magistral — ${patientName}</title>
+<title>ReceituÃ¡rio Magistral â€” ${patientName}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Times New Roman", Times, serif; font-size: 12pt; color: #111; background: #fff; }
@@ -112,11 +112,11 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
   <div class="header">
     <div>
       <div class="clinic-name">Dr. Fillipe David</div>
-      <div class="clinic-sub">Nutricionista Clínico e Esportivo &nbsp;·&nbsp; CRN-5 &nbsp;·&nbsp; Alagoinhas / BA</div>
+      <div class="clinic-sub">Nutricionista ClÃ­nico e Esportivo &nbsp;Â·&nbsp; CRN-5 &nbsp;Â·&nbsp; Alagoinhas / BA</div>
     </div>
     <div class="header-right">Emitido em: ${today}</div>
   </div>
-  <div class="doc-title">Receituário Magistral</div>
+  <div class="doc-title">ReceituÃ¡rio Magistral</div>
   <div class="patient-box">
     <div><span class="label">Paciente</span><span class="value">${patientName}</span></div>
     <div style="text-align:right"><span class="label">Data</span><span class="value">${today}</span></div>
@@ -126,7 +126,7 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
     <div class="signature-block">
       <div class="signature-line"></div>
       <div class="signature-name">Dr. Fillipe David</div>
-      <div class="signature-sub">Nutricionista · CRN-5</div>
+      <div class="signature-sub">Nutricionista Â· CRN-5</div>
     </div>
     <div class="stamp-box">Carimbo</div>
   </div>
@@ -136,12 +136,12 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
 </html>`;
 
   const win = window.open("", "_blank");
-  if (!win) { toast.error("Permita popups para gerar o receituário."); return; }
+  if (!win) { toast.error("Permita popups para gerar o receituÃ¡rio."); return; }
   win.document.write(html);
   win.document.close();
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function PrescriptionBuilder({ patientId }: Props) {
   const [substrates,   setSubstrates]   = useState<Substrate[]>([]);
@@ -169,14 +169,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const [newSubIdealDose, setNewSubIdealDose] = useState("");
   const [registeringSub, setRegisteringSub] = useState(false);
 
-  const [protocolDraft, setProtocolDraft] = useState<BlockItem[]>([]);
-  const [protocolName, setProtocolName] = useState("");
-  const [protocolObjective, setProtocolObjective] = useState("Geral");
-  const [protocolPharmaForm, setProtocolPharmaForm] = useState(PHARMA_FORMS[0]);
-  const [protocolPosology, setProtocolPosology] = useState("");
-  const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
-  const [savingProtocol, setSavingProtocol] = useState(false);
-
+  const [readyFormulaSourceId, setReadyFormulaSourceId] = useState<string | null>(null);
   const [readyFormulaOpen, setReadyFormulaOpen] = useState(false);
   const [readyFormulaName, setReadyFormulaName] = useState("");
   const [readyFormulaObjective, setReadyFormulaObjective] = useState("Geral");
@@ -211,12 +204,12 @@ export function PrescriptionBuilder({ patientId }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const nextLabel = () => `Fórmula ${blocks.length + 1}`;
+  const nextLabel = () => `FÃ³rmula ${blocks.length + 1}`;
 
   const addBlock = (): PrescriptionBlock => ({
     localId:            crypto.randomUUID(),
     label:              nextLabel(),
-    pharmaceuticalForm: "Cápsulas",
+    pharmaceuticalForm: "CÃ¡psulas",
     posology:           "",
     items:              [],
   });
@@ -237,7 +230,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
       items,
     };
     setBlocks((prev) => [...prev, block]);
-    toast.success(`"${formula.name}" adicionada ao receituário.`);
+    toast.success(`"${formula.name}" adicionada ao receituÃ¡rio.`);
   };
 
   // Add a single substrate to an existing block (or create a new one)
@@ -285,47 +278,12 @@ export function PrescriptionBuilder({ patientId }: Props) {
     setBlocks((prev) => [...prev, addBlock()]);
   };
 
-  const addToProtocolDraft = (sub: Substrate) => {
-    const exists = protocolDraft.some((item) => item.substrateId === sub.id);
-    if (exists) {
-      toast.info("Esse substrato já está no protocolo em montagem.");
-      return;
-    }
-
-    setProtocolDraft((prev) => [
-      ...prev,
-      {
-        substrateId: sub.id,
-        name: sub.name,
-        dose: sub.ideal_dose ?? sub.min_dose ?? 0,
-        unit: sub.unit,
-      },
-    ]);
-  };
-
-  const removeProtocolItem = (substrateId?: number) => {
-    setProtocolDraft((prev) => prev.filter((item) => item.substrateId !== substrateId));
-  };
-
-  const patchProtocolItem = (substrateId: number | undefined, patch: Partial<BlockItem>) => {
-    setProtocolDraft((prev) => prev.map((item) =>
-      item.substrateId === substrateId ? { ...item, ...patch } : item
-    ));
-  };
-
-  const clearProtocolDraft = () => {
-    setProtocolDraft([]);
-    setProtocolName("");
-    setProtocolObjective("Geral");
-    setProtocolPharmaForm(PHARMA_FORMS[0]);
-    setProtocolPosology("");
-  };
-
-  const openProtocolDialog = () => {
-    setReadyFormulaName(protocolName.trim() || "Novo protocolo");
-    setReadyFormulaObjective(protocolObjective);
-    setReadyFormulaPharmaForm(protocolPharmaForm);
-    setReadyFormulaPosology(protocolPosology);
+  const openReadyFormulaDialog = (block: PrescriptionBlock) => {
+    setReadyFormulaSourceId(block.localId);
+    setReadyFormulaName(block.label.trim() || "Novo protocolo");
+    setReadyFormulaObjective("Geral");
+    setReadyFormulaPharmaForm(block.pharmaceuticalForm || PHARMA_FORMS[0]);
+    setReadyFormulaPosology(block.posology);
     setReadyFormulaOpen(true);
   };
 
@@ -335,8 +293,9 @@ export function PrescriptionBuilder({ patientId }: Props) {
       return;
     }
 
-    if (protocolDraft.length === 0) {
-      toast.error("Adicione pelo menos um substrato ao protocolo.");
+    const sourceBlock = blocks.find((block) => block.localId === readyFormulaSourceId);
+    if (!sourceBlock || sourceBlock.items.length === 0) {
+      toast.error("Adicione pelo menos um ativo ao bloco antes de salvar.");
       return;
     }
 
@@ -346,7 +305,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
       objective: readyFormulaObjective.trim() || "Geral",
       posology: readyFormulaPosology.trim() || null,
       pharmaceuticalForm: readyFormulaPharmaForm,
-      items: protocolDraft.map((item) => ({
+      items: sourceBlock.items.map((item) => ({
         substrateId: item.substrateId ?? null,
         name: item.name,
         appliedDose: item.dose,
@@ -363,14 +322,13 @@ export function PrescriptionBuilder({ patientId }: Props) {
     const refreshed = await fetchReadyFormulas();
     setFormulas(refreshed);
     setReadyFormulaOpen(false);
-    clearProtocolDraft();
     toast.success("Protocolo salvo com sucesso.");
   };
 
   const handleCancelEdit = () => {
     setEditingPrescriptionId(undefined);
     setBlocks([]);
-    toast.info("Edição cancelada.");
+    toast.info("EdiÃ§Ã£o cancelada.");
   };
 
   const handleEditPrescription = (p: SavedPrescription) => {
@@ -389,7 +347,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
     }));
     setBlocks(mappedBlocks);
     setView("builder");
-    toast.info(`Editando Prescrição #${p.id}.`);
+    toast.info(`Editando PrescriÃ§Ã£o #${p.id}.`);
   };
 
   const handleRegisterSubstrate = async (e: React.FormEvent) => {
@@ -442,7 +400,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
 
   const handleSave = async () => {
     const filled = blocks.filter((b) => b.items.length > 0);
-    if (filled.length === 0) { toast.error("Adicione pelo menos um ativo ao receituário."); return; }
+    if (filled.length === 0) { toast.error("Adicione pelo menos um ativo ao receituÃ¡rio."); return; }
     setSaving(true);
     const ok = await savePrescription(patientId, filled.map((b) => ({
       label:              b.label,
@@ -456,8 +414,8 @@ export function PrescriptionBuilder({ patientId }: Props) {
       })),
     })), editingPrescriptionId);
     setSaving(false);
-    if (!ok) { toast.error("Erro ao salvar a prescrição."); return; }
-    toast.success(editingPrescriptionId ? "Prescrição atualizada com sucesso." : "Prescrição salva com sucesso.");
+    if (!ok) { toast.error("Erro ao salvar a prescriÃ§Ã£o."); return; }
+    toast.success(editingPrescriptionId ? "PrescriÃ§Ã£o atualizada com sucesso." : "PrescriÃ§Ã£o salva com sucesso.");
     setBlocks([]);
     setEditingPrescriptionId(undefined);
     await loadHistory();
@@ -465,9 +423,9 @@ export function PrescriptionBuilder({ patientId }: Props) {
   };
 
   const handleDeletePrescription = async (id: number) => {
-    if (!confirm("Excluir esta prescrição?")) return;
+    if (!confirm("Excluir esta prescriÃ§Ã£o?")) return;
     if (await deletePrescription(id)) {
-      toast.success("Prescrição excluída.");
+      toast.success("PrescriÃ§Ã£o excluÃ­da.");
       setHistory((prev) => prev.filter((p) => p.id !== id));
       if (editingPrescriptionId === id) {
         setEditingPrescriptionId(undefined);
@@ -523,7 +481,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
     );
   }
 
-  // ── History view ────────────────────────────────────────────────────────────
+  // â”€â”€ History view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (view === "history") {
     const fmtDate = (iso: string) =>
       new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
@@ -532,18 +490,18 @@ export function PrescriptionBuilder({ patientId }: Props) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-foreground">Histórico de Prescrições</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{patientName} · {history.length} prescrição(ões)</p>
+            <h3 className="text-sm font-bold text-foreground">HistÃ³rico de PrescriÃ§Ãµes</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{patientName} Â· {history.length} prescriÃ§Ã£o(Ãµes)</p>
           </div>
           <Button size="sm" onClick={() => setView("builder")} className="gap-1.5">
-            <Plus size={13} /> Nova Prescrição
+            <Plus size={13} /> Nova PrescriÃ§Ã£o
           </Button>
         </div>
 
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 gap-2 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground">
             <History size={28} className="opacity-20" />
-            <p className="text-sm">Nenhuma prescrição salva ainda.</p>
+            <p className="text-sm">Nenhuma prescriÃ§Ã£o salva ainda.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -556,11 +514,11 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   <FileText size={14} className="text-primary shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground">
-                      Prescrição #{p.id}
-                      <span className="text-muted-foreground font-normal text-xs ml-2">· {fmtDate(p.created_at)}</span>
+                      PrescriÃ§Ã£o #{p.id}
+                      <span className="text-muted-foreground font-normal text-xs ml-2">Â· {fmtDate(p.created_at)}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {p.blocks.length} bloco(s) · {p.blocks.reduce((n, b) => n + b.items.length, 0)} ativo(s)
+                      {p.blocks.length} bloco(s) Â· {p.blocks.reduce((n, b) => n + b.items.length, 0)} ativo(s)
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -568,7 +526,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleEditPrescription(p); }}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded border border-border/50 hover:border-primary/30"
-                      title="Editar esta prescrição"
+                      title="Editar esta prescriÃ§Ã£o"
                     >
                       <Pencil size={11} /> Editar
                     </button>
@@ -595,7 +553,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                       <div key={b.id} className="rounded-lg border border-border/50 overflow-hidden">
                         <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border/30">
                           <span className="text-xs font-bold text-foreground">{b.label}</span>
-                          <span className="text-[10px] text-muted-foreground">{b.pharmaceutical_form}{b.posology ? ` · ${b.posology}` : ""}</span>
+                          <span className="text-[10px] text-muted-foreground">{b.pharmaceutical_form}{b.posology ? ` Â· ${b.posology}` : ""}</span>
                         </div>
                         <div className="divide-y divide-border/20">
                           {b.items.map((item, i) => (
@@ -620,7 +578,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
   return (
     <div className="flex gap-0 h-[calc(100vh-220px)] min-h-[500px] rounded-xl border border-border/60 overflow-hidden">
 
-      {/* ══ LEFT PANEL — Catalog ══════════════════════════════════════════════ */}
+      {/* â•â• LEFT PANEL â€” Catalog â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="w-[42%] shrink-0 flex flex-col border-r border-border/60 bg-muted/10">
 
         {/* Tab bar */}
@@ -637,12 +595,12 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab === "formulas" ? "Fórmulas Prontas" : "Substratos Avulsos"}
+              {tab === "formulas" ? "FÃ³rmulas Prontas" : "Substratos Avulsos"}
             </button>
           ))}
         </div>
 
-        {/* ── Fórmulas Prontas ── */}
+        {/* â”€â”€ FÃ³rmulas Prontas â”€â”€ */}
         {leftTab === "formulas" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Objective filter */}
@@ -695,8 +653,8 @@ export function PrescriptionBuilder({ patientId }: Props) {
                         <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
                           {formula.items.slice(0, 4).map((fi) =>
                             `${fi.substrate_name ?? fi.substrate?.name} ${fi.applied_dose}${fi.unit}`
-                          ).join(" · ")}
-                          {formula.items.length > 4 && ` · +${formula.items.length - 4}`}
+                          ).join(" Â· ")}
+                          {formula.items.length > 4 && ` Â· +${formula.items.length - 4}`}
                         </p>
                       )}
                     </div>
@@ -711,80 +669,23 @@ export function PrescriptionBuilder({ patientId }: Props) {
                 </div>
               ))}
               {visibleFormulas.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma fórmula para este objetivo.</p>
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma fÃ³rmula para este objetivo.</p>
               )}
             </div>
           </div>
         )}
 
-        {/* ── Substratos Avulsos ── */}
+        {/* â”€â”€ Substratos Avulsos â”€â”€ */}
         {leftTab === "substrates" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="p-3 border-b border-border/40 shrink-0 space-y-2">
-              <div className="rounded-lg border border-border/60 bg-background p-3 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-primary">Protocolo em montagem</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Junte substratos avulsos e salve como um protocolo reutilizável.
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
-                    {protocolDraft.length} item(ns)
-                  </span>
-                </div>
-                {protocolDraft.length > 0 ? (
-                  <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
-                    {protocolDraft.map((item) => (
-                      <div key={item.substrateId ?? item.name} className="flex items-center justify-between gap-2 text-[11px] bg-muted/40 rounded-md px-2 py-1.5">
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground truncate">{item.name}</p>
-                          <p className="text-muted-foreground tabular-nums">{item.dose} {item.unit}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeProtocolItem(item.substrateId)}
-                          className="text-muted-foreground/40 hover:text-destructive transition-colors"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">Nenhum substrato adicionado ainda.</p>
-                )}
-                <div className="flex items-center gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={openProtocolDialog}
-                    disabled={protocolDraft.length === 0}
-                    className="h-7 text-[11px] gap-1.5 border-primary/20 text-primary"
-                  >
-                    <Save size={11} />
-                    Salvar protocolo
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearProtocolDraft}
-                    disabled={protocolDraft.length === 0}
-                    className="h-7 text-[11px] text-muted-foreground"
-                  >
-                    Limpar
-                  </Button>
-                </div>
-              </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={subSearch}
                     onChange={(e) => setSubSearch(e.target.value)}
-                    placeholder="Buscar substrato…"
+                    placeholder="Buscar substratoâ€¦"
                     className="pl-7 h-8 text-xs"
                   />
                 </div>
@@ -802,7 +703,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
               {/* Form to register new substrate directly in the catalog */}
               {showNewSubForm && (
                 <form onSubmit={handleRegisterSubstrate} className="p-3 border border-border/60 rounded-lg bg-background/50 space-y-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-foreground">Novo Ativo no Catálogo</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-foreground">Novo Ativo no CatÃ¡logo</p>
                   <div className="space-y-1.5">
                     <Input
                       placeholder="Nome do ativo (ex: Creatina Creapure)"
@@ -817,7 +718,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                         onChange={(e) => setNewSubCategory(e.target.value)}
                         className="h-7 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
                       >
-                        {["Adaptógeno", "Termogênico", "Fitoterápico", "Vitamina", "Mineral", "Aminoácido", "Lipídio", "Probiótico", "Antioxidante", "Hormonal", "Outros"].map(c => (
+                        {["AdaptÃ³geno", "TermogÃªnico", "FitoterÃ¡pico", "Vitamina", "Mineral", "AminoÃ¡cido", "LipÃ­dio", "ProbiÃ³tico", "Antioxidante", "Hormonal", "Outros"].map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
@@ -881,14 +782,6 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            title="Adicionar ao protocolo"
-                            onClick={() => addToProtocolDraft(sub)}
-                            className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors flex items-center justify-center"
-                          >
-                            <BookmarkPlus size={12} />
-                          </button>
                           {blocks.map((b) => (
                             <button
                               key={b.localId}
@@ -922,7 +815,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
         )}
       </div>
 
-      {/* ══ RIGHT PANEL — Receituário ═════════════════════════════════════════ */}
+      {/* â•â• RIGHT PANEL â€” ReceituÃ¡rio â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
 
         {/* Panel header */}
@@ -930,7 +823,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
           <div className="flex items-center gap-2">
             <FileText size={15} className="text-primary" />
             <div>
-              <p className="text-xs font-bold text-foreground">Receituário</p>
+              <p className="text-xs font-bold text-foreground">ReceituÃ¡rio</p>
               <p className="text-[10px] text-muted-foreground">{patientName}</p>
             </div>
           </div>
@@ -941,17 +834,17 @@ export function PrescriptionBuilder({ patientId }: Props) {
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border/50 hover:border-border"
             >
               <History size={12} />
-              Histórico {history.length > 0 && <span className="ml-0.5 tabular-nums">({history.length})</span>}
+              HistÃ³rico {history.length > 0 && <span className="ml-0.5 tabular-nums">({history.length})</span>}
             </button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleAddEmptyBlock}
               className="gap-1 h-7 text-xs border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
-              title="Criar nova fórmula (bloco em branco)"
+              title="Criar nova fÃ³rmula (bloco em branco)"
             >
               <Plus size={12} />
-              Fórmula
+              FÃ³rmula
             </Button>
             <Button
               variant="outline"
@@ -970,14 +863,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
               className="gap-1.5 h-7 text-xs"
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              {saving ? "Salvando…" : "Salvar"}
+              {saving ? "Salvandoâ€¦" : "Salvar"}
             </Button>
           </div>
         </div>
 
         {editingPrescriptionId && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-800 shrink-0">
-            <span>Editando Prescrição <strong>#{editingPrescriptionId}</strong> (as alterações serão salvas ao clicar em Salvar)</span>
+            <span>Editando PrescriÃ§Ã£o <strong>#{editingPrescriptionId}</strong> (as alteraÃ§Ãµes serÃ£o salvas ao clicar em Salvar)</span>
             <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="h-6 text-[10px] text-amber-800 hover:text-amber-900 gap-1 hover:bg-amber-500/10">
               <X size={10} /> Cancelar
             </Button>
@@ -990,12 +883,12 @@ export function PrescriptionBuilder({ patientId }: Props) {
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-12">
               <Beaker size={32} className="opacity-20" />
               <div className="text-center">
-                <p className="text-sm font-medium">Receituário vazio</p>
-                <p className="text-xs mt-0.5">Adicione uma fórmula ou substrato pelo painel esquerdo.</p>
+                <p className="text-sm font-medium">ReceituÃ¡rio vazio</p>
+                <p className="text-xs mt-0.5">Adicione uma fÃ³rmula ou substrato pelo painel esquerdo.</p>
               </div>
               <Button variant="outline" size="sm" onClick={handleAddEmptyBlock} className="text-xs gap-1.5 mt-2">
                 <Plus size={13} />
-                Criar Fórmula em Branco
+                Criar FÃ³rmula em Branco
               </Button>
             </div>
           ) : (
@@ -1026,6 +919,18 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
                         />
                       </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReadyFormulaDialog(block)}
+                        disabled={block.items.length === 0}
+                        className="h-7 gap-1 text-[11px] border-primary/20 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
+                        title="Salvar bloco como protocolo"
+                      >
+                        <Save size={11} />
+                        Salvar
+                      </Button>
                       <button
                         type="button"
                         onClick={() => removeBlock(block.localId)}
@@ -1117,7 +1022,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                 className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-border/85 hover:border-primary/50 hover:bg-primary/5 rounded-xl text-xs font-semibold text-primary transition-all mt-4 cursor-pointer"
               >
                 <Plus size={13} />
-                Criar Nova Fórmula (Bloco em Branco)
+                Criar Nova FÃ³rmula (Bloco em Branco)
               </button>
             </>
           )}
@@ -1127,7 +1032,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
         {blocks.length > 0 && (
           <div className="px-4 py-2 border-t border-border/40 bg-muted/10 shrink-0">
             <p className="text-[11px] text-muted-foreground">
-              {blocks.length} bloco(s) · {totalItems} ativo(s)
+              {blocks.length} bloco(s) Â· {totalItems} ativo(s)
             </p>
           </div>
         )}
@@ -1138,7 +1043,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
           <DialogHeader>
             <DialogTitle>Salvar protocolo magistral</DialogTitle>
             <DialogDescription>
-              Crie um modelo reutilizável com os substratos avulsos selecionados.
+              Salve este bloco como um modelo reutilizável para outras prescrições.
             </DialogDescription>
           </DialogHeader>
 
@@ -1158,7 +1063,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                 <Input
                   value={readyFormulaObjective}
                   onChange={(e) => setReadyFormulaObjective(e.target.value)}
-                  placeholder="Ex: Energia"
+                  placeholder="Ex: Dor de coluna"
                 />
               </div>
               <div className="space-y-1.5">
@@ -1186,7 +1091,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
             </div>
 
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              Esse protocolo vai salvar exatamente os substratos escolhidos no rascunho.
+              Os itens deste bloco serão salvos como fórmula pronta.
             </div>
           </div>
 
@@ -1208,3 +1113,4 @@ export function PrescriptionBuilder({ patientId }: Props) {
     </div>
   );
 }
+
