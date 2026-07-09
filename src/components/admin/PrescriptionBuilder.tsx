@@ -614,7 +614,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
     <div className="flex gap-0 h-[calc(100vh-220px)] min-h-[500px] rounded-xl border border-border/60 overflow-hidden">
 
       {/* â•â• LEFT PANEL â€” Catalog â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      <div className="w-[42%] shrink-0 flex flex-col border-r border-border/60 bg-muted/10">
+      <div className="w-[56%] xl:w-[58%] shrink-0 flex flex-col border-r border-border/60 bg-muted/10">
 
         {/* Tab bar */}
         <div className="flex border-b border-border/60 shrink-0">
@@ -697,7 +697,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   </Button>
                 </div>
 
-                <div className="grid gap-3 lg:grid-cols-[340px_minmax(0,1fr)]">
+                <div className="grid gap-3 xl:grid-cols-[360px_minmax(0,1fr)]">
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-2">
                       <Input
