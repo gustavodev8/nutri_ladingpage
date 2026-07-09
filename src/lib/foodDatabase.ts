@@ -7,6 +7,7 @@ export interface FoodItem {
   id: string;
   name: string;
   category: string;
+  name_key?: string;
   kcal: number;    // per 100g
   protein: number; // per 100g (g)
   carbs: number;   // per 100g (g)

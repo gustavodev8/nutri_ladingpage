@@ -54,6 +54,10 @@ function normalizeText(value) {
     .toLowerCase();
 }
 
+function normalizeFoodKey(value) {
+  return normalizeText(value).replace(/[^a-z0-9]+/g, "");
+}
+
 function canonicalCategory(value) {
   const normalized = normalizeText(value);
   return APP_CATEGORIES.get(normalized) || "Personalizado";
@@ -187,6 +191,7 @@ function normalizeRow(headers, cells, sourceRefLabel) {
 
   return {
     name,
+    name_key: normalizeFoodKey(name),
     category,
     kcal: parseNumber(read("kcal")),
     protein: parseNumber(read("protein")),
@@ -219,6 +224,7 @@ function toSql(rows) {
       const sourceCode = row.source_code ? `'${escapeSql(row.source_code)}'` : "NULL";
       return `(
   '${escapeSql(row.name)}',
+  '${escapeSql(row.name_key)}',
   '${escapeSql(row.category)}',
   ${row.kcal.toFixed(2)},
   ${row.protein.toFixed(2)},
@@ -236,6 +242,7 @@ function toSql(rows) {
 
 INSERT INTO master_foods (
   name,
+  name_key,
   category,
   kcal_per_100g,
   protein_per_100g,
@@ -247,7 +254,7 @@ INSERT INTO master_foods (
   source_code
 ) VALUES
 ${values}
-ON CONFLICT (name) DO UPDATE SET
+ON CONFLICT (name_key) DO UPDATE SET
   category = EXCLUDED.category,
   kcal_per_100g = EXCLUDED.kcal_per_100g,
   protein_per_100g = EXCLUDED.protein_per_100g,

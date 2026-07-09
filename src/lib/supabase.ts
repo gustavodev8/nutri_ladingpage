@@ -241,12 +241,20 @@ export async function fetchFoodsFromSupabase(query?: string, category?: string):
 
 export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase").FoodItem>): Promise<boolean> {
   const { id, ...fields } = food;
+  const normalizeFoodKey = (value: string | undefined) =>
+    (value ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "")
+      .trim();
   
   // Se tiver ID numérico (ex: do banco), é update. Se for string (ex: custom_...), é novo ou precisa ser tratado.
   // No nosso sistema simplificado, vamos tratar tudo como upsert pelo nome se não tiver id real.
   
   const payload = {
     name: fields.name,
+    name_key: normalizeFoodKey(fields.name),
     category: fields.category,
     kcal: fields.kcal,
     protein: fields.protein,
@@ -263,7 +271,7 @@ export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase"
     const { error } = await supabase.from(FOOD_TABLE).update(payload).eq("id", numericId);
     return !error;
   } else {
-    const { error } = await supabase.from(FOOD_TABLE).insert(payload);
+    const { error } = await supabase.from(FOOD_TABLE).upsert(payload, { onConflict: "name_key" });
     return !error;
   }
 }

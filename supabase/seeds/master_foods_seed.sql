@@ -2,6 +2,7 @@ BEGIN;
 
 INSERT INTO master_foods (
   name,
+  name_key,
   category,
   kcal_per_100g,
   protein_per_100g,
@@ -14,6 +15,7 @@ INSERT INTO master_foods (
 ) VALUES
 (
   'Arroz, integral, cozido',
+  'arrozintegralcozido',
   'Cereais e derivados',
   124.00,
   2.60,
@@ -26,6 +28,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz, integral, cru',
+  'arrozintegralcru',
   'Cereais e derivados',
   360.00,
   7.30,
@@ -38,6 +41,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz, tipo 1, cozido',
+  'arroztipo1cozido',
   'Cereais e derivados',
   128.00,
   2.50,
@@ -50,6 +54,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz, tipo 1, cru',
+  'arroztipo1cru',
   'Cereais e derivados',
   358.00,
   7.20,
@@ -62,6 +67,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz, tipo 2, cozido',
+  'arroztipo2cozido',
   'Cereais e derivados',
   130.00,
   2.60,
@@ -74,6 +80,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz, tipo 2, cru',
+  'arroztipo2cru',
   'Cereais e derivados',
   358.00,
   7.20,
@@ -86,6 +93,7 @@ INSERT INTO master_foods (
 ),
 (
   'Aveia, flocos, crua',
+  'aveiaflocoscrua',
   'Cereais e derivados',
   394.00,
   13.90,
@@ -98,6 +106,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, doce, maisena',
+  'biscoitodocemaisena',
   'Cereais e derivados',
   443.00,
   8.10,
@@ -110,6 +119,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, doce, recheado com chocolate',
+  'biscoitodocerecheadocomchocolate',
   'Cereais e derivados',
   472.00,
   6.40,
@@ -122,6 +132,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, doce, recheado com morango',
+  'biscoitodocerecheadocommorango',
   'Cereais e derivados',
   471.00,
   5.70,
@@ -134,6 +145,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, doce, wafer, recheado de chocolate',
+  'biscoitodocewaferrecheadodechocolate',
   'Cereais e derivados',
   502.00,
   5.60,
@@ -146,6 +158,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, doce, wafer, recheado de morango',
+  'biscoitodocewaferrecheadodemorango',
   'Cereais e derivados',
   513.00,
   4.50,
@@ -158,6 +171,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, salgado, cream cracker',
+  'biscoitosalgadocreamcracker',
   'Cereais e derivados',
   432.00,
   10.10,
@@ -170,6 +184,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolo, mistura para',
+  'bolomisturapara',
   'Cereais e derivados',
   419.00,
   6.20,
@@ -182,6 +197,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolo, pronto, aipim',
+  'boloprontoaipim',
   'Cereais e derivados',
   324.00,
   4.40,
@@ -194,6 +210,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolo, pronto, chocolate',
+  'boloprontochocolate',
   'Cereais e derivados',
   410.00,
   6.20,
@@ -206,6 +223,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolo, pronto, coco',
+  'boloprontococo',
   'Cereais e derivados',
   333.00,
   5.70,
@@ -218,6 +236,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolo, pronto, milho',
+  'boloprontomilho',
   'Cereais e derivados',
   311.00,
   4.80,
@@ -230,6 +249,7 @@ INSERT INTO master_foods (
 ),
 (
   'Canjica, branca, crua',
+  'canjicabrancacrua',
   'Cereais e derivados',
   358.00,
   7.20,
@@ -242,6 +262,7 @@ INSERT INTO master_foods (
 ),
 (
   'Canjica, com leite integral',
+  'canjicacomleiteintegral',
   'Cereais e derivados',
   112.00,
   2.40,
@@ -254,6 +275,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereais, milho, flocos, com sal',
+  'cereaismilhoflocoscomsal',
   'Cereais e derivados',
   370.00,
   7.30,
@@ -266,6 +288,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereais, milho, flocos, sem sal',
+  'cereaismilhoflocossemsal',
   'Cereais e derivados',
   363.00,
   6.90,
@@ -278,6 +301,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereais, mingau, milho, infantil',
+  'cereaismingaumilhoinfantil',
   'Cereais e derivados',
   394.00,
   6.40,
@@ -290,6 +314,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereais, mistura para vitamina, trigo, cevada e aveia',
+  'cereaismisturaparavitaminatrigocevadaeaveia',
   'Cereais e derivados',
   381.00,
   8.90,
@@ -302,6 +327,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereal matinal, milho',
+  'cerealmatinalmilho',
   'Cereais e derivados',
   365.00,
   7.20,
@@ -314,6 +340,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cereal matinal, milho, açúcar',
+  'cerealmatinalmilhoacucar',
   'Cereais e derivados',
   377.00,
   4.70,
@@ -326,6 +353,7 @@ INSERT INTO master_foods (
 ),
 (
   'Creme de arroz, pó',
+  'cremedearrozpo',
   'Cereais e derivados',
   386.00,
   7.00,
@@ -338,6 +366,7 @@ INSERT INTO master_foods (
 ),
 (
   'Creme de milho, pó',
+  'cremedemilhopo',
   'Cereais e derivados',
   333.00,
   4.80,
@@ -350,6 +379,7 @@ INSERT INTO master_foods (
 ),
 (
   'Curau, milho verde',
+  'curaumilhoverde',
   'Cereais e derivados',
   78.00,
   2.40,
@@ -362,6 +392,7 @@ INSERT INTO master_foods (
 ),
 (
   'Curau, milho verde, mistura para',
+  'curaumilhoverdemisturapara',
   'Cereais e derivados',
   402.00,
   2.20,
@@ -374,6 +405,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de arroz, enriquecida',
+  'farinhadearrozenriquecida',
   'Cereais e derivados',
   363.00,
   1.30,
@@ -386,6 +418,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de centeio, integral',
+  'farinhadecenteiointegral',
   'Cereais e derivados',
   336.00,
   12.50,
@@ -398,6 +431,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de milho, amarela',
+  'farinhademilhoamarela',
   'Cereais e derivados',
   351.00,
   7.20,
@@ -410,6 +444,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de rosca',
+  'farinhaderosca',
   'Cereais e derivados',
   371.00,
   11.40,
@@ -422,6 +457,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de trigo',
+  'farinhadetrigo',
   'Cereais e derivados',
   360.00,
   9.80,
@@ -434,6 +470,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, láctea, de cereais',
+  'farinhalacteadecereais',
   'Cereais e derivados',
   415.00,
   11.90,
@@ -446,6 +483,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lasanha, massa fresca, cozida',
+  'lasanhamassafrescacozida',
   'Cereais e derivados',
   164.00,
   5.80,
@@ -458,6 +496,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lasanha, massa fresca, crua',
+  'lasanhamassafrescacrua',
   'Cereais e derivados',
   220.00,
   7.00,
@@ -470,6 +509,7 @@ INSERT INTO master_foods (
 ),
 (
   'Macarrão, instantâneo',
+  'macarraoinstantaneo',
   'Cereais e derivados',
   436.00,
   8.80,
@@ -482,6 +522,7 @@ INSERT INTO master_foods (
 ),
 (
   'Macarrão, trigo, cru',
+  'macarraotrigocru',
   'Cereais e derivados',
   371.00,
   10.00,
@@ -494,6 +535,7 @@ INSERT INTO master_foods (
 ),
 (
   'Macarrão, trigo, cru, com ovos',
+  'macarraotrigocrucomovos',
   'Cereais e derivados',
   371.00,
   10.30,
@@ -506,6 +548,7 @@ INSERT INTO master_foods (
 ),
 (
   'Milho, amido, cru',
+  'milhoamidocru',
   'Cereais e derivados',
   361.00,
   0.60,
@@ -518,6 +561,7 @@ INSERT INTO master_foods (
 ),
 (
   'Milho, fubá, cru',
+  'milhofubacru',
   'Cereais e derivados',
   353.00,
   7.20,
@@ -530,6 +574,7 @@ INSERT INTO master_foods (
 ),
 (
   'Milho, verde, cru',
+  'milhoverdecru',
   'Cereais e derivados',
   138.00,
   6.60,
@@ -542,6 +587,7 @@ INSERT INTO master_foods (
 ),
 (
   'Milho, verde, enlatado, drenado',
+  'milhoverdeenlatadodrenado',
   'Cereais e derivados',
   98.00,
   3.20,
@@ -554,6 +600,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mingau tradicional, pó',
+  'mingautradicionalpo',
   'Cereais e derivados',
   373.00,
   0.60,
@@ -566,6 +613,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pamonha, barra para cozimento, pré-cozida',
+  'pamonhabarraparacozimentoprecozida',
   'Cereais e derivados',
   171.00,
   2.60,
@@ -578,6 +626,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, aveia, forma',
+  'paoaveiaforma',
   'Cereais e derivados',
   343.00,
   12.40,
@@ -590,6 +639,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, de soja',
+  'paodesoja',
   'Cereais e derivados',
   309.00,
   11.30,
@@ -602,6 +652,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, glúten, forma',
+  'paoglutenforma',
   'Cereais e derivados',
   253.00,
   12.00,
@@ -614,6 +665,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, milho, forma',
+  'paomilhoforma',
   'Cereais e derivados',
   292.00,
   8.30,
@@ -626,6 +678,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, trigo, forma, integral',
+  'paotrigoformaintegral',
   'Cereais e derivados',
   253.00,
   9.40,
@@ -638,6 +691,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, trigo, francês',
+  'paotrigofrances',
   'Cereais e derivados',
   300.00,
   8.00,
@@ -650,6 +704,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, trigo, sovado',
+  'paotrigosovado',
   'Cereais e derivados',
   311.00,
   8.40,
@@ -662,6 +717,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, de carne, cru',
+  'pasteldecarnecru',
   'Cereais e derivados',
   289.00,
   10.70,
@@ -674,6 +730,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, de carne, frito',
+  'pasteldecarnefrito',
   'Cereais e derivados',
   388.00,
   10.10,
@@ -686,6 +743,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, de queijo, cru',
+  'pasteldequeijocru',
   'Cereais e derivados',
   308.00,
   9.90,
@@ -698,6 +756,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, de queijo, frito',
+  'pasteldequeijofrito',
   'Cereais e derivados',
   422.00,
   8.70,
@@ -710,6 +769,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, massa, crua',
+  'pastelmassacrua',
   'Cereais e derivados',
   310.00,
   6.90,
@@ -722,6 +782,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pastel, massa, frita',
+  'pastelmassafrita',
   'Cereais e derivados',
   570.00,
   6.00,
@@ -734,6 +795,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pipoca, com óleo de soja, sem sal',
+  'pipocacomoleodesojasemsal',
   'Cereais e derivados',
   448.00,
   9.90,
@@ -746,6 +808,7 @@ INSERT INTO master_foods (
 ),
 (
   'Polenta, pré-cozida',
+  'polentaprecozida',
   'Cereais e derivados',
   103.00,
   2.30,
@@ -758,6 +821,7 @@ INSERT INTO master_foods (
 ),
 (
   'Torrada, pão francês',
+  'torradapaofrances',
   'Cereais e derivados',
   377.00,
   10.50,
@@ -770,6 +834,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, cabotian, cozida',
+  'aboboracabotiancozida',
   'Verduras e legumes',
   48.00,
   1.40,
@@ -782,6 +847,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, cabotian, crua',
+  'aboboracabotiancrua',
   'Verduras e legumes',
   39.00,
   1.70,
@@ -794,6 +860,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, menina brasileira, crua',
+  'aboborameninabrasileiracrua',
   'Verduras e legumes',
   14.00,
   0.60,
@@ -806,6 +873,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, moranga, crua',
+  'aboboramorangacrua',
   'Verduras e legumes',
   12.00,
   1.00,
@@ -818,6 +886,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, moranga, refogada',
+  'aboboramorangarefogada',
   'Verduras e legumes',
   29.00,
   0.40,
@@ -830,6 +899,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abóbora, pescoço, crua',
+  'aboborapescococrua',
   'Verduras e legumes',
   24.00,
   0.70,
@@ -842,6 +912,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abobrinha, italiana, cozida',
+  'abobrinhaitalianacozida',
   'Verduras e legumes',
   15.00,
   1.10,
@@ -854,6 +925,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abobrinha, italiana, crua',
+  'abobrinhaitalianacrua',
   'Verduras e legumes',
   19.00,
   1.10,
@@ -866,6 +938,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abobrinha, italiana, refogada',
+  'abobrinhaitalianarefogada',
   'Verduras e legumes',
   24.00,
   1.10,
@@ -878,6 +951,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abobrinha, paulista, crua',
+  'abobrinhapaulistacrua',
   'Verduras e legumes',
   31.00,
   0.60,
@@ -890,6 +964,7 @@ INSERT INTO master_foods (
 ),
 (
   'Acelga, crua',
+  'acelgacrua',
   'Verduras e legumes',
   21.00,
   1.40,
@@ -902,6 +977,7 @@ INSERT INTO master_foods (
 ),
 (
   'Agrião, cru',
+  'agriaocru',
   'Verduras e legumes',
   17.00,
   2.70,
@@ -914,6 +990,7 @@ INSERT INTO master_foods (
 ),
 (
   'Aipo, cru',
+  'aipocru',
   'Verduras e legumes',
   19.00,
   0.80,
@@ -926,6 +1003,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alface, americana, crua',
+  'alfaceamericanacrua',
   'Verduras e legumes',
   9.00,
   0.60,
@@ -938,6 +1016,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alface, crespa, crua',
+  'alfacecrespacrua',
   'Verduras e legumes',
   11.00,
   1.30,
@@ -950,6 +1029,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alface, lisa, crua',
+  'alfacelisacrua',
   'Verduras e legumes',
   14.00,
   1.70,
@@ -962,6 +1042,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alface, roxa, crua',
+  'alfaceroxacrua',
   'Verduras e legumes',
   13.00,
   0.90,
@@ -974,6 +1055,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alfavaca, crua',
+  'alfavacacrua',
   'Verduras e legumes',
   29.00,
   2.70,
@@ -986,6 +1068,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alho, cru',
+  'alhocru',
   'Verduras e legumes',
   113.00,
   7.00,
@@ -998,6 +1081,7 @@ INSERT INTO master_foods (
 ),
 (
   'Alho-poró, cru',
+  'alhoporocru',
   'Verduras e legumes',
   32.00,
   1.40,
@@ -1010,6 +1094,7 @@ INSERT INTO master_foods (
 ),
 (
   'Almeirão, cru',
+  'almeiraocru',
   'Verduras e legumes',
   18.00,
   1.80,
@@ -1022,6 +1107,7 @@ INSERT INTO master_foods (
 ),
 (
   'Almeirão, refogado',
+  'almeiraorefogado',
   'Verduras e legumes',
   65.00,
   1.70,
@@ -1034,6 +1120,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, baroa, cozida',
+  'batatabaroacozida',
   'Verduras e legumes',
   80.00,
   0.90,
@@ -1046,6 +1133,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, baroa, crua',
+  'batatabaroacrua',
   'Verduras e legumes',
   101.00,
   1.00,
@@ -1058,6 +1146,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, doce, cozida',
+  'batatadocecozida',
   'Verduras e legumes',
   77.00,
   0.60,
@@ -1070,6 +1159,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, doce, crua',
+  'batatadocecrua',
   'Verduras e legumes',
   118.00,
   1.30,
@@ -1082,6 +1172,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, frita, tipo chips, industrializada',
+  'batatafritatipochipsindustrializada',
   'Verduras e legumes',
   543.00,
   5.60,
@@ -1094,6 +1185,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, inglesa, cozida',
+  'batatainglesacozida',
   'Verduras e legumes',
   52.00,
   1.20,
@@ -1106,6 +1198,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, inglesa, crua',
+  'batatainglesacrua',
   'Verduras e legumes',
   64.00,
   1.80,
@@ -1118,6 +1211,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, inglesa, frita',
+  'batatainglesafrita',
   'Verduras e legumes',
   267.00,
   5.00,
@@ -1130,6 +1224,7 @@ INSERT INTO master_foods (
 ),
 (
   'Batata, inglesa, sauté',
+  'batatainglesasaute',
   'Verduras e legumes',
   68.00,
   1.30,
@@ -1142,6 +1237,7 @@ INSERT INTO master_foods (
 ),
 (
   'Berinjela, cozida',
+  'berinjelacozida',
   'Verduras e legumes',
   19.00,
   0.70,
@@ -1154,6 +1250,7 @@ INSERT INTO master_foods (
 ),
 (
   'Berinjela, crua',
+  'berinjelacrua',
   'Verduras e legumes',
   20.00,
   1.20,
@@ -1166,6 +1263,7 @@ INSERT INTO master_foods (
 ),
 (
   'Beterraba, cozida',
+  'beterrabacozida',
   'Verduras e legumes',
   32.00,
   1.30,
@@ -1178,6 +1276,7 @@ INSERT INTO master_foods (
 ),
 (
   'Beterraba, crua',
+  'beterrabacrua',
   'Verduras e legumes',
   49.00,
   1.90,
@@ -1190,6 +1289,7 @@ INSERT INTO master_foods (
 ),
 (
   'Biscoito, polvilho doce',
+  'biscoitopolvilhodoce',
   'Verduras e legumes',
   438.00,
   1.30,
@@ -1202,6 +1302,7 @@ INSERT INTO master_foods (
 ),
 (
   'Brócolis, cozido',
+  'brocoliscozido',
   'Verduras e legumes',
   25.00,
   2.10,
@@ -1214,6 +1315,7 @@ INSERT INTO master_foods (
 ),
 (
   'Brócolis, cru',
+  'brocoliscru',
   'Verduras e legumes',
   25.00,
   3.60,
@@ -1226,6 +1328,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cará, cozido',
+  'caracozido',
   'Verduras e legumes',
   78.00,
   1.50,
@@ -1238,6 +1341,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cará, cru',
+  'caracru',
   'Verduras e legumes',
   96.00,
   2.30,
@@ -1250,6 +1354,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caruru, cru',
+  'carurucru',
   'Verduras e legumes',
   34.00,
   3.20,
@@ -1262,6 +1367,7 @@ INSERT INTO master_foods (
 ),
 (
   'Catalonha, crua',
+  'catalonhacrua',
   'Verduras e legumes',
   24.00,
   1.90,
@@ -1274,6 +1380,7 @@ INSERT INTO master_foods (
 ),
 (
   'Catalonha, refogada',
+  'catalonharefogada',
   'Verduras e legumes',
   63.00,
   2.00,
@@ -1286,6 +1393,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cebola, crua',
+  'cebolacrua',
   'Verduras e legumes',
   39.00,
   1.70,
@@ -1298,6 +1406,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cebolinha, crua',
+  'cebolinhacrua',
   'Verduras e legumes',
   20.00,
   1.90,
@@ -1310,6 +1419,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cenoura, cozida',
+  'cenouracozida',
   'Verduras e legumes',
   30.00,
   0.80,
@@ -1322,6 +1432,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cenoura, crua',
+  'cenouracrua',
   'Verduras e legumes',
   34.00,
   1.30,
@@ -1334,6 +1445,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chicória, crua',
+  'chicoriacrua',
   'Verduras e legumes',
   14.00,
   1.10,
@@ -1346,6 +1458,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chuchu, cozido',
+  'chuchucozido',
   'Verduras e legumes',
   19.00,
   0.40,
@@ -1358,6 +1471,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chuchu, cru',
+  'chuchucru',
   'Verduras e legumes',
   17.00,
   0.70,
@@ -1370,6 +1484,7 @@ INSERT INTO master_foods (
 ),
 (
   'Coentro, folhas desidratadas',
+  'coentrofolhasdesidratadas',
   'Verduras e legumes',
   309.00,
   20.90,
@@ -1382,6 +1497,7 @@ INSERT INTO master_foods (
 ),
 (
   'Couve, manteiga, crua',
+  'couvemanteigacrua',
   'Verduras e legumes',
   27.00,
   2.90,
@@ -1394,6 +1510,7 @@ INSERT INTO master_foods (
 ),
 (
   'Couve, manteiga, refogada',
+  'couvemanteigarefogada',
   'Verduras e legumes',
   90.00,
   1.70,
@@ -1406,6 +1523,7 @@ INSERT INTO master_foods (
 ),
 (
   'Couve-flor, crua',
+  'couveflorcrua',
   'Verduras e legumes',
   23.00,
   1.90,
@@ -1418,6 +1536,7 @@ INSERT INTO master_foods (
 ),
 (
   'Couve-flor, cozida',
+  'couveflorcozida',
   'Verduras e legumes',
   19.00,
   1.20,
@@ -1430,6 +1549,7 @@ INSERT INTO master_foods (
 ),
 (
   'Espinafre, Nova Zelândia, cru',
+  'espinafrenovazelandiacru',
   'Verduras e legumes',
   16.00,
   2.00,
@@ -1442,6 +1562,7 @@ INSERT INTO master_foods (
 ),
 (
   'Espinafre, Nova Zelândia, refogado',
+  'espinafrenovazelandiarefogado',
   'Verduras e legumes',
   67.00,
   2.70,
@@ -1454,6 +1575,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de mandioca, crua',
+  'farinhademandiocacrua',
   'Verduras e legumes',
   361.00,
   1.60,
@@ -1466,6 +1588,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de mandioca, torrada',
+  'farinhademandiocatorrada',
   'Verduras e legumes',
   365.00,
   1.20,
@@ -1478,6 +1601,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de puba',
+  'farinhadepuba',
   'Verduras e legumes',
   360.00,
   1.60,
@@ -1490,6 +1614,7 @@ INSERT INTO master_foods (
 ),
 (
   'Fécula, de mandioca',
+  'feculademandioca',
   'Verduras e legumes',
   331.00,
   0.50,
@@ -1502,6 +1627,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, broto, cru',
+  'feijaobrotocru',
   'Verduras e legumes',
   39.00,
   4.20,
@@ -1514,6 +1640,7 @@ INSERT INTO master_foods (
 ),
 (
   'Inhame, cru',
+  'inhamecru',
   'Verduras e legumes',
   97.00,
   2.10,
@@ -1526,6 +1653,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jiló, cru',
+  'jilocru',
   'Verduras e legumes',
   27.00,
   1.40,
@@ -1538,6 +1666,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jurubeba, crua',
+  'jurubebacrua',
   'Verduras e legumes',
   126.00,
   4.40,
@@ -1550,6 +1679,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mandioca, cozida',
+  'mandiocacozida',
   'Verduras e legumes',
   125.00,
   0.60,
@@ -1562,6 +1692,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mandioca, crua',
+  'mandiocacrua',
   'Verduras e legumes',
   151.00,
   1.10,
@@ -1574,6 +1705,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mandioca, farofa, temperada',
+  'mandiocafarofatemperada',
   'Verduras e legumes',
   406.00,
   2.10,
@@ -1586,6 +1718,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mandioca, frita',
+  'mandiocafrita',
   'Verduras e legumes',
   300.00,
   1.40,
@@ -1598,6 +1731,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manjericão, cru',
+  'manjericaocru',
   'Verduras e legumes',
   21.00,
   2.00,
@@ -1610,6 +1744,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maxixe, cru',
+  'maxixecru',
   'Verduras e legumes',
   14.00,
   1.40,
@@ -1622,6 +1757,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mostarda, folha, crua',
+  'mostardafolhacrua',
   'Verduras e legumes',
   18.00,
   2.10,
@@ -1634,6 +1770,7 @@ INSERT INTO master_foods (
 ),
 (
   'Nhoque, batata, cozido',
+  'nhoquebatatacozido',
   'Verduras e legumes',
   181.00,
   5.90,
@@ -1646,6 +1783,7 @@ INSERT INTO master_foods (
 ),
 (
   'Nabo, cru',
+  'nabocru',
   'Verduras e legumes',
   18.00,
   1.20,
@@ -1658,6 +1796,7 @@ INSERT INTO master_foods (
 ),
 (
   'Palmito, juçara, em conserva',
+  'palmitojucaraemconserva',
   'Verduras e legumes',
   23.00,
   1.80,
@@ -1670,6 +1809,7 @@ INSERT INTO master_foods (
 ),
 (
   'Palmito, pupunha, em conserva',
+  'palmitopupunhaemconserva',
   'Verduras e legumes',
   29.00,
   2.50,
@@ -1682,6 +1822,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, de queijo, assado',
+  'paodequeijoassado',
   'Verduras e legumes',
   363.00,
   5.10,
@@ -1694,6 +1835,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pão, de queijo, cru',
+  'paodequeijocru',
   'Verduras e legumes',
   295.00,
   3.60,
@@ -1706,6 +1848,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pepino, cru',
+  'pepinocru',
   'Verduras e legumes',
   10.00,
   0.90,
@@ -1718,6 +1861,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pimentão, amarelo, cru',
+  'pimentaoamarelocru',
   'Verduras e legumes',
   28.00,
   1.20,
@@ -1730,6 +1874,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pimentão, verde, cru',
+  'pimentaoverdecru',
   'Verduras e legumes',
   21.00,
   1.10,
@@ -1742,6 +1887,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pimentão, vermelho, cru',
+  'pimentaovermelhocru',
   'Verduras e legumes',
   23.00,
   1.00,
@@ -1754,6 +1900,7 @@ INSERT INTO master_foods (
 ),
 (
   'Polvilho, doce',
+  'polvilhodoce',
   'Verduras e legumes',
   351.00,
   0.40,
@@ -1766,6 +1913,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quiabo, cru',
+  'quiabocru',
   'Verduras e legumes',
   30.00,
   1.90,
@@ -1778,6 +1926,7 @@ INSERT INTO master_foods (
 ),
 (
   'Rabanete, cru',
+  'rabanetecru',
   'Verduras e legumes',
   14.00,
   1.40,
@@ -1790,6 +1939,7 @@ INSERT INTO master_foods (
 ),
 (
   'Repolho, branco, cru',
+  'repolhobrancocru',
   'Verduras e legumes',
   17.00,
   0.90,
@@ -1802,6 +1952,7 @@ INSERT INTO master_foods (
 ),
 (
   'Repolho, roxo, cru',
+  'repolhoroxocru',
   'Verduras e legumes',
   31.00,
   1.90,
@@ -1814,6 +1965,7 @@ INSERT INTO master_foods (
 ),
 (
   'Repolho, roxo, refogado',
+  'repolhoroxorefogado',
   'Verduras e legumes',
   42.00,
   1.80,
@@ -1826,6 +1978,7 @@ INSERT INTO master_foods (
 ),
 (
   'Rúcula, crua',
+  'ruculacrua',
   'Verduras e legumes',
   13.00,
   1.80,
@@ -1838,6 +1991,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salsa, crua',
+  'salsacrua',
   'Verduras e legumes',
   33.00,
   3.30,
@@ -1850,6 +2004,7 @@ INSERT INTO master_foods (
 ),
 (
   'Seleta de legumes, enlatada',
+  'seletadelegumesenlatada',
   'Verduras e legumes',
   57.00,
   3.40,
@@ -1862,6 +2017,7 @@ INSERT INTO master_foods (
 ),
 (
   'Serralha, crua',
+  'serralhacrua',
   'Verduras e legumes',
   30.00,
   2.70,
@@ -1874,6 +2030,7 @@ INSERT INTO master_foods (
 ),
 (
   'Taioba, crua',
+  'taiobacrua',
   'Verduras e legumes',
   34.00,
   2.90,
@@ -1886,6 +2043,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tomate, com semente, cru',
+  'tomatecomsementecru',
   'Verduras e legumes',
   15.00,
   1.10,
@@ -1898,6 +2056,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tomate, extrato',
+  'tomateextrato',
   'Verduras e legumes',
   61.00,
   2.40,
@@ -1910,6 +2069,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tomate, molho industrializado',
+  'tomatemolhoindustrializado',
   'Verduras e legumes',
   38.00,
   1.40,
@@ -1922,6 +2082,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tomate, purê',
+  'tomatepure',
   'Verduras e legumes',
   28.00,
   1.40,
@@ -1934,6 +2095,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tomate, salada',
+  'tomatesalada',
   'Verduras e legumes',
   21.00,
   0.80,
@@ -1946,6 +2108,7 @@ INSERT INTO master_foods (
 ),
 (
   'Vagem, crua',
+  'vagemcrua',
   'Verduras e legumes',
   25.00,
   1.80,
@@ -1958,6 +2121,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abacate, cru',
+  'abacatecru',
   'Frutas',
   96.00,
   1.20,
@@ -1970,6 +2134,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abacaxi, cru',
+  'abacaxicru',
   'Frutas',
   48.00,
   0.90,
@@ -1982,6 +2147,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abacaxi, polpa, congelada',
+  'abacaxipolpacongelada',
   'Frutas',
   31.00,
   0.50,
@@ -1994,6 +2160,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abiu, cru',
+  'abiucru',
   'Frutas',
   62.00,
   0.80,
@@ -2006,6 +2173,7 @@ INSERT INTO master_foods (
 ),
 (
   'Açaí, polpa, com xarope de guaraná e glucose',
+  'acaipolpacomxaropedeguaranaeglucose',
   'Frutas',
   110.00,
   0.70,
@@ -2018,6 +2186,7 @@ INSERT INTO master_foods (
 ),
 (
   'Açaí, polpa, congelada',
+  'acaipolpacongelada',
   'Frutas',
   58.00,
   0.80,
@@ -2030,6 +2199,7 @@ INSERT INTO master_foods (
 ),
 (
   'Acerola, crua',
+  'acerolacrua',
   'Frutas',
   33.00,
   0.90,
@@ -2042,6 +2212,7 @@ INSERT INTO master_foods (
 ),
 (
   'Acerola, polpa, congelada',
+  'acerolapolpacongelada',
   'Frutas',
   22.00,
   0.60,
@@ -2054,6 +2225,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ameixa, calda, enlatada',
+  'ameixacaldaenlatada',
   'Frutas',
   183.00,
   0.40,
@@ -2066,6 +2238,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ameixa, crua',
+  'ameixacrua',
   'Frutas',
   53.00,
   0.80,
@@ -2078,6 +2251,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ameixa, em calda, enlatada, drenada',
+  'ameixaemcaldaenlatadadrenada',
   'Frutas',
   177.00,
   1.00,
@@ -2090,6 +2264,7 @@ INSERT INTO master_foods (
 ),
 (
   'Atemóia, crua',
+  'atemoiacrua',
   'Frutas',
   97.00,
   1.00,
@@ -2102,6 +2277,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, da terra, crua',
+  'bananadaterracrua',
   'Frutas',
   128.00,
   1.40,
@@ -2114,6 +2290,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, doce em barra',
+  'bananadoceembarra',
   'Frutas',
   280.00,
   2.20,
@@ -2126,6 +2303,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, figo, crua',
+  'bananafigocrua',
   'Frutas',
   105.00,
   1.10,
@@ -2138,6 +2316,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, maçã, crua',
+  'bananamacacrua',
   'Frutas',
   87.00,
   1.80,
@@ -2150,6 +2329,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, nanica, crua',
+  'bananananicacrua',
   'Frutas',
   92.00,
   1.40,
@@ -2162,6 +2342,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, ouro, crua',
+  'bananaourocrua',
   'Frutas',
   112.00,
   1.50,
@@ -2174,6 +2355,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, pacova, crua',
+  'bananapacovacrua',
   'Frutas',
   78.00,
   1.20,
@@ -2186,6 +2368,7 @@ INSERT INTO master_foods (
 ),
 (
   'Banana, prata, crua',
+  'bananapratacrua',
   'Frutas',
   98.00,
   1.30,
@@ -2198,6 +2381,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cacau, cru',
+  'cacaucru',
   'Frutas',
   74.00,
   1.00,
@@ -2210,6 +2394,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cajá-Manga, cru',
+  'cajamangacru',
   'Frutas',
   46.00,
   1.30,
@@ -2222,6 +2407,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cajá, polpa, congelada',
+  'cajapolpacongelada',
   'Frutas',
   26.00,
   0.60,
@@ -2234,6 +2420,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caju, cru',
+  'cajucru',
   'Frutas',
   43.00,
   1.00,
@@ -2246,6 +2433,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caju, polpa, congelada',
+  'cajupolpacongelada',
   'Frutas',
   37.00,
   0.50,
@@ -2258,6 +2446,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caju, suco concentrado, envasado',
+  'cajusucoconcentradoenvasado',
   'Frutas',
   45.00,
   0.40,
@@ -2270,6 +2459,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caqui, chocolate, cru',
+  'caquichocolatecru',
   'Frutas',
   71.00,
   0.40,
@@ -2282,6 +2472,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carambola, crua',
+  'carambolacrua',
   'Frutas',
   46.00,
   0.90,
@@ -2294,6 +2485,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ciriguela, crua',
+  'ciriguelacrua',
   'Frutas',
   76.00,
   1.40,
@@ -2306,6 +2498,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cupuaçu, cru',
+  'cupuacucru',
   'Frutas',
   49.00,
   1.20,
@@ -2318,6 +2511,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cupuaçu, polpa, congelada',
+  'cupuacupolpacongelada',
   'Frutas',
   49.00,
   0.80,
@@ -2330,6 +2524,7 @@ INSERT INTO master_foods (
 ),
 (
   'Figo, cru',
+  'figocru',
   'Frutas',
   41.00,
   1.00,
@@ -2342,6 +2537,7 @@ INSERT INTO master_foods (
 ),
 (
   'Figo, enlatado, em calda',
+  'figoenlatadoemcalda',
   'Frutas',
   184.00,
   0.60,
@@ -2354,6 +2550,7 @@ INSERT INTO master_foods (
 ),
 (
   'Fruta-pão, crua',
+  'frutapaocrua',
   'Frutas',
   67.00,
   1.10,
@@ -2366,6 +2563,7 @@ INSERT INTO master_foods (
 ),
 (
   'Goiaba, branca, com casca, crua',
+  'goiababrancacomcascacrua',
   'Frutas',
   52.00,
   0.90,
@@ -2378,6 +2576,7 @@ INSERT INTO master_foods (
 ),
 (
   'Goiaba, doce em pasta',
+  'goiabadoceempasta',
   'Frutas',
   269.00,
   0.60,
@@ -2390,6 +2589,7 @@ INSERT INTO master_foods (
 ),
 (
   'Goiaba, doce, cascão',
+  'goiabadocecascao',
   'Frutas',
   286.00,
   0.40,
@@ -2402,6 +2602,7 @@ INSERT INTO master_foods (
 ),
 (
   'Goiaba, vermelha, com casca, crua',
+  'goiabavermelhacomcascacrua',
   'Frutas',
   54.00,
   1.10,
@@ -2414,6 +2615,7 @@ INSERT INTO master_foods (
 ),
 (
   'Graviola, crua',
+  'graviolacrua',
   'Frutas',
   62.00,
   0.80,
@@ -2426,6 +2628,7 @@ INSERT INTO master_foods (
 ),
 (
   'Graviola, polpa, congelada',
+  'graviolapolpacongelada',
   'Frutas',
   38.00,
   0.60,
@@ -2438,6 +2641,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jabuticaba, crua',
+  'jabuticabacrua',
   'Frutas',
   58.00,
   0.60,
@@ -2450,6 +2654,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jaca, crua',
+  'jacacrua',
   'Frutas',
   88.00,
   1.40,
@@ -2462,6 +2667,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jambo, cru',
+  'jambocru',
   'Frutas',
   27.00,
   0.90,
@@ -2474,6 +2680,7 @@ INSERT INTO master_foods (
 ),
 (
   'Jamelão, cru',
+  'jamelaocru',
   'Frutas',
   41.00,
   0.50,
@@ -2486,6 +2693,7 @@ INSERT INTO master_foods (
 ),
 (
   'Kiwi, cru',
+  'kiwicru',
   'Frutas',
   51.00,
   1.30,
@@ -2498,6 +2706,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, baía, crua',
+  'laranjabaiacrua',
   'Frutas',
   45.00,
   1.00,
@@ -2510,6 +2719,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, baía, suco',
+  'laranjabaiasuco',
   'Frutas',
   37.00,
   0.70,
@@ -2522,6 +2732,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, da terra, crua',
+  'laranjadaterracrua',
   'Frutas',
   51.00,
   1.10,
@@ -2534,6 +2745,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, da terra, suco',
+  'laranjadaterrasuco',
   'Frutas',
   41.00,
   0.70,
@@ -2546,6 +2758,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, lima, crua',
+  'laranjalimacrua',
   'Frutas',
   46.00,
   1.10,
@@ -2558,6 +2771,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, lima, suco',
+  'laranjalimasuco',
   'Frutas',
   39.00,
   0.70,
@@ -2570,6 +2784,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, pêra, crua',
+  'laranjaperacrua',
   'Frutas',
   37.00,
   1.00,
@@ -2582,6 +2797,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, pêra, suco',
+  'laranjaperasuco',
   'Frutas',
   33.00,
   0.70,
@@ -2594,6 +2810,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, valência, crua',
+  'laranjavalenciacrua',
   'Frutas',
   46.00,
   0.80,
@@ -2606,6 +2823,7 @@ INSERT INTO master_foods (
 ),
 (
   'Laranja, valência, suco',
+  'laranjavalenciasuco',
   'Frutas',
   36.00,
   0.50,
@@ -2618,6 +2836,7 @@ INSERT INTO master_foods (
 ),
 (
   'Limão, cravo, suco',
+  'limaocravosuco',
   'Frutas',
   14.00,
   0.30,
@@ -2630,6 +2849,7 @@ INSERT INTO master_foods (
 ),
 (
   'Limão, galego, suco',
+  'limaogalegosuco',
   'Frutas',
   22.00,
   0.60,
@@ -2642,6 +2862,7 @@ INSERT INTO master_foods (
 ),
 (
   'Limão, tahiti, cru',
+  'limaotahiticru',
   'Frutas',
   32.00,
   0.90,
@@ -2654,6 +2875,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maçã, Argentina, com casca, crua',
+  'macaargentinacomcascacrua',
   'Frutas',
   63.00,
   0.20,
@@ -2666,6 +2888,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maçã, Fuji, com casca, crua',
+  'macafujicomcascacrua',
   'Frutas',
   56.00,
   0.30,
@@ -2678,6 +2901,7 @@ INSERT INTO master_foods (
 ),
 (
   'Macaúba, crua',
+  'macaubacrua',
   'Frutas',
   404.00,
   2.10,
@@ -2690,6 +2914,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mamão, doce em calda, drenado',
+  'mamaodoceemcaldadrenado',
   'Frutas',
   196.00,
   0.20,
@@ -2702,6 +2927,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mamão, Formosa, cru',
+  'mamaoformosacru',
   'Frutas',
   45.00,
   0.80,
@@ -2714,6 +2940,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mamão, Papaia, cru',
+  'mamaopapaiacru',
   'Frutas',
   40.00,
   0.50,
@@ -2726,6 +2953,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mamão verde, doce em calda, drenado',
+  'mamaoverdedoceemcaldadrenado',
   'Frutas',
   209.00,
   0.30,
@@ -2738,6 +2966,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manga, Haden, crua',
+  'mangahadencrua',
   'Frutas',
   64.00,
   0.40,
@@ -2750,6 +2979,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manga, Palmer, crua',
+  'mangapalmercrua',
   'Frutas',
   72.00,
   0.40,
@@ -2762,6 +2992,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manga, polpa, congelada',
+  'mangapolpacongelada',
   'Frutas',
   48.00,
   0.40,
@@ -2774,6 +3005,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manga, Tommy Atkins, crua',
+  'mangatommyatkinscrua',
   'Frutas',
   51.00,
   0.90,
@@ -2786,6 +3018,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maracujá, cru',
+  'maracujacru',
   'Frutas',
   68.00,
   2.00,
@@ -2798,6 +3031,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maracujá, polpa, congelada',
+  'maracujapolpacongelada',
   'Frutas',
   39.00,
   0.80,
@@ -2810,6 +3044,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maracujá, suco concentrado, envasado',
+  'maracujasucoconcentradoenvasado',
   'Frutas',
   42.00,
   0.80,
@@ -2822,6 +3057,7 @@ INSERT INTO master_foods (
 ),
 (
   'Melancia, crua',
+  'melanciacrua',
   'Frutas',
   33.00,
   0.90,
@@ -2834,6 +3070,7 @@ INSERT INTO master_foods (
 ),
 (
   'Melão, cru',
+  'melaocru',
   'Frutas',
   29.00,
   0.70,
@@ -2846,6 +3083,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mexerica, Murcote, crua',
+  'mexericamurcotecrua',
   'Frutas',
   58.00,
   0.90,
@@ -2858,6 +3096,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mexerica, Rio, crua',
+  'mexericariocrua',
   'Frutas',
   37.00,
   0.70,
@@ -2870,6 +3109,7 @@ INSERT INTO master_foods (
 ),
 (
   'Morango, cru',
+  'morangocru',
   'Frutas',
   30.00,
   0.90,
@@ -2882,6 +3122,7 @@ INSERT INTO master_foods (
 ),
 (
   'Nêspera, crua',
+  'nesperacrua',
   'Frutas',
   43.00,
   0.30,
@@ -2894,6 +3135,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pequi, cru',
+  'pequicru',
   'Frutas',
   205.00,
   2.30,
@@ -2906,6 +3148,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pêra, Park, crua',
+  'peraparkcrua',
   'Frutas',
   61.00,
   0.20,
@@ -2918,6 +3161,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pêra, Williams, crua',
+  'perawilliamscrua',
   'Frutas',
   53.00,
   0.60,
@@ -2930,6 +3174,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pêssego, Aurora, cru',
+  'pessegoauroracru',
   'Frutas',
   36.00,
   0.80,
@@ -2942,6 +3187,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pêssego, enlatado, em calda',
+  'pessegoenlatadoemcalda',
   'Frutas',
   63.00,
   0.70,
@@ -2954,6 +3200,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pinha, crua',
+  'pinhacrua',
   'Frutas',
   88.00,
   1.50,
@@ -2966,6 +3213,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pitanga, crua',
+  'pitangacrua',
   'Frutas',
   41.00,
   0.90,
@@ -2978,6 +3226,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pitanga, polpa, congelada',
+  'pitangapolpacongelada',
   'Frutas',
   19.00,
   0.30,
@@ -2990,6 +3239,7 @@ INSERT INTO master_foods (
 ),
 (
   'Romã, crua',
+  'romacrua',
   'Frutas',
   56.00,
   0.40,
@@ -3002,6 +3252,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tamarindo, cru',
+  'tamarindocru',
   'Frutas',
   276.00,
   3.20,
@@ -3014,6 +3265,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tangerina, Poncã, crua',
+  'tangerinaponcacrua',
   'Frutas',
   38.00,
   0.80,
@@ -3026,6 +3278,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tangerina, Poncã, suco',
+  'tangerinaponcasuco',
   'Frutas',
   36.00,
   0.50,
@@ -3038,6 +3291,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tucumã, cru',
+  'tucumacru',
   'Frutas',
   262.00,
   2.10,
@@ -3050,6 +3304,7 @@ INSERT INTO master_foods (
 ),
 (
   'Umbu, cru',
+  'umbucru',
   'Frutas',
   37.00,
   0.80,
@@ -3062,6 +3317,7 @@ INSERT INTO master_foods (
 ),
 (
   'Umbu, polpa, congelada',
+  'umbupolpacongelada',
   'Frutas',
   34.00,
   0.50,
@@ -3074,6 +3330,7 @@ INSERT INTO master_foods (
 ),
 (
   'Uva, Itália, crua',
+  'uvaitaliacrua',
   'Frutas',
   53.00,
   0.70,
@@ -3086,6 +3343,7 @@ INSERT INTO master_foods (
 ),
 (
   'Uva, Rubi, crua',
+  'uvarubicrua',
   'Frutas',
   49.00,
   0.60,
@@ -3098,6 +3356,7 @@ INSERT INTO master_foods (
 ),
 (
   'Uva, suco concentrado, envasado',
+  'uvasucoconcentradoenvasado',
   'Frutas',
   58.00,
   0.00,
@@ -3110,6 +3369,7 @@ INSERT INTO master_foods (
 ),
 (
   'Azeite, de dendê',
+  'azeitededende',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3122,6 +3382,7 @@ INSERT INTO master_foods (
 ),
 (
   'Azeite, de oliva, extra virgem',
+  'azeitedeolivaextravirgem',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3134,6 +3395,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manteiga, com sal',
+  'manteigacomsal',
   'Óleos e gorduras',
   726.00,
   0.40,
@@ -3146,6 +3408,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manteiga, sem sal',
+  'manteigasemsal',
   'Óleos e gorduras',
   758.00,
   0.40,
@@ -3158,6 +3421,7 @@ INSERT INTO master_foods (
 ),
 (
   'Margarina, com óleo hidrogenado, com sal (65% de lipídeos)',
+  'margarinacomoleohidrogenadocomsal65delipideos',
   'Óleos e gorduras',
   596.00,
   0.00,
@@ -3170,6 +3434,7 @@ INSERT INTO master_foods (
 ),
 (
   'Margarina, com óleo hidrogenado, sem sal (80% de lipídeos)',
+  'margarinacomoleohidrogenadosemsal80delipideos',
   'Óleos e gorduras',
   723.00,
   0.00,
@@ -3182,6 +3447,7 @@ INSERT INTO master_foods (
 ),
 (
   'Margarina, com óleo interesterificado, com sal (65%de lipídeos)',
+  'margarinacomoleointeresterificadocomsal65delipideos',
   'Óleos e gorduras',
   594.00,
   0.00,
@@ -3194,6 +3460,7 @@ INSERT INTO master_foods (
 ),
 (
   'Margarina, com óleo interesterificado, sem sal (65% de lipídeos)',
+  'margarinacomoleointeresterificadosemsal65delipideos',
   'Óleos e gorduras',
   593.00,
   0.00,
@@ -3206,6 +3473,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de babaçu',
+  'oleodebabacu',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3218,6 +3486,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de canola',
+  'oleodecanola',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3230,6 +3499,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de girassol',
+  'oleodegirassol',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3242,6 +3512,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de milho',
+  'oleodemilho',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3254,6 +3525,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de pequi',
+  'oleodepequi',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3266,6 +3538,7 @@ INSERT INTO master_foods (
 ),
 (
   'Óleo, de soja',
+  'oleodesoja',
   'Óleos e gorduras',
   884.00,
   0.00,
@@ -3278,6 +3551,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abadejo, filé, congelado, assado',
+  'abadejofilecongeladoassado',
   'Personalizado',
   112.00,
   23.50,
@@ -3290,6 +3564,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abadejo, filé, congelado,cozido',
+  'abadejofilecongeladocozido',
   'Personalizado',
   91.00,
   19.30,
@@ -3302,6 +3577,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abadejo, filé, congelado, cru',
+  'abadejofilecongeladocru',
   'Personalizado',
   59.00,
   13.10,
@@ -3314,6 +3590,7 @@ INSERT INTO master_foods (
 ),
 (
   'Abadejo, filé, congelado, grelhado',
+  'abadejofilecongeladogrelhado',
   'Personalizado',
   130.00,
   27.60,
@@ -3326,6 +3603,7 @@ INSERT INTO master_foods (
 ),
 (
   'Atum, conserva em óleo',
+  'atumconservaemoleo',
   'Personalizado',
   166.00,
   26.20,
@@ -3338,6 +3616,7 @@ INSERT INTO master_foods (
 ),
 (
   'Atum, fresco, cru',
+  'atumfrescocru',
   'Personalizado',
   118.00,
   25.70,
@@ -3350,6 +3629,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bacalhau, salgado, cru',
+  'bacalhausalgadocru',
   'Personalizado',
   136.00,
   29.00,
@@ -3362,6 +3642,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bacalhau, salgado, refogado',
+  'bacalhausalgadorefogado',
   'Personalizado',
   140.00,
   24.00,
@@ -3374,6 +3655,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cação, posta, com farinha de trigo, frita',
+  'cacaopostacomfarinhadetrigofrita',
   'Personalizado',
   208.00,
   25.00,
@@ -3386,6 +3668,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cação, posta, cozida',
+  'cacaopostacozida',
   'Personalizado',
   116.00,
   25.60,
@@ -3398,6 +3681,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cação, posta, crua',
+  'cacaopostacrua',
   'Personalizado',
   83.00,
   17.90,
@@ -3410,6 +3694,7 @@ INSERT INTO master_foods (
 ),
 (
   'Camarão, Rio Grande, grande, cozido',
+  'camaraoriograndegrandecozido',
   'Personalizado',
   90.00,
   19.00,
@@ -3422,6 +3707,7 @@ INSERT INTO master_foods (
 ),
 (
   'Camarão, Rio Grande, grande, cru',
+  'camaraoriograndegrandecru',
   'Personalizado',
   47.00,
   10.00,
@@ -3434,6 +3720,7 @@ INSERT INTO master_foods (
 ),
 (
   'Camarão, Sete Barbas, sem cabeça, com casca, frito',
+  'camaraosetebarbassemcabecacomcascafrito',
   'Personalizado',
   231.00,
   18.40,
@@ -3446,6 +3733,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caranguejo, cozido',
+  'caranguejocozido',
   'Personalizado',
   83.00,
   18.50,
@@ -3458,6 +3746,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corimba, cru',
+  'corimbacru',
   'Personalizado',
   128.00,
   17.40,
@@ -3470,6 +3759,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corimbatá, assado',
+  'corimbataassado',
   'Personalizado',
   261.00,
   19.90,
@@ -3482,6 +3772,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corimbatá, cozido',
+  'corimbatacozido',
   'Personalizado',
   239.00,
   20.10,
@@ -3494,6 +3785,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corvina de água doce, crua',
+  'corvinadeaguadocecrua',
   'Personalizado',
   101.00,
   18.90,
@@ -3506,6 +3798,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corvina do mar, crua',
+  'corvinadomarcrua',
   'Personalizado',
   94.00,
   18.60,
@@ -3518,6 +3811,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corvina grande, assada',
+  'corvinagrandeassada',
   'Personalizado',
   147.00,
   26.80,
@@ -3530,6 +3824,7 @@ INSERT INTO master_foods (
 ),
 (
   'Corvina grande, cozida',
+  'corvinagrandecozida',
   'Personalizado',
   100.00,
   23.40,
@@ -3542,6 +3837,7 @@ INSERT INTO master_foods (
 ),
 (
   'Dourada de água doce, fresca',
+  'douradadeaguadocefresca',
   'Personalizado',
   131.00,
   18.80,
@@ -3554,6 +3850,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lambari, congelado, cru',
+  'lambaricongeladocru',
   'Personalizado',
   131.00,
   16.80,
@@ -3566,6 +3863,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lambari, congelado, frito',
+  'lambaricongeladofrito',
   'Personalizado',
   327.00,
   28.40,
@@ -3578,6 +3876,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lambari, fresco, cru',
+  'lambarifrescocru',
   'Personalizado',
   152.00,
   15.70,
@@ -3590,6 +3889,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manjuba, com farinha de trigo, frita',
+  'manjubacomfarinhadetrigofrita',
   'Personalizado',
   344.00,
   23.50,
@@ -3602,6 +3902,7 @@ INSERT INTO master_foods (
 ),
 (
   'Manjuba, frita',
+  'manjubafrita',
   'Personalizado',
   349.00,
   30.10,
@@ -3614,6 +3915,7 @@ INSERT INTO master_foods (
 ),
 (
   'Merluza, filé, assado',
+  'merluzafileassado',
   'Personalizado',
   122.00,
   26.60,
@@ -3626,6 +3928,7 @@ INSERT INTO master_foods (
 ),
 (
   'Merluza, filé, cru',
+  'merluzafilecru',
   'Personalizado',
   89.00,
   16.60,
@@ -3638,6 +3941,7 @@ INSERT INTO master_foods (
 ),
 (
   'Merluza, filé, frito',
+  'merluzafilefrito',
   'Personalizado',
   192.00,
   26.90,
@@ -3650,6 +3954,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, branca, crua',
+  'pescadabrancacrua',
   'Personalizado',
   111.00,
   16.30,
@@ -3662,6 +3967,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, branca, frita',
+  'pescadabrancafrita',
   'Personalizado',
   223.00,
   27.40,
@@ -3674,6 +3980,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, filé, com farinha de trigo, frito',
+  'pescadafilecomfarinhadetrigofrito',
   'Personalizado',
   283.00,
   21.40,
@@ -3686,6 +3993,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, filé, cru',
+  'pescadafilecru',
   'Personalizado',
   107.00,
   16.70,
@@ -3698,6 +4006,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, filé, frito',
+  'pescadafilefrito',
   'Personalizado',
   154.00,
   28.60,
@@ -3710,6 +4019,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescada, filé, molho escabeche',
+  'pescadafilemolhoescabeche',
   'Personalizado',
   142.00,
   11.80,
@@ -3722,6 +4032,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pescadinha, crua',
+  'pescadinhacrua',
   'Personalizado',
   76.00,
   15.50,
@@ -3734,6 +4045,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pintado, assado',
+  'pintadoassado',
   'Personalizado',
   192.00,
   36.50,
@@ -3746,6 +4058,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pintado, cru',
+  'pintadocru',
   'Personalizado',
   91.00,
   18.60,
@@ -3758,6 +4071,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pintado, grelhado',
+  'pintadogrelhado',
   'Personalizado',
   152.00,
   30.80,
@@ -3770,6 +4084,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porquinho, cru',
+  'porquinhocru',
   'Personalizado',
   93.00,
   20.50,
@@ -3782,6 +4097,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salmão, filé, com pele, fresco,  grelhado',
+  'salmaofilecompelefrescogrelhado',
   'Personalizado',
   229.00,
   23.90,
@@ -3794,6 +4110,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salmão, sem pele, fresco, cru',
+  'salmaosempelefrescocru',
   'Personalizado',
   170.00,
   19.30,
@@ -3806,6 +4123,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salmão, sem pele, fresco, grelhado',
+  'salmaosempelefrescogrelhado',
   'Personalizado',
   243.00,
   26.10,
@@ -3818,6 +4136,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sardinha, assada',
+  'sardinhaassada',
   'Personalizado',
   164.00,
   32.20,
@@ -3830,6 +4149,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sardinha, conserva em óleo',
+  'sardinhaconservaemoleo',
   'Personalizado',
   285.00,
   15.90,
@@ -3842,6 +4162,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sardinha, frita',
+  'sardinhafrita',
   'Personalizado',
   257.00,
   33.40,
@@ -3854,6 +4175,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sardinha, inteira, crua',
+  'sardinhainteiracrua',
   'Personalizado',
   114.00,
   21.10,
@@ -3866,6 +4188,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tucunaré, filé, congelado, cru',
+  'tucunarefilecongeladocru',
   'Personalizado',
   88.00,
   18.00,
@@ -3878,6 +4201,7 @@ INSERT INTO master_foods (
 ),
 (
   'Apresuntado',
+  'apresuntado',
   'Carnes e aves',
   129.00,
   13.50,
@@ -3890,6 +4214,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caldo de carne, tablete',
+  'caldodecarnetablete',
   'Carnes e aves',
   241.00,
   7.80,
@@ -3902,6 +4227,7 @@ INSERT INTO master_foods (
 ),
 (
   'Caldo de galinha, tablete',
+  'caldodegalinhatablete',
   'Carnes e aves',
   251.00,
   6.30,
@@ -3914,6 +4240,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, acém, moído, cozido',
+  'carnebovinaacemmoidocozido',
   'Carnes e aves',
   212.00,
   26.70,
@@ -3926,6 +4253,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, acém, moído, cru',
+  'carnebovinaacemmoidocru',
   'Carnes e aves',
   137.00,
   19.40,
@@ -3938,6 +4266,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, acém, sem gordura, cozido',
+  'carnebovinaacemsemgorduracozido',
   'Carnes e aves',
   215.00,
   27.30,
@@ -3950,6 +4279,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, acém, sem gordura, cru',
+  'carnebovinaacemsemgorduracru',
   'Carnes e aves',
   144.00,
   20.80,
@@ -3962,6 +4292,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, almôndegas, cruas',
+  'carnebovinaalmondegascruas',
   'Carnes e aves',
   189.00,
   12.30,
@@ -3974,6 +4305,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, almôndegas, fritas',
+  'carnebovinaalmondegasfritas',
   'Carnes e aves',
   272.00,
   18.20,
@@ -3986,6 +4318,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, bucho, cozido',
+  'carnebovinabuchocozido',
   'Carnes e aves',
   133.00,
   21.60,
@@ -3998,6 +4331,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, bucho, cru',
+  'carnebovinabuchocru',
   'Carnes e aves',
   137.00,
   20.50,
@@ -4010,6 +4344,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, capa de contra-filé, com gordura, crua',
+  'carnebovinacapadecontrafilecomgorduracrua',
   'Carnes e aves',
   217.00,
   19.20,
@@ -4022,6 +4357,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, capa de contra-filé, com gordura, grelhada',
+  'carnebovinacapadecontrafilecomgorduragrelhada',
   'Carnes e aves',
   312.00,
   30.70,
@@ -4034,6 +4370,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, capa de contra-filé, sem gordura, crua',
+  'carnebovinacapadecontrafilesemgorduracrua',
   'Carnes e aves',
   131.00,
   21.50,
@@ -4046,6 +4383,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, capa de contra-filé, sem gordura, grelhada',
+  'carnebovinacapadecontrafilesemgorduragrelhada',
   'Carnes e aves',
   239.00,
   35.10,
@@ -4058,6 +4396,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, charque, cozido',
+  'carnebovinacharquecozido',
   'Carnes e aves',
   263.00,
   36.40,
@@ -4070,6 +4409,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, charque, cru',
+  'carnebovinacharquecru',
   'Carnes e aves',
   249.00,
   22.70,
@@ -4082,6 +4422,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé, à milanesa',
+  'carnebovinacontrafileamilanesa',
   'Carnes e aves',
   352.00,
   20.60,
@@ -4094,6 +4435,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé de costela, cru',
+  'carnebovinacontrafiledecostelacru',
   'Carnes e aves',
   202.00,
   19.80,
@@ -4106,6 +4448,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé de costela, grelhado',
+  'carnebovinacontrafiledecostelagrelhado',
   'Carnes e aves',
   275.00,
   29.90,
@@ -4118,6 +4461,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé, com gordura, cru',
+  'carnebovinacontrafilecomgorduracru',
   'Carnes e aves',
   206.00,
   21.20,
@@ -4130,6 +4474,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé, com gordura, grelhado',
+  'carnebovinacontrafilecomgorduragrelhado',
   'Carnes e aves',
   278.00,
   32.40,
@@ -4142,6 +4487,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé, sem gordura, cru',
+  'carnebovinacontrafilesemgorduracru',
   'Carnes e aves',
   157.00,
   24.00,
@@ -4154,6 +4500,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, contra-filé, sem gordura, grelhado',
+  'carnebovinacontrafilesemgorduragrelhado',
   'Carnes e aves',
   194.00,
   35.90,
@@ -4166,6 +4513,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, costela, assada',
+  'carnebovinacostelaassada',
   'Carnes e aves',
   373.00,
   28.80,
@@ -4178,6 +4526,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, costela, crua',
+  'carnebovinacostelacrua',
   'Carnes e aves',
   358.00,
   16.70,
@@ -4190,6 +4539,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, coxão duro, sem gordura, cozido',
+  'carnebovinacoxaodurosemgorduracozido',
   'Carnes e aves',
   217.00,
   31.90,
@@ -4202,6 +4552,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, coxão duro, sem gordura, cru',
+  'carnebovinacoxaodurosemgorduracru',
   'Carnes e aves',
   148.00,
   21.50,
@@ -4214,6 +4565,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, coxão mole, sem gordura, cozido',
+  'carnebovinacoxaomolesemgorduracozido',
   'Carnes e aves',
   219.00,
   32.40,
@@ -4226,6 +4578,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, coxão mole, sem gordura, cru',
+  'carnebovinacoxaomolesemgorduracru',
   'Carnes e aves',
   169.00,
   21.20,
@@ -4238,6 +4591,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, cupim, assado',
+  'carnebovinacupimassado',
   'Carnes e aves',
   330.00,
   28.60,
@@ -4250,6 +4604,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, cupim, cru',
+  'carnebovinacupimcru',
   'Carnes e aves',
   221.00,
   19.50,
@@ -4262,6 +4617,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, fígado, cru',
+  'carnebovinafigadocru',
   'Carnes e aves',
   141.00,
   20.70,
@@ -4274,6 +4630,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, fígado, grelhado',
+  'carnebovinafigadogrelhado',
   'Carnes e aves',
   225.00,
   29.90,
@@ -4286,6 +4643,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, filé mingnon, sem gordura, cru',
+  'carnebovinafilemingnonsemgorduracru',
   'Carnes e aves',
   143.00,
   21.60,
@@ -4298,6 +4656,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, filé mingnon, sem gordura, grelhado',
+  'carnebovinafilemingnonsemgorduragrelhado',
   'Carnes e aves',
   220.00,
   32.80,
@@ -4310,6 +4669,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, flanco, sem gordura, cozido',
+  'carnebovinaflancosemgorduracozido',
   'Carnes e aves',
   196.00,
   29.40,
@@ -4322,6 +4682,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, flanco, sem gordura, cru',
+  'carnebovinaflancosemgorduracru',
   'Carnes e aves',
   141.00,
   20.00,
@@ -4334,6 +4695,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, fraldinha, com gordura, cozida',
+  'carnebovinafraldinhacomgorduracozida',
   'Carnes e aves',
   338.00,
   24.20,
@@ -4346,6 +4708,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, fraldinha, com gordura, crua',
+  'carnebovinafraldinhacomgorduracrua',
   'Carnes e aves',
   221.00,
   17.60,
@@ -4358,6 +4721,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, lagarto, cozido',
+  'carnebovinalagartocozido',
   'Carnes e aves',
   222.00,
   32.90,
@@ -4370,6 +4734,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, lagarto, cru',
+  'carnebovinalagartocru',
   'Carnes e aves',
   135.00,
   20.50,
@@ -4382,6 +4747,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, língua, cozida',
+  'carnebovinalinguacozida',
   'Carnes e aves',
   315.00,
   21.40,
@@ -4394,6 +4760,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, língua, crua',
+  'carnebovinalinguacrua',
   'Carnes e aves',
   215.00,
   17.10,
@@ -4406,6 +4773,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, maminha, crua',
+  'carnebovinamaminhacrua',
   'Carnes e aves',
   153.00,
   20.90,
@@ -4418,6 +4786,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, maminha, grelhada',
+  'carnebovinamaminhagrelhada',
   'Carnes e aves',
   153.00,
   30.70,
@@ -4430,6 +4799,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, miolo de alcatra, sem gordura, cru',
+  'carnebovinamiolodealcatrasemgorduracru',
   'Carnes e aves',
   163.00,
   21.60,
@@ -4442,6 +4812,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, miolo de alcatra, sem gordura, grelhado',
+  'carnebovinamiolodealcatrasemgorduragrelhado',
   'Carnes e aves',
   241.00,
   31.90,
@@ -4454,6 +4825,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, músculo, sem gordura, cozido',
+  'carnebovinamusculosemgorduracozido',
   'Carnes e aves',
   194.00,
   31.20,
@@ -4466,6 +4838,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, músculo, sem gordura, cru',
+  'carnebovinamusculosemgorduracru',
   'Carnes e aves',
   142.00,
   21.60,
@@ -4478,6 +4851,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, paleta, com gordura, crua',
+  'carnebovinapaletacomgorduracrua',
   'Carnes e aves',
   159.00,
   21.40,
@@ -4490,6 +4864,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, paleta, sem gordura, cozida',
+  'carnebovinapaletasemgorduracozida',
   'Carnes e aves',
   194.00,
   29.70,
@@ -4502,6 +4877,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, paleta, sem gordura, crua',
+  'carnebovinapaletasemgorduracrua',
   'Carnes e aves',
   141.00,
   21.00,
@@ -4514,6 +4890,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, patinho, sem gordura, cru',
+  'carnebovinapatinhosemgorduracru',
   'Carnes e aves',
   133.00,
   21.70,
@@ -4526,6 +4903,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, patinho, sem gordura, grelhado',
+  'carnebovinapatinhosemgorduragrelhado',
   'Carnes e aves',
   219.00,
   35.90,
@@ -4538,6 +4916,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, peito, sem gordura, cozido',
+  'carnebovinapeitosemgorduracozido',
   'Carnes e aves',
   338.00,
   22.20,
@@ -4550,6 +4929,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, peito, sem gordura, cru',
+  'carnebovinapeitosemgorduracru',
   'Carnes e aves',
   259.00,
   17.60,
@@ -4562,6 +4942,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, picanha, com gordura, crua',
+  'carnebovinapicanhacomgorduracrua',
   'Carnes e aves',
   213.00,
   18.80,
@@ -4574,6 +4955,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, picanha, com gordura, grelhada',
+  'carnebovinapicanhacomgorduragrelhada',
   'Carnes e aves',
   289.00,
   26.40,
@@ -4586,6 +4968,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, picanha, sem gordura, crua',
+  'carnebovinapicanhasemgorduracrua',
   'Carnes e aves',
   134.00,
   21.30,
@@ -4598,6 +4981,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, picanha, sem gordura, grelhada',
+  'carnebovinapicanhasemgorduragrelhada',
   'Carnes e aves',
   238.00,
   31.90,
@@ -4610,6 +4994,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, seca, cozida',
+  'carnebovinasecacozida',
   'Carnes e aves',
   313.00,
   26.90,
@@ -4622,6 +5007,7 @@ INSERT INTO master_foods (
 ),
 (
   'Carne, bovina, seca, crua',
+  'carnebovinasecacrua',
   'Carnes e aves',
   313.00,
   19.70,
@@ -4634,6 +5020,7 @@ INSERT INTO master_foods (
 ),
 (
   'Coxinha de frango, frita',
+  'coxinhadefrangofrita',
   'Carnes e aves',
   283.00,
   9.60,
@@ -4646,6 +5033,7 @@ INSERT INTO master_foods (
 ),
 (
   'Croquete, de carne, cru',
+  'croquetedecarnecru',
   'Carnes e aves',
   246.00,
   12.00,
@@ -4658,6 +5046,7 @@ INSERT INTO master_foods (
 ),
 (
   'Croquete, de carne, frito',
+  'croquetedecarnefrito',
   'Carnes e aves',
   347.00,
   16.90,
@@ -4670,6 +5059,7 @@ INSERT INTO master_foods (
 ),
 (
   'Empada de frango, pré-cozida, assada',
+  'empadadefrangoprecozidaassada',
   'Carnes e aves',
   358.00,
   6.90,
@@ -4682,6 +5072,7 @@ INSERT INTO master_foods (
 ),
 (
   'Empada, de frango, pré-cozida',
+  'empadadefrangoprecozida',
   'Carnes e aves',
   377.00,
   7.30,
@@ -4694,6 +5085,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, asa, com pele, crua',
+  'frangoasacompelecrua',
   'Carnes e aves',
   213.00,
   18.10,
@@ -4706,6 +5098,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, caipira, inteiro, com pele, cozido',
+  'frangocaipirainteirocompelecozido',
   'Carnes e aves',
   243.00,
   23.90,
@@ -4718,6 +5111,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, caipira, inteiro, sem pele, cozido',
+  'frangocaipirainteirosempelecozido',
   'Carnes e aves',
   196.00,
   29.60,
@@ -4730,6 +5124,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coração, cru',
+  'frangocoracaocru',
   'Carnes e aves',
   222.00,
   12.60,
@@ -4742,6 +5137,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coração, grelhado',
+  'frangocoracaogrelhado',
   'Carnes e aves',
   207.00,
   22.40,
@@ -4754,6 +5150,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coxa, com pele, assada',
+  'frangocoxacompeleassada',
   'Carnes e aves',
   215.00,
   28.50,
@@ -4766,6 +5163,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coxa, com pele, crua',
+  'frangocoxacompelecrua',
   'Carnes e aves',
   161.00,
   17.10,
@@ -4778,6 +5176,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coxa, sem pele, cozida',
+  'frangocoxasempelecozida',
   'Carnes e aves',
   167.00,
   26.90,
@@ -4790,6 +5189,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, coxa, sem pele, crua',
+  'frangocoxasempelecrua',
   'Carnes e aves',
   120.00,
   17.80,
@@ -4802,6 +5202,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, fígado, cru',
+  'frangofigadocru',
   'Carnes e aves',
   106.00,
   17.60,
@@ -4814,6 +5215,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, filé, à milanesa',
+  'frangofileamilanesa',
   'Carnes e aves',
   221.00,
   28.50,
@@ -4826,6 +5228,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, inteiro, com pele, cru',
+  'frangointeirocompelecru',
   'Carnes e aves',
   226.00,
   16.40,
@@ -4838,6 +5241,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, inteiro, sem pele, assado',
+  'frangointeirosempeleassado',
   'Carnes e aves',
   187.00,
   28.00,
@@ -4850,6 +5254,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, inteiro, sem pele, cozido',
+  'frangointeirosempelecozido',
   'Carnes e aves',
   170.00,
   25.00,
@@ -4862,6 +5267,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, inteiro, sem pele, cru',
+  'frangointeirosempelecru',
   'Carnes e aves',
   129.00,
   20.60,
@@ -4874,6 +5280,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, peito, com pele, assado',
+  'frangopeitocompeleassado',
   'Carnes e aves',
   212.00,
   33.40,
@@ -4886,6 +5293,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, peito, com pele, cru',
+  'frangopeitocompelecru',
   'Carnes e aves',
   149.00,
   20.80,
@@ -4898,6 +5306,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, peito, sem pele, cozido',
+  'frangopeitosempelecozido',
   'Carnes e aves',
   163.00,
   31.50,
@@ -4910,6 +5319,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, peito, sem pele, cru',
+  'frangopeitosempelecru',
   'Carnes e aves',
   119.00,
   21.50,
@@ -4922,6 +5332,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, peito, sem pele, grelhado',
+  'frangopeitosempelegrelhado',
   'Carnes e aves',
   159.00,
   32.00,
@@ -4934,6 +5345,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, sobrecoxa, com pele, assada',
+  'frangosobrecoxacompeleassada',
   'Carnes e aves',
   260.00,
   28.70,
@@ -4946,6 +5358,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, sobrecoxa, com pele, crua',
+  'frangosobrecoxacompelecrua',
   'Carnes e aves',
   255.00,
   15.50,
@@ -4958,6 +5371,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, sobrecoxa, sem pele, assada',
+  'frangosobrecoxasempeleassada',
   'Carnes e aves',
   233.00,
   29.20,
@@ -4970,6 +5384,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, sobrecoxa, sem pele, crua',
+  'frangosobrecoxasempelecrua',
   'Carnes e aves',
   162.00,
   17.60,
@@ -4982,6 +5397,7 @@ INSERT INTO master_foods (
 ),
 (
   'Hambúrguer, bovino, cru',
+  'hamburguerbovinocru',
   'Carnes e aves',
   215.00,
   13.20,
@@ -4994,6 +5410,7 @@ INSERT INTO master_foods (
 ),
 (
   'Hambúrguer, bovino, frito',
+  'hamburguerbovinofrito',
   'Carnes e aves',
   258.00,
   20.00,
@@ -5006,6 +5423,7 @@ INSERT INTO master_foods (
 ),
 (
   'Hambúrguer, bovino, grelhado',
+  'hamburguerbovinogrelhado',
   'Carnes e aves',
   210.00,
   13.20,
@@ -5018,6 +5436,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, frango, crua',
+  'linguicafrangocrua',
   'Carnes e aves',
   218.00,
   14.20,
@@ -5030,6 +5449,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, frango, frita',
+  'linguicafrangofrita',
   'Carnes e aves',
   245.00,
   18.30,
@@ -5042,6 +5462,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, frango, grelhada',
+  'linguicafrangogrelhada',
   'Carnes e aves',
   244.00,
   18.20,
@@ -5054,6 +5475,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, porco, crua',
+  'linguicaporcocrua',
   'Carnes e aves',
   227.00,
   16.10,
@@ -5066,6 +5488,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, porco, frita',
+  'linguicaporcofrita',
   'Carnes e aves',
   280.00,
   20.50,
@@ -5078,6 +5501,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lingüiça, porco, grelhada',
+  'linguicaporcogrelhada',
   'Carnes e aves',
   296.00,
   23.20,
@@ -5090,6 +5514,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mortadela',
+  'mortadela',
   'Carnes e aves',
   269.00,
   12.00,
@@ -5102,6 +5527,7 @@ INSERT INTO master_foods (
 ),
 (
   'Peru, congelado, assado',
+  'perucongeladoassado',
   'Carnes e aves',
   163.00,
   26.20,
@@ -5114,6 +5540,7 @@ INSERT INTO master_foods (
 ),
 (
   'Peru, congelado, cru',
+  'perucongeladocru',
   'Carnes e aves',
   94.00,
   18.10,
@@ -5126,6 +5553,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, bisteca, crua',
+  'porcobistecacrua',
   'Carnes e aves',
   164.00,
   21.50,
@@ -5138,6 +5566,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, bisteca, frita',
+  'porcobistecafrita',
   'Carnes e aves',
   311.00,
   33.70,
@@ -5150,6 +5579,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, bisteca, grelhada',
+  'porcobistecagrelhada',
   'Carnes e aves',
   280.00,
   28.90,
@@ -5162,6 +5592,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, costela, assada',
+  'porcocostelaassada',
   'Carnes e aves',
   402.00,
   30.20,
@@ -5174,6 +5605,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, costela, crua',
+  'porcocostelacrua',
   'Carnes e aves',
   256.00,
   18.00,
@@ -5186,6 +5618,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, lombo, assado',
+  'porcolomboassado',
   'Carnes e aves',
   210.00,
   35.70,
@@ -5198,6 +5631,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, lombo, cru',
+  'porcolombocru',
   'Carnes e aves',
   176.00,
   22.60,
@@ -5210,6 +5644,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, orelha, salgada, crua',
+  'porcoorelhasalgadacrua',
   'Carnes e aves',
   258.00,
   18.50,
@@ -5222,6 +5657,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, pernil, assado',
+  'porcopernilassado',
   'Carnes e aves',
   262.00,
   32.10,
@@ -5234,6 +5670,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, pernil, cru',
+  'porcopernilcru',
   'Carnes e aves',
   186.00,
   20.10,
@@ -5246,6 +5683,7 @@ INSERT INTO master_foods (
 ),
 (
   'Porco, rabo, salgado, cru',
+  'porcorabosalgadocru',
   'Carnes e aves',
   377.00,
   15.60,
@@ -5258,6 +5696,7 @@ INSERT INTO master_foods (
 ),
 (
   'Presunto, com capa de gordura',
+  'presuntocomcapadegordura',
   'Carnes e aves',
   128.00,
   14.40,
@@ -5270,6 +5709,7 @@ INSERT INTO master_foods (
 ),
 (
   'Presunto, sem capa de gordura',
+  'presuntosemcapadegordura',
   'Carnes e aves',
   94.00,
   14.30,
@@ -5282,6 +5722,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quibe, assado',
+  'quibeassado',
   'Carnes e aves',
   136.00,
   14.60,
@@ -5294,6 +5735,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quibe, cru',
+  'quibecru',
   'Carnes e aves',
   109.00,
   12.40,
@@ -5306,6 +5748,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quibe, frito',
+  'quibefrito',
   'Carnes e aves',
   254.00,
   14.90,
@@ -5318,6 +5761,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salame',
+  'salame',
   'Carnes e aves',
   398.00,
   25.80,
@@ -5330,6 +5774,7 @@ INSERT INTO master_foods (
 ),
 (
   'Toucinho, cru',
+  'toucinhocru',
   'Carnes e aves',
   593.00,
   11.50,
@@ -5342,6 +5787,7 @@ INSERT INTO master_foods (
 ),
 (
   'Toucinho, frito',
+  'toucinhofrito',
   'Carnes e aves',
   697.00,
   27.30,
@@ -5354,6 +5800,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bebida láctea, pêssego',
+  'bebidalacteapessego',
   'Ovos e laticínios',
   55.00,
   2.10,
@@ -5366,6 +5813,7 @@ INSERT INTO master_foods (
 ),
 (
   'Creme de Leite',
+  'cremedeleite',
   'Ovos e laticínios',
   221.00,
   1.50,
@@ -5378,6 +5826,7 @@ INSERT INTO master_foods (
 ),
 (
   'Iogurte, natural',
+  'iogurtenatural',
   'Ovos e laticínios',
   51.00,
   4.10,
@@ -5390,6 +5839,7 @@ INSERT INTO master_foods (
 ),
 (
   'Iogurte, natural, desnatado',
+  'iogurtenaturaldesnatado',
   'Ovos e laticínios',
   41.00,
   3.80,
@@ -5402,6 +5852,7 @@ INSERT INTO master_foods (
 ),
 (
   'Iogurte, sabor abacaxi',
+  'iogurtesaborabacaxi',
   'Ovos e laticínios',
   0.00,
   0.00,
@@ -5414,6 +5865,7 @@ INSERT INTO master_foods (
 ),
 (
   'Iogurte, sabor morango',
+  'iogurtesabormorango',
   'Ovos e laticínios',
   70.00,
   2.70,
@@ -5426,6 +5878,7 @@ INSERT INTO master_foods (
 ),
 (
   'Iogurte, sabor pêssego',
+  'iogurtesaborpessego',
   'Ovos e laticínios',
   68.00,
   2.50,
@@ -5438,6 +5891,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, condensado',
+  'leitecondensado',
   'Ovos e laticínios',
   313.00,
   7.70,
@@ -5450,6 +5904,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de cabra',
+  'leitedecabra',
   'Ovos e laticínios',
   66.00,
   3.10,
@@ -5462,6 +5917,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de vaca, achocolatado',
+  'leitedevacaachocolatado',
   'Ovos e laticínios',
   83.00,
   2.10,
@@ -5474,6 +5930,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de vaca, desnatado, pó',
+  'leitedevacadesnatadopo',
   'Ovos e laticínios',
   362.00,
   34.70,
@@ -5486,6 +5943,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de vaca, desnatado, UHT',
+  'leitedevacadesnatadouht',
   'Ovos e laticínios',
   0.00,
   0.00,
@@ -5498,6 +5956,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de vaca, integral',
+  'leitedevacaintegral',
   'Ovos e laticínios',
   0.00,
   0.00,
@@ -5510,6 +5969,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de vaca, integral, pó',
+  'leitedevacaintegralpo',
   'Ovos e laticínios',
   497.00,
   25.40,
@@ -5522,6 +5982,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, fermentado',
+  'leitefermentado',
   'Ovos e laticínios',
   70.00,
   1.90,
@@ -5534,6 +5995,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, minas, frescal',
+  'queijominasfrescal',
   'Ovos e laticínios',
   264.00,
   17.40,
@@ -5546,6 +6008,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, minas, meia cura',
+  'queijominasmeiacura',
   'Ovos e laticínios',
   321.00,
   21.20,
@@ -5558,6 +6021,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, mozarela',
+  'queijomozarela',
   'Ovos e laticínios',
   330.00,
   22.60,
@@ -5570,6 +6034,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, parmesão',
+  'queijoparmesao',
   'Ovos e laticínios',
   453.00,
   35.60,
@@ -5582,6 +6047,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, pasteurizado',
+  'queijopasteurizado',
   'Ovos e laticínios',
   303.00,
   9.40,
@@ -5594,6 +6060,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, petit suisse, morango',
+  'queijopetitsuissemorango',
   'Ovos e laticínios',
   121.00,
   5.80,
@@ -5606,6 +6073,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, prato',
+  'queijoprato',
   'Ovos e laticínios',
   360.00,
   22.70,
@@ -5618,6 +6086,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, requeijão, cremoso',
+  'queijorequeijaocremoso',
   'Ovos e laticínios',
   257.00,
   9.60,
@@ -5630,6 +6099,7 @@ INSERT INTO master_foods (
 ),
 (
   'Queijo, ricota',
+  'queijoricota',
   'Ovos e laticínios',
   140.00,
   12.60,
@@ -5642,6 +6112,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bebida isotônica, sabores variados',
+  'bebidaisotonicasaboresvariados',
   'Personalizado',
   26.00,
   0.00,
@@ -5654,6 +6125,7 @@ INSERT INTO master_foods (
 ),
 (
   'Café, infusão 10%',
+  'cafeinfusao10',
   'Personalizado',
   9.00,
   0.70,
@@ -5666,6 +6138,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cana, aguardente 1',
+  'canaaguardente1',
   'Personalizado',
   216.00,
   0.00,
@@ -5678,6 +6151,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cana, caldo de',
+  'canacaldode',
   'Personalizado',
   65.00,
   0.00,
@@ -5690,6 +6164,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cerveja, pilsen 2',
+  'cervejapilsen2',
   'Personalizado',
   41.00,
   0.60,
@@ -5702,6 +6177,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chá, erva-doce, infusão 5%',
+  'chaervadoceinfusao5',
   'Personalizado',
   1.00,
   0.00,
@@ -5714,6 +6190,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chá, mate, infusão 5%',
+  'chamateinfusao5',
   'Personalizado',
   3.00,
   0.00,
@@ -5726,6 +6203,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chá, preto, infusão 5%',
+  'chapretoinfusao5',
   'Personalizado',
   2.00,
   0.00,
@@ -5738,6 +6216,7 @@ INSERT INTO master_foods (
 ),
 (
   'Coco, água de',
+  'cocoaguade',
   'Personalizado',
   22.00,
   0.00,
@@ -5750,6 +6229,7 @@ INSERT INTO master_foods (
 ),
 (
   'Refrigerante, tipo água tônica',
+  'refrigerantetipoaguatonica',
   'Personalizado',
   31.00,
   0.00,
@@ -5762,6 +6242,7 @@ INSERT INTO master_foods (
 ),
 (
   'Refrigerante, tipo cola',
+  'refrigerantetipocola',
   'Personalizado',
   34.00,
   0.00,
@@ -5774,6 +6255,7 @@ INSERT INTO master_foods (
 ),
 (
   'Refrigerante, tipo guaraná',
+  'refrigerantetipoguarana',
   'Personalizado',
   39.00,
   0.00,
@@ -5786,6 +6268,7 @@ INSERT INTO master_foods (
 ),
 (
   'Refrigerante, tipo laranja',
+  'refrigerantetipolaranja',
   'Personalizado',
   46.00,
   0.00,
@@ -5798,6 +6281,7 @@ INSERT INTO master_foods (
 ),
 (
   'Refrigerante, tipo limão',
+  'refrigerantetipolimao',
   'Personalizado',
   40.00,
   0.00,
@@ -5810,6 +6294,7 @@ INSERT INTO master_foods (
 ),
 (
   'Omelete, de queijo',
+  'omeletedequeijo',
   'Personalizado',
   268.00,
   15.60,
@@ -5822,6 +6307,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de codorna, inteiro, cru',
+  'ovodecodornainteirocru',
   'Personalizado',
   177.00,
   13.70,
@@ -5834,6 +6320,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de galinha, clara, cozida/10minutos',
+  'ovodegalinhaclaracozida10minutos',
   'Personalizado',
   59.00,
   13.40,
@@ -5846,6 +6333,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de galinha, gema, cozida/10minutos',
+  'ovodegalinhagemacozida10minutos',
   'Personalizado',
   353.00,
   15.90,
@@ -5858,6 +6346,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de galinha, inteiro, cozido/10minutos',
+  'ovodegalinhainteirocozido10minutos',
   'Personalizado',
   146.00,
   13.30,
@@ -5870,6 +6359,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de galinha, inteiro, cru',
+  'ovodegalinhainteirocru',
   'Personalizado',
   143.00,
   13.00,
@@ -5882,6 +6372,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ovo, de galinha, inteiro, frito',
+  'ovodegalinhainteirofrito',
   'Personalizado',
   240.00,
   15.60,
@@ -5894,6 +6385,7 @@ INSERT INTO master_foods (
 ),
 (
   'Achocolatado, pó',
+  'achocolatadopo',
   'Doces e sobremesas',
   401.00,
   4.20,
@@ -5906,6 +6398,7 @@ INSERT INTO master_foods (
 ),
 (
   'Açúcar, cristal',
+  'acucarcristal',
   'Doces e sobremesas',
   387.00,
   0.30,
@@ -5918,6 +6411,7 @@ INSERT INTO master_foods (
 ),
 (
   'Açúcar, mascavo',
+  'acucarmascavo',
   'Doces e sobremesas',
   369.00,
   0.80,
@@ -5930,6 +6424,7 @@ INSERT INTO master_foods (
 ),
 (
   'Açúcar, refinado',
+  'acucarrefinado',
   'Doces e sobremesas',
   387.00,
   0.30,
@@ -5942,6 +6437,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chocolate, ao leite',
+  'chocolateaoleite',
   'Doces e sobremesas',
   540.00,
   7.20,
@@ -5954,6 +6450,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chocolate, ao leite, com castanha do Pará',
+  'chocolateaoleitecomcastanhadopara',
   'Doces e sobremesas',
   559.00,
   7.40,
@@ -5966,6 +6463,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chocolate, ao leite, dietético',
+  'chocolateaoleitedietetico',
   'Doces e sobremesas',
   557.00,
   6.90,
@@ -5978,6 +6476,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chocolate, meio amargo',
+  'chocolatemeioamargo',
   'Doces e sobremesas',
   475.00,
   4.90,
@@ -5990,6 +6489,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cocada branca',
+  'cocadabranca',
   'Doces e sobremesas',
   449.00,
   1.10,
@@ -6002,6 +6502,7 @@ INSERT INTO master_foods (
 ),
 (
   'Doce, de abóbora, cremoso',
+  'docedeaboboracremoso',
   'Doces e sobremesas',
   199.00,
   0.90,
@@ -6014,6 +6515,7 @@ INSERT INTO master_foods (
 ),
 (
   'Doce, de leite, cremoso',
+  'docedeleitecremoso',
   'Doces e sobremesas',
   306.00,
   5.50,
@@ -6026,6 +6528,7 @@ INSERT INTO master_foods (
 ),
 (
   'Geléia, mocotó, natural',
+  'geleiamocotonatural',
   'Doces e sobremesas',
   106.00,
   2.10,
@@ -6038,6 +6541,7 @@ INSERT INTO master_foods (
 ),
 (
   'Glicose de milho',
+  'glicosedemilho',
   'Doces e sobremesas',
   292.00,
   0.00,
@@ -6050,6 +6554,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maria mole',
+  'mariamole',
   'Doces e sobremesas',
   301.00,
   3.80,
@@ -6062,6 +6567,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maria mole, coco queimado',
+  'mariamolecocoqueimado',
   'Doces e sobremesas',
   307.00,
   3.90,
@@ -6074,6 +6580,7 @@ INSERT INTO master_foods (
 ),
 (
   'Marmelada',
+  'marmelada',
   'Doces e sobremesas',
   257.00,
   0.40,
@@ -6086,6 +6593,7 @@ INSERT INTO master_foods (
 ),
 (
   'Mel, de abelha',
+  'meldeabelha',
   'Doces e sobremesas',
   309.00,
   0.00,
@@ -6098,6 +6606,7 @@ INSERT INTO master_foods (
 ),
 (
   'Melado',
+  'melado',
   'Doces e sobremesas',
   297.00,
   0.00,
@@ -6110,6 +6619,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quindim',
+  'quindim',
   'Doces e sobremesas',
   411.00,
   4.70,
@@ -6122,6 +6632,7 @@ INSERT INTO master_foods (
 ),
 (
   'Rapadura',
+  'rapadura',
   'Doces e sobremesas',
   352.00,
   1.00,
@@ -6134,6 +6645,7 @@ INSERT INTO master_foods (
 ),
 (
   'Café, pó, torrado',
+  'cafepotorrado',
   'Personalizado',
   419.00,
   14.70,
@@ -6146,6 +6658,7 @@ INSERT INTO master_foods (
 ),
 (
   'Capuccino, pó',
+  'capuccinopo',
   'Personalizado',
   417.00,
   11.30,
@@ -6158,6 +6671,7 @@ INSERT INTO master_foods (
 ),
 (
   'Fermento em pó, químico',
+  'fermentoempoquimico',
   'Personalizado',
   90.00,
   0.50,
@@ -6170,6 +6684,7 @@ INSERT INTO master_foods (
 ),
 (
   'Fermento, biológico, levedura, tablete',
+  'fermentobiologicoleveduratablete',
   'Personalizado',
   90.00,
   17.00,
@@ -6182,6 +6697,7 @@ INSERT INTO master_foods (
 ),
 (
   'Gelatina, sabores variados, pó',
+  'gelatinasaboresvariadospo',
   'Personalizado',
   380.00,
   8.90,
@@ -6194,6 +6710,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sal, dietético',
+  'saldietetico',
   'Personalizado',
   0.00,
   0.00,
@@ -6206,6 +6723,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sal, grosso',
+  'salgrosso',
   'Personalizado',
   0.00,
   0.00,
@@ -6218,6 +6736,7 @@ INSERT INTO master_foods (
 ),
 (
   'Shoyu',
+  'shoyu',
   'Personalizado',
   61.00,
   3.30,
@@ -6230,6 +6749,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tempero a base de sal',
+  'temperoabasedesal',
   'Personalizado',
   21.00,
   2.70,
@@ -6242,6 +6762,7 @@ INSERT INTO master_foods (
 ),
 (
   'Azeitona, preta, conserva',
+  'azeitonapretaconserva',
   'Personalizado',
   194.00,
   1.20,
@@ -6254,6 +6775,7 @@ INSERT INTO master_foods (
 ),
 (
   'Azeitona, verde, conserva',
+  'azeitonaverdeconserva',
   'Personalizado',
   137.00,
   0.90,
@@ -6266,6 +6788,7 @@ INSERT INTO master_foods (
 ),
 (
   'Chantilly, spray, com gordura vegetal',
+  'chantillyspraycomgorduravegetal',
   'Personalizado',
   315.00,
   0.50,
@@ -6278,6 +6801,7 @@ INSERT INTO master_foods (
 ),
 (
   'Leite, de coco',
+  'leitedecoco',
   'Personalizado',
   166.00,
   1.00,
@@ -6290,6 +6814,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maionese, tradicional com ovos',
+  'maionesetradicionalcomovos',
   'Personalizado',
   302.00,
   0.60,
@@ -6302,6 +6827,7 @@ INSERT INTO master_foods (
 ),
 (
   'Acarajé',
+  'acaraje',
   'Personalizado',
   289.00,
   8.30,
@@ -6314,6 +6840,7 @@ INSERT INTO master_foods (
 ),
 (
   'Arroz carreteiro',
+  'arrozcarreteiro',
   'Personalizado',
   154.00,
   10.80,
@@ -6326,6 +6853,7 @@ INSERT INTO master_foods (
 ),
 (
   'Baião de dois, arroz e feijão-de-corda',
+  'baiaodedoisarrozefeijaodecorda',
   'Personalizado',
   136.00,
   6.20,
@@ -6338,6 +6866,7 @@ INSERT INTO master_foods (
 ),
 (
   'Barreado',
+  'barreado',
   'Personalizado',
   165.00,
   18.30,
@@ -6350,6 +6879,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bife à cavalo, com contra filé',
+  'bifeacavalocomcontrafile',
   'Personalizado',
   291.00,
   23.70,
@@ -6362,6 +6892,7 @@ INSERT INTO master_foods (
 ),
 (
   'Bolinho de arroz',
+  'bolinhodearroz',
   'Personalizado',
   274.00,
   8.00,
@@ -6374,6 +6905,7 @@ INSERT INTO master_foods (
 ),
 (
   'Camarão à baiana',
+  'camaraoabaiana',
   'Personalizado',
   101.00,
   7.90,
@@ -6386,6 +6918,7 @@ INSERT INTO master_foods (
 ),
 (
   'Charuto, de repolho',
+  'charutoderepolho',
   'Personalizado',
   78.00,
   6.80,
@@ -6398,6 +6931,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cuscuz, de milho, cozido com sal',
+  'cuscuzdemilhocozidocomsal',
   'Personalizado',
   113.00,
   2.20,
@@ -6410,6 +6944,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cuscuz, paulista',
+  'cuscuzpaulista',
   'Personalizado',
   142.00,
   2.60,
@@ -6422,6 +6957,7 @@ INSERT INTO master_foods (
 ),
 (
   'Cuxá, molho',
+  'cuxamolho',
   'Personalizado',
   80.00,
   5.60,
@@ -6434,6 +6970,7 @@ INSERT INTO master_foods (
 ),
 (
   'Dobradinha',
+  'dobradinha',
   'Personalizado',
   125.00,
   19.80,
@@ -6446,6 +6983,7 @@ INSERT INTO master_foods (
 ),
 (
   'Estrogonofe de carne',
+  'estrogonofedecarne',
   'Personalizado',
   173.00,
   15.00,
@@ -6458,6 +6996,7 @@ INSERT INTO master_foods (
 ),
 (
   'Estrogonofe de frango',
+  'estrogonofedefrango',
   'Personalizado',
   157.00,
   17.60,
@@ -6470,6 +7009,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão tropeiro mineiro',
+  'feijaotropeiromineiro',
   'Personalizado',
   152.00,
   10.20,
@@ -6482,6 +7022,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijoada',
+  'feijoada',
   'Personalizado',
   117.00,
   8.70,
@@ -6494,6 +7035,7 @@ INSERT INTO master_foods (
 ),
 (
   'Frango, com açafrão',
+  'frangocomacafrao',
   'Personalizado',
   113.00,
   9.70,
@@ -6506,6 +7048,7 @@ INSERT INTO master_foods (
 ),
 (
   'Macarrão, molho bolognesa',
+  'macarraomolhobolognesa',
   'Personalizado',
   120.00,
   4.90,
@@ -6518,6 +7061,7 @@ INSERT INTO master_foods (
 ),
 (
   'Maniçoba',
+  'manicoba',
   'Personalizado',
   134.00,
   10.00,
@@ -6530,6 +7074,7 @@ INSERT INTO master_foods (
 ),
 (
   'Quibebe',
+  'quibebe',
   'Personalizado',
   86.00,
   8.60,
@@ -6542,6 +7087,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salada, de legumes, com maionese',
+  'saladadelegumescommaionese',
   'Personalizado',
   96.00,
   1.10,
@@ -6554,6 +7100,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salada, de legumes, cozida no vapor',
+  'saladadelegumescozidanovapor',
   'Personalizado',
   35.00,
   2.00,
@@ -6566,6 +7113,7 @@ INSERT INTO master_foods (
 ),
 (
   'Salpicão, de frango',
+  'salpicaodefrango',
   'Personalizado',
   148.00,
   13.90,
@@ -6578,6 +7126,7 @@ INSERT INTO master_foods (
 ),
 (
   'Sarapatel',
+  'sarapatel',
   'Personalizado',
   123.00,
   18.50,
@@ -6590,6 +7139,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tabule',
+  'tabule',
   'Personalizado',
   57.00,
   2.00,
@@ -6602,6 +7152,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tacacá',
+  'tacaca',
   'Personalizado',
   47.00,
   7.00,
@@ -6614,6 +7165,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tapioca, com manteiga',
+  'tapiocacommanteiga',
   'Personalizado',
   348.00,
   0.10,
@@ -6626,6 +7178,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tucupi, com pimenta-de-cheiro',
+  'tucupicompimentadecheiro',
   'Personalizado',
   27.00,
   2.10,
@@ -6638,6 +7191,7 @@ INSERT INTO master_foods (
 ),
 (
   'Vaca atolada',
+  'vacaatolada',
   'Personalizado',
   145.00,
   5.10,
@@ -6650,6 +7204,7 @@ INSERT INTO master_foods (
 ),
 (
   'Vatapá',
+  'vatapa',
   'Personalizado',
   255.00,
   6.00,
@@ -6662,6 +7217,7 @@ INSERT INTO master_foods (
 ),
 (
   'Virado à paulista',
+  'viradoapaulista',
   'Personalizado',
   307.00,
   10.20,
@@ -6674,6 +7230,7 @@ INSERT INTO master_foods (
 ),
 (
   'Yakisoba',
+  'yakisoba',
   'Personalizado',
   113.00,
   7.50,
@@ -6686,6 +7243,7 @@ INSERT INTO master_foods (
 ),
 (
   'Amendoim, grão, cru',
+  'amendoimgraocru',
   'Leguminosas',
   544.00,
   27.20,
@@ -6698,6 +7256,7 @@ INSERT INTO master_foods (
 ),
 (
   'Amendoim, torrado, salgado',
+  'amendoimtorradosalgado',
   'Leguminosas',
   606.00,
   22.50,
@@ -6710,6 +7269,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ervilha, em vagem',
+  'ervilhaemvagem',
   'Leguminosas',
   88.00,
   7.50,
@@ -6722,6 +7282,7 @@ INSERT INTO master_foods (
 ),
 (
   'Ervilha, enlatada, drenada',
+  'ervilhaenlatadadrenada',
   'Leguminosas',
   74.00,
   4.60,
@@ -6734,6 +7295,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, carioca, cozido',
+  'feijaocariocacozido',
   'Leguminosas',
   76.00,
   4.80,
@@ -6746,6 +7308,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, carioca, cru',
+  'feijaocariocacru',
   'Leguminosas',
   329.00,
   20.00,
@@ -6758,6 +7321,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, fradinho, cozido',
+  'feijaofradinhocozido',
   'Leguminosas',
   78.00,
   5.10,
@@ -6770,6 +7334,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, fradinho, cru',
+  'feijaofradinhocru',
   'Leguminosas',
   339.00,
   20.20,
@@ -6782,6 +7347,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, jalo, cozido',
+  'feijaojalocozido',
   'Leguminosas',
   93.00,
   6.10,
@@ -6794,6 +7360,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, jalo, cru',
+  'feijaojalocru',
   'Leguminosas',
   328.00,
   20.10,
@@ -6806,6 +7373,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, preto, cozido',
+  'feijaopretocozido',
   'Leguminosas',
   77.00,
   4.50,
@@ -6818,6 +7386,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, preto, cru',
+  'feijaopretocru',
   'Leguminosas',
   324.00,
   21.30,
@@ -6830,6 +7399,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, rajado, cozido',
+  'feijaorajadocozido',
   'Leguminosas',
   85.00,
   5.50,
@@ -6842,6 +7412,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, rajado, cru',
+  'feijaorajadocru',
   'Leguminosas',
   326.00,
   17.30,
@@ -6854,6 +7425,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, rosinha, cozido',
+  'feijaorosinhacozido',
   'Leguminosas',
   68.00,
   4.50,
@@ -6866,6 +7438,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, rosinha, cru',
+  'feijaorosinhacru',
   'Leguminosas',
   337.00,
   20.90,
@@ -6878,6 +7451,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, roxo, cozido',
+  'feijaoroxocozido',
   'Leguminosas',
   77.00,
   5.70,
@@ -6890,6 +7464,7 @@ INSERT INTO master_foods (
 ),
 (
   'Feijão, roxo, cru',
+  'feijaoroxocru',
   'Leguminosas',
   331.00,
   22.20,
@@ -6902,6 +7477,7 @@ INSERT INTO master_foods (
 ),
 (
   'Grão-de-bico, cru',
+  'graodebicocru',
   'Leguminosas',
   355.00,
   21.20,
@@ -6914,6 +7490,7 @@ INSERT INTO master_foods (
 ),
 (
   'Guandu, cru',
+  'guanducru',
   'Leguminosas',
   344.00,
   19.00,
@@ -6926,6 +7503,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lentilha, cozida',
+  'lentilhacozida',
   'Leguminosas',
   93.00,
   6.30,
@@ -6938,6 +7516,7 @@ INSERT INTO master_foods (
 ),
 (
   'Lentilha, crua',
+  'lentilhacrua',
   'Leguminosas',
   339.00,
   23.20,
@@ -6950,6 +7529,7 @@ INSERT INTO master_foods (
 ),
 (
   'Paçoca, amendoim',
+  'pacocaamendoim',
   'Leguminosas',
   487.00,
   16.00,
@@ -6962,6 +7542,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pé-de-moleque, amendoim',
+  'pedemolequeamendoim',
   'Leguminosas',
   503.00,
   13.20,
@@ -6974,6 +7555,7 @@ INSERT INTO master_foods (
 ),
 (
   'Soja, farinha',
+  'sojafarinha',
   'Leguminosas',
   404.00,
   36.00,
@@ -6986,6 +7568,7 @@ INSERT INTO master_foods (
 ),
 (
   'Soja, extrato solúvel, natural, fluido',
+  'sojaextratosoluvelnaturalfluido',
   'Leguminosas',
   39.00,
   2.40,
@@ -6998,6 +7581,7 @@ INSERT INTO master_foods (
 ),
 (
   'Soja, extrato solúvel, pó',
+  'sojaextratosoluvelpo',
   'Leguminosas',
   459.00,
   35.70,
@@ -7010,6 +7594,7 @@ INSERT INTO master_foods (
 ),
 (
   'Soja, queijo (tofu)',
+  'sojaqueijotofu',
   'Leguminosas',
   64.00,
   6.60,
@@ -7022,6 +7607,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tremoço, cru',
+  'tremococru',
   'Leguminosas',
   381.00,
   33.60,
@@ -7034,6 +7620,7 @@ INSERT INTO master_foods (
 ),
 (
   'Tremoço, em conserva',
+  'tremocoemconserva',
   'Leguminosas',
   121.00,
   11.10,
@@ -7046,6 +7633,7 @@ INSERT INTO master_foods (
 ),
 (
   'Amêndoa, torrada, salgada',
+  'amendoatorradasalgada',
   'Oleaginosas e sementes',
   581.00,
   18.60,
@@ -7058,6 +7646,7 @@ INSERT INTO master_foods (
 ),
 (
   'Castanha-de-caju, torrada, salgada',
+  'castanhadecajutorradasalgada',
   'Oleaginosas e sementes',
   570.00,
   18.50,
@@ -7070,6 +7659,7 @@ INSERT INTO master_foods (
 ),
 (
   'Castanha-do-Brasil, crua',
+  'castanhadobrasilcrua',
   'Oleaginosas e sementes',
   643.00,
   14.50,
@@ -7082,6 +7672,7 @@ INSERT INTO master_foods (
 ),
 (
   'Coco, cru',
+  'cococru',
   'Oleaginosas e sementes',
   406.00,
   3.70,
@@ -7094,6 +7685,7 @@ INSERT INTO master_foods (
 ),
 (
   'Coco,  verde, cru',
+  'cocoverdecru',
   'Oleaginosas e sementes',
   0.00,
   0.00,
@@ -7106,6 +7698,7 @@ INSERT INTO master_foods (
 ),
 (
   'Farinha, de mesocarpo de babaçu, crua',
+  'farinhademesocarpodebabacucrua',
   'Oleaginosas e sementes',
   329.00,
   1.40,
@@ -7118,6 +7711,7 @@ INSERT INTO master_foods (
 ),
 (
   'Gergelim, semente',
+  'gergelimsemente',
   'Oleaginosas e sementes',
   584.00,
   21.20,
@@ -7130,6 +7724,7 @@ INSERT INTO master_foods (
 ),
 (
   'Linhaça, semente',
+  'linhacasemente',
   'Oleaginosas e sementes',
   495.00,
   14.10,
@@ -7142,6 +7737,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pinhão, cozido',
+  'pinhaocozido',
   'Oleaginosas e sementes',
   174.00,
   3.00,
@@ -7154,6 +7750,7 @@ INSERT INTO master_foods (
 ),
 (
   'Pupunha, cozida',
+  'pupunhacozida',
   'Oleaginosas e sementes',
   219.00,
   2.50,
@@ -7166,6 +7763,7 @@ INSERT INTO master_foods (
 ),
 (
   'Noz, crua',
+  'nozcrua',
   'Oleaginosas e sementes',
   620.00,
   14.00,
@@ -7176,7 +7774,7 @@ INSERT INTO master_foods (
   'alimentos.csv',
   '597'
 )
-ON CONFLICT (name) DO UPDATE SET
+ON CONFLICT (name_key) DO UPDATE SET
   category = EXCLUDED.category,
   kcal_per_100g = EXCLUDED.kcal_per_100g,
   protein_per_100g = EXCLUDED.protein_per_100g,

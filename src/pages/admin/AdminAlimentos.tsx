@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Check, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, Check, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { FOOD_CATEGORIES, type FoodItem } from "@/lib/foodDatabase";
 import { deleteFoodFromSupabase, fetchFoodsFromSupabase, upsertFoodInSupabase } from "@/lib/supabase";
@@ -184,9 +184,11 @@ export default function AdminAlimentos() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("Todos");
+  const [page, setPage] = useState(1);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const ITEMS_PER_PAGE = 10;
 
   const loadFoods = async () => {
     setLoading(true);
@@ -210,6 +212,24 @@ export default function AdminAlimentos() {
       return matchesCategory && matchesQuery;
     });
   }, [foods, search, catFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedFoods = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, catFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const handleSave = async (form: FoodForm) => {
     const food: Partial<FoodItem> = {
@@ -304,8 +324,9 @@ export default function AdminAlimentos() {
           Nenhum alimento encontrado com os filtros atuais.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((food) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {pagedFoods.map((food) => (
             <div
               key={food.id}
               className="flex items-start justify-between rounded-2xl border border-border bg-card p-4"
@@ -349,6 +370,65 @@ export default function AdminAlimentos() {
               </div>
             </div>
           ))}
+          </div>
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Mostrando {filtered.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1} até{" "}
+              {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length} alimentos
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, index) => index + 1)
+                  .filter((number) => {
+                    if (totalPages <= 7) return true;
+                    return number === 1 || number === totalPages || Math.abs(number - currentPage) <= 1;
+                  })
+                  .map((number, index, array) => {
+                    const previous = array[index - 1];
+                    const showGap = previous !== undefined && number - previous > 1;
+
+                    return (
+                      <div key={number} className="flex items-center gap-1">
+                        {showGap && <span className="px-1 text-muted-foreground">...</span>}
+                        <button
+                          type="button"
+                          onClick={() => setPage(number)}
+                          className={cn(
+                            "h-9 min-w-9 rounded-lg border px-3 text-sm font-medium transition-colors",
+                            number === currentPage
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border text-foreground hover:bg-muted/60"
+                          )}
+                        >
+                          {number}
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
