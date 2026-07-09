@@ -6,10 +6,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -169,13 +165,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const [newSubIdealDose, setNewSubIdealDose] = useState("");
   const [registeringSub, setRegisteringSub] = useState(false);
 
-  const [readyFormulaSourceId, setReadyFormulaSourceId] = useState<string | null>(null);
-  const [readyFormulaOpen, setReadyFormulaOpen] = useState(false);
-  const [readyFormulaName, setReadyFormulaName] = useState("");
-  const [readyFormulaObjective, setReadyFormulaObjective] = useState("Geral");
-  const [readyFormulaPharmaForm, setReadyFormulaPharmaForm] = useState(PHARMA_FORMS[0]);
-  const [readyFormulaPosology, setReadyFormulaPosology] = useState("");
-  const [savingReadyFormula, setSavingReadyFormula] = useState(false);
+  const [creatingProtocol, setCreatingProtocol] = useState(false);
+  const [protocolDraft, setProtocolDraft] = useState<BlockItem[]>([]);
+  const [protocolName, setProtocolName] = useState("");
+  const [protocolObjective, setProtocolObjective] = useState("Geral");
+  const [protocolPharmaForm, setProtocolPharmaForm] = useState(PHARMA_FORMS[0]);
+  const [protocolPosology, setProtocolPosology] = useState("");
+  const [protocolSubSearch, setProtocolSubSearch] = useState("");
+  const [savingProtocol, setSavingProtocol] = useState(false);
 
   // Custom inline item input state
   const [customItemInputs, setCustomItemInputs] = useState<Record<string, { name: string; dose: string; unit: string }>>({});
@@ -278,41 +275,79 @@ export function PrescriptionBuilder({ patientId }: Props) {
     setBlocks((prev) => [...prev, addBlock()]);
   };
 
-  const openReadyFormulaDialog = (block: PrescriptionBlock) => {
-    setReadyFormulaSourceId(block.localId);
-    setReadyFormulaName(block.label.trim() || "Novo protocolo");
-    setReadyFormulaObjective("Geral");
-    setReadyFormulaPharmaForm(block.pharmaceuticalForm || PHARMA_FORMS[0]);
-    setReadyFormulaPosology(block.posology);
-    setReadyFormulaOpen(true);
+  const startProtocolMode = () => {
+    setCreatingProtocol(true);
+    setProtocolDraft([]);
+    setProtocolName("");
+    setProtocolObjective("Geral");
+    setProtocolPharmaForm(PHARMA_FORMS[0]);
+    setProtocolPosology("");
+    setProtocolSubSearch("");
   };
 
-  const handleSaveReadyFormula = async () => {
-    if (!readyFormulaName.trim()) {
+  const addSubstrateToProtocol = (sub: Substrate) => {
+    const exists = protocolDraft.some((item) => item.substrateId === sub.id);
+    if (exists) {
+      toast.info("Esse substrato já está no protocolo.");
+      return;
+    }
+
+    setProtocolDraft((prev) => [
+      ...prev,
+      {
+        substrateId: sub.id,
+        name: sub.name,
+        dose: sub.ideal_dose ?? sub.min_dose ?? 0,
+        unit: sub.unit,
+      },
+    ]);
+  };
+
+  const removeProtocolItem = (substrateId?: number) => {
+    setProtocolDraft((prev) => prev.filter((item) => item.substrateId !== substrateId));
+  };
+
+  const patchProtocolItem = (substrateId: number | undefined, patch: Partial<BlockItem>) => {
+    setProtocolDraft((prev) => prev.map((item) =>
+      item.substrateId === substrateId ? { ...item, ...patch } : item
+    ));
+  };
+
+  const cancelProtocolMode = () => {
+    setCreatingProtocol(false);
+    setProtocolDraft([]);
+    setProtocolName("");
+    setProtocolObjective("Geral");
+    setProtocolPharmaForm(PHARMA_FORMS[0]);
+    setProtocolPosology("");
+    setProtocolSubSearch("");
+  };
+
+  const handleSaveProtocol = async () => {
+    if (!protocolName.trim()) {
       toast.error("Digite o nome do protocolo.");
       return;
     }
 
-    const sourceBlock = blocks.find((block) => block.localId === readyFormulaSourceId);
-    if (!sourceBlock || sourceBlock.items.length === 0) {
-      toast.error("Adicione pelo menos um ativo ao bloco antes de salvar.");
+    if (protocolDraft.length === 0) {
+      toast.error("Adicione pelo menos um substrato ao protocolo.");
       return;
     }
 
-    setSavingReadyFormula(true);
+    setSavingProtocol(true);
     const ok = await insertReadyFormula({
-      name: readyFormulaName.trim(),
-      objective: readyFormulaObjective.trim() || "Geral",
-      posology: readyFormulaPosology.trim() || null,
-      pharmaceuticalForm: readyFormulaPharmaForm,
-      items: sourceBlock.items.map((item) => ({
+      name: protocolName.trim(),
+      objective: protocolObjective.trim() || "Geral",
+      posology: protocolPosology.trim() || null,
+      pharmaceuticalForm: protocolPharmaForm,
+      items: protocolDraft.map((item) => ({
         substrateId: item.substrateId ?? null,
         name: item.name,
         appliedDose: item.dose,
         unit: item.unit,
       })),
     });
-    setSavingReadyFormula(false);
+    setSavingProtocol(false);
 
     if (!ok) {
       toast.error("Não foi possível salvar o protocolo.");
@@ -321,7 +356,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
 
     const refreshed = await fetchReadyFormulas();
     setFormulas(refreshed);
-    setReadyFormulaOpen(false);
+    cancelProtocolMode();
     toast.success("Protocolo salvo com sucesso.");
   };
 
@@ -604,7 +639,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
         {leftTab === "formulas" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Objective filter */}
-            <div className="p-3 border-b border-border/40 shrink-0">
+            <div className="p-3 border-b border-border/40 shrink-0 space-y-3">
               <div className="relative" ref={objRef}>
                 <button
                   type="button"
@@ -634,7 +669,166 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   </div>
                 )}
               </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Protocolos</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={startProtocolMode}
+                  className="h-7 text-xs gap-1.5 border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
+                >
+                  <Plus size={12} />
+                  Novo protocolo
+                </Button>
+              </div>
             </div>
+
+            {creatingProtocol && (
+              <div className="p-3 border-b border-border/40 bg-background/70 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Novo protocolo</p>
+                    <p className="text-[11px] text-muted-foreground">Escolha os substratos cadastrados, defina o nome e salve.</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={cancelProtocolMode} className="h-7 text-xs text-muted-foreground">
+                    Cancelar
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Input
+                    value={protocolName}
+                    onChange={(e) => setProtocolName(e.target.value)}
+                    placeholder="Nome do protocolo"
+                    className="h-8 text-xs"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Input
+                      value={protocolObjective}
+                      onChange={(e) => setProtocolObjective(e.target.value)}
+                      placeholder="Objetivo"
+                      className="h-8 text-xs"
+                    />
+                    <select
+                      value={protocolPharmaForm}
+                      onChange={(e) => setProtocolPharmaForm(e.target.value)}
+                      className="h-8 text-[11px] border border-border/60 rounded bg-background px-2 text-foreground"
+                    >
+                      {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <Textarea
+                    value={protocolPosology}
+                    onChange={(e) => setProtocolPosology(e.target.value)}
+                    placeholder="Posologia (opcional)"
+                    className="min-h-16 text-xs resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={protocolSubSearch}
+                      onChange={(e) => setProtocolSubSearch(e.target.value)}
+                      placeholder="Buscar substrato para o protocolo"
+                      className="pl-7 h-8 text-xs"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSaveProtocol}
+                    disabled={savingProtocol || protocolDraft.length === 0 || !protocolName.trim()}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    {savingProtocol ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    Salvar
+                  </Button>
+                </div>
+
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-2">
+                    Substratos selecionados
+                  </p>
+                  {protocolDraft.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {protocolDraft.map((item) => (
+                        <div key={item.substrateId ?? item.name} className="flex items-center gap-2 rounded-md border border-border/50 bg-background px-2 py-1.5">
+                          <span className="flex-1 text-xs font-medium text-foreground truncate">{item.name}</span>
+                          <Input
+                            type="number"
+                            step="any"
+                            value={item.dose}
+                            onChange={(e) => patchProtocolItem(item.substrateId, { dose: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-20 text-xs text-right tabular-nums"
+                          />
+                          <span className="text-[11px] text-muted-foreground w-8">{item.unit}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeProtocolItem(item.substrateId)}
+                            className="text-muted-foreground/30 hover:text-destructive transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">Nenhum substrato selecionado ainda.</p>
+                  )}
+                </div>
+
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                  {Object.entries(
+                    substrates
+                      .filter((sub) =>
+                        sub.name.toLowerCase().includes(protocolSubSearch.toLowerCase()) ||
+                        sub.category.toLowerCase().includes(protocolSubSearch.toLowerCase())
+                      )
+                      .reduce<Record<string, Substrate[]>>((acc, sub) => {
+                        (acc[sub.category] ??= []).push(sub);
+                        return acc;
+                      }, {})
+                  ).map(([cat, subs]) => (
+                    <div key={cat}>
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cat}</p>
+                      <div className="space-y-1">
+                        {subs.map((sub) => {
+                          const selected = protocolDraft.some((item) => item.substrateId === sub.id);
+                          return (
+                            <div key={sub.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-background px-2.5 py-1.5">
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-foreground truncate">{sub.name}</p>
+                                {sub.ideal_dose && (
+                                  <p className="text-[10px] text-muted-foreground">Dose ideal: {sub.ideal_dose} {sub.unit}</p>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant={selected ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => addSubstrateToProtocol(sub)}
+                                className="h-7 text-[11px] gap-1.5 shrink-0"
+                                disabled={selected}
+                              >
+                                <Plus size={11} />
+                                {selected ? "Adicionado" : "Adicionar"}
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {substrates.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum substrato cadastrado.</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Formula cards */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -839,16 +1033,6 @@ export function PrescriptionBuilder({ patientId }: Props) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleAddEmptyBlock}
-              className="gap-1 h-7 text-xs border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
-              title="Criar nova fÃ³rmula (bloco em branco)"
-            >
-              <Plus size={12} />
-              FÃ³rmula
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={handlePrint}
               disabled={totalItems === 0}
               className="gap-1.5 h-7 text-xs"
@@ -919,18 +1103,6 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openReadyFormulaDialog(block)}
-                        disabled={block.items.length === 0}
-                        className="h-7 gap-1 text-[11px] border-primary/20 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
-                        title="Salvar bloco como protocolo"
-                      >
-                        <Save size={11} />
-                        Salvar
-                      </Button>
                       <button
                         type="button"
                         onClick={() => removeBlock(block.localId)}
@@ -1038,78 +1210,6 @@ export function PrescriptionBuilder({ patientId }: Props) {
         )}
       </div>
 
-      <Dialog open={readyFormulaOpen} onOpenChange={setReadyFormulaOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Salvar protocolo magistral</DialogTitle>
-            <DialogDescription>
-              Salve este bloco como um modelo reutilizável para outras prescrições.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground">Nome do protocolo</p>
-              <Input
-                value={readyFormulaName}
-                onChange={(e) => setReadyFormulaName(e.target.value)}
-                placeholder="Ex: Protocolo Dor de Coluna"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-foreground">Objetivo</p>
-                <Input
-                  value={readyFormulaObjective}
-                  onChange={(e) => setReadyFormulaObjective(e.target.value)}
-                  placeholder="Ex: Dor de coluna"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-foreground">Forma farmacêutica</p>
-                <select
-                  value={readyFormulaPharmaForm}
-                  onChange={(e) => setReadyFormulaPharmaForm(e.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {PHARMA_FORMS.map((form) => (
-                    <option key={form} value={form}>{form}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground">Posologia</p>
-              <Textarea
-                value={readyFormulaPosology}
-                onChange={(e) => setReadyFormulaPosology(e.target.value)}
-                placeholder="Ex: 1 cápsula ao dia, preferencialmente pela manhã."
-                className="min-h-24 resize-none"
-              />
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              Os itens deste bloco serão salvos como fórmula pronta.
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setReadyFormulaOpen(false)}
-              className="sm:mr-auto"
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveReadyFormula} disabled={savingReadyFormula}>
-              {savingReadyFormula ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Save size={14} className="mr-1.5" />}
-              {savingReadyFormula ? "Salvando..." : "Salvar protocolo"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
