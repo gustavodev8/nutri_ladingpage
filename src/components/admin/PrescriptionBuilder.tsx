@@ -690,142 +690,157 @@ export function PrescriptionBuilder({ patientId }: Props) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold text-foreground">Novo protocolo</p>
-                    <p className="text-[11px] text-muted-foreground">Escolha os substratos cadastrados, defina o nome e salve.</p>
+                    <p className="text-[11px] text-muted-foreground">Monte o protocolo com mais espaço e melhor leitura.</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={cancelProtocolMode} className="h-7 text-xs text-muted-foreground">
                     Cancelar
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  <Input
-                    value={protocolName}
-                    onChange={(e) => setProtocolName(e.target.value)}
-                    placeholder="Nome do protocolo"
-                    className="h-8 text-xs"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Input
-                      value={protocolObjective}
-                      onChange={(e) => setProtocolObjective(e.target.value)}
-                      placeholder="Objetivo"
-                      className="h-8 text-xs"
-                    />
-                    <select
-                      value={protocolPharmaForm}
-                      onChange={(e) => setProtocolPharmaForm(e.target.value)}
-                      className="h-8 text-[11px] border border-border/60 rounded bg-background px-2 text-foreground"
-                    >
-                      {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
-                    </select>
-                  </div>
-                  <Textarea
-                    value={protocolPosology}
-                    onChange={(e) => setProtocolPosology(e.target.value)}
-                    placeholder="Posologia (opcional)"
-                    className="min-h-16 text-xs resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={protocolSubSearch}
-                      onChange={(e) => setProtocolSubSearch(e.target.value)}
-                      placeholder="Buscar substrato para o protocolo"
-                      className="pl-7 h-8 text-xs"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleSaveProtocol}
-                    disabled={savingProtocol || protocolDraft.length === 0 || !protocolName.trim()}
-                    className="h-8 text-xs gap-1.5"
-                  >
-                    {savingProtocol ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                    Salvar
-                  </Button>
-                </div>
-
-                <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-2">
-                    Substratos selecionados
-                  </p>
-                  {protocolDraft.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {protocolDraft.map((item) => (
-                        <div key={item.substrateId ?? item.name} className="flex items-center gap-2 rounded-md border border-border/50 bg-background px-2 py-1.5">
-                          <span className="flex-1 text-xs font-medium text-foreground truncate">{item.name}</span>
-                          <Input
-                            type="number"
-                            step="any"
-                            value={item.dose}
-                            onChange={(e) => patchProtocolItem(item.substrateId, { dose: parseFloat(e.target.value) || 0 })}
-                            className="h-7 w-20 text-xs text-right tabular-nums"
-                          />
-                          <span className="text-[11px] text-muted-foreground w-8">{item.unit}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeProtocolItem(item.substrateId)}
-                            className="text-muted-foreground/30 hover:text-destructive transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ))}
+                <div className="grid gap-3 lg:grid-cols-[340px_minmax(0,1fr)]">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-2">
+                      <Input
+                        value={protocolName}
+                        onChange={(e) => setProtocolName(e.target.value)}
+                        placeholder="Nome do protocolo"
+                        className="h-8 text-xs"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Input
+                          value={protocolObjective}
+                          onChange={(e) => setProtocolObjective(e.target.value)}
+                          placeholder="Objetivo"
+                          className="h-8 text-xs"
+                        />
+                        <select
+                          value={protocolPharmaForm}
+                          onChange={(e) => setProtocolPharmaForm(e.target.value)}
+                          className="h-8 text-[11px] border border-border/60 rounded bg-background px-2 text-foreground"
+                        >
+                          {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
+                        </select>
+                      </div>
+                      <Textarea
+                        value={protocolPosology}
+                        onChange={(e) => setProtocolPosology(e.target.value)}
+                        placeholder="Posologia (opcional)"
+                        className="min-h-16 text-xs resize-none"
+                      />
                     </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">Nenhum substrato selecionado ainda.</p>
-                  )}
-                </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                  {Object.entries(
-                    substrates
-                      .filter((sub) =>
-                        sub.name.toLowerCase().includes(protocolSubSearch.toLowerCase()) ||
-                        sub.category.toLowerCase().includes(protocolSubSearch.toLowerCase())
-                      )
-                      .reduce<Record<string, Substrate[]>>((acc, sub) => {
-                        (acc[sub.category] ??= []).push(sub);
-                        return acc;
-                      }, {})
-                  ).map(([cat, subs]) => (
-                    <div key={cat}>
-                      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cat}</p>
-                      <div className="space-y-1">
-                        {subs.map((sub) => {
-                          const selected = protocolDraft.some((item) => item.substrateId === sub.id);
-                          return (
-                            <div key={sub.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-background px-2.5 py-1.5">
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-foreground truncate">{sub.name}</p>
-                                {sub.ideal_dose && (
-                                  <p className="text-[10px] text-muted-foreground">Dose ideal: {sub.ideal_dose} {sub.unit}</p>
-                                )}
-                              </div>
-                              <Button
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                          Selecionados
+                        </p>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">{protocolDraft.length}</span>
+                      </div>
+                      {protocolDraft.length > 0 ? (
+                        <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                          {protocolDraft.map((item) => (
+                            <div key={item.substrateId ?? item.name} className="flex items-center gap-2 rounded-md border border-border/50 bg-background px-2 py-1.5">
+                              <span className="flex-1 text-xs font-medium text-foreground truncate">{item.name}</span>
+                              <Input
+                                type="number"
+                                step="any"
+                                value={item.dose}
+                                onChange={(e) => patchProtocolItem(item.substrateId, { dose: parseFloat(e.target.value) || 0 })}
+                                className="h-7 w-20 text-xs text-right tabular-nums"
+                              />
+                              <span className="text-[11px] text-muted-foreground w-8">{item.unit}</span>
+                              <button
                                 type="button"
-                                variant={selected ? "secondary" : "outline"}
-                                size="sm"
-                                onClick={() => addSubstrateToProtocol(sub)}
-                                className="h-7 text-[11px] gap-1.5 shrink-0"
-                                disabled={selected}
+                                onClick={() => removeProtocolItem(item.substrateId)}
+                                className="text-muted-foreground/30 hover:text-destructive transition-colors"
                               >
-                                <Plus size={11} />
-                                {selected ? "Adicionado" : "Adicionar"}
-                              </Button>
+                                <Trash2 size={12} />
+                              </button>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">Nenhum substrato selecionado ainda.</p>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-3">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleSaveProtocol}
+                          disabled={savingProtocol || protocolDraft.length === 0 || !protocolName.trim()}
+                          className="h-8 text-xs gap-1.5"
+                        >
+                          {savingProtocol ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                          Salvar
+                        </Button>
                       </div>
                     </div>
-                  ))}
-                  {substrates.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum substrato cadastrado.</p>
-                  )}
+                  </div>
+
+                  <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        Substratos cadastrados
+                      </p>
+                      <div className="relative w-full sm:max-w-sm">
+                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={protocolSubSearch}
+                          onChange={(e) => setProtocolSubSearch(e.target.value)}
+                          placeholder="Buscar substrato"
+                          className="pl-7 h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="max-h-[44vh] overflow-y-auto pr-1 space-y-2">
+                      {Object.entries(
+                        substrates
+                          .filter((sub) =>
+                            sub.name.toLowerCase().includes(protocolSubSearch.toLowerCase()) ||
+                            sub.category.toLowerCase().includes(protocolSubSearch.toLowerCase())
+                          )
+                          .reduce<Record<string, Substrate[]>>((acc, sub) => {
+                            (acc[sub.category] ??= []).push(sub);
+                            return acc;
+                          }, {})
+                      ).map(([cat, subs]) => (
+                        <div key={cat}>
+                          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cat}</p>
+                          <div className="space-y-1">
+                            {subs.map((sub) => {
+                              const selected = protocolDraft.some((item) => item.substrateId === sub.id);
+                              return (
+                                <div key={sub.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background px-3 py-2">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-foreground truncate">{sub.name}</p>
+                                    {sub.ideal_dose && (
+                                      <p className="text-[10px] text-muted-foreground">Dose ideal: {sub.ideal_dose} {sub.unit}</p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant={selected ? "secondary" : "outline"}
+                                    size="sm"
+                                    onClick={() => addSubstrateToProtocol(sub)}
+                                    className="h-7 text-[11px] gap-1.5 shrink-0"
+                                    disabled={selected}
+                                  >
+                                    <Plus size={11} />
+                                    {selected ? "Adicionado" : "Adicionar"}
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {substrates.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhum substrato cadastrado.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
