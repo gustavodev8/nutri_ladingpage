@@ -140,11 +140,11 @@ type TabKey = "perfil" | "anamnese" | "relatorio" | "antropometria" | "planos" |
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "perfil",       label: "Perfil",               icon: <User size={16} /> },
   { key: "anamnese",     label: "Anamnese",              icon: <ClipboardList size={16} /> },
-  { key: "relatorio",    label: "RelatÃ³rio",            icon: <FileText size={16} /> },
+  { key: "relatorio",    label: "Relatório",            icon: <FileText size={16} /> },
   { key: "antropometria",label: "Antropometria",         icon: <Activity size={16} /> },
   { key: "planos",       label: "Planos Alimentares",    icon: <BookOpen size={16} /> },
   { key: "protocolos",   label: "Protocolos de Exames",  icon: <ClipboardList size={16} /> },
-  { key: "prescricao",   label: "PrescriÃ§Ã£o Magistral",  icon: <BookOpen size={16} /> },
+  { key: "prescricao",   label: "Prescrição Magistral",  icon: <BookOpen size={16} /> },
 ];
 
 // â”€â”€â”€ Shared Textarea â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -221,7 +221,7 @@ export default function AdminPaciente() {
   if (!patient) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">Paciente nÃ£o encontrado.</p>
+        <p className="text-muted-foreground">Paciente não encontrado.</p>
         <Link to="/admin/pacientes">
           <Button variant="outline">
             <ArrowLeft size={16} className="mr-2" />
@@ -247,7 +247,7 @@ export default function AdminPaciente() {
           <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
         </div>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-black text-foreground tabular-nums">{value ?? "â€”"}</span>
+          <span className="text-3xl font-black text-foreground tabular-nums">{value ?? "—"}</span>
           {value && unit && <span className="text-sm font-bold text-muted-foreground">{unit}</span>}
         </div>
       </div>
@@ -256,14 +256,14 @@ export default function AdminPaciente() {
     const ComparisonRow = ({ label, right, left }: any) => (
       <div className="grid grid-cols-7 gap-2 py-3 border-b border-border/40 items-center last:border-0">
         <div className="col-span-3 text-right">
-          <span className="text-sm font-bold text-foreground tabular-nums">{right ?? "â€”"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{right ?? "—"}</span>
           <span className="text-[10px] ml-1 text-muted-foreground font-medium">cm</span>
         </div>
         <div className="col-span-1 text-center">
           <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">{label}</span>
         </div>
         <div className="col-span-3 text-left">
-          <span className="text-sm font-bold text-foreground tabular-nums">{left ?? "â€”"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{left ?? "—"}</span>
           <span className="text-[10px] ml-1 text-muted-foreground font-medium">cm</span>
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function AdminPaciente() {
       <div className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <div className="flex items-baseline gap-1">
-          <span className="text-sm font-bold text-foreground tabular-nums">{value ?? "â€”"}</span>
+          <span className="text-sm font-bold text-foreground tabular-nums">{value ?? "—"}</span>
           {value && <span className="text-[10px] font-medium text-muted-foreground/60">{unit}</span>}
         </div>
       </div>
@@ -290,12 +290,12 @@ export default function AdminPaciente() {
               className="h-11 px-4 rounded-2xl hover:bg-muted font-bold flex gap-2 transition-all"
             >
               <ArrowLeft size={18} />
-              Voltar ao ProntuÃ¡rio
+              Voltar ao Prontuário
             </Button>
             <div className="h-6 w-px bg-border/60 mx-2" />
             <div>
               <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-                RelatÃ³rio AntropomÃ©trico
+                Relatório Antropométrico
                 <span className="text-primary opacity-30">/</span>
                 <span className="text-muted-foreground font-medium">{formatDate(m.assessment_date)}</span>
               </h2>
@@ -316,8 +316,8 @@ export default function AdminPaciente() {
             <div className="lg:col-span-4 bg-primary rounded-[40px] p-8 text-primary-foreground shadow-2xl shadow-primary/20 flex flex-col justify-between overflow-hidden relative group">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
               <div className="relative z-10">
-                <p className="text-[11px] font-black uppercase tracking-[0.25em] opacity-70 mb-1">Status MetabÃ³lico</p>
-                <h3 className="text-6xl font-black tracking-tighter tabular-nums mb-4">{bmi ?? "â€”"}</h3>
+                <p className="text-[11px] font-black uppercase tracking-[0.25em] opacity-70 mb-1">Status Metab?lico</p>
+                <h3 className="text-6xl font-black tracking-tighter tabular-nums mb-4">{bmi ?? "—"}</h3>
                 {bmiInfo && (
                   <div className="inline-flex items-center px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 text-xs font-black uppercase tracking-widest">
                     {bmiInfo.label}
@@ -325,7 +325,7 @@ export default function AdminPaciente() {
                 )}
               </div>
               <div className="relative z-10 pt-10">
-                <p className="text-sm opacity-80 font-medium max-w-[200px]">Ãndice de massa corporal calculado com base no peso e altura atuais.</p>
+                <p className="text-sm opacity-80 font-medium max-w-[200px]">Índice de massa corporal calculado com base no peso e altura atuais.</p>
               </div>
             </div>
 
@@ -347,11 +347,11 @@ export default function AdminPaciente() {
                   <h4 className="text-sm font-black uppercase tracking-[0.15em] text-foreground/80">Tronco & Tronco</h4>
                 </div>
                 <div className="space-y-1">
-                  <MeasureRow label="PescoÃ§o" value={m.neck} />
+                  <MeasureRow label="Pescoço" value={m.neck} />
                   <MeasureRow label="Ombro" value={m.shoulder} />
                   <MeasureRow label="Peitoral" value={m.chest} />
                   <MeasureRow label="Cintura" value={m.waist} />
-                  <MeasureRow label="AbdÃ´men" value={m.abdomen} />
+                  <MeasureRow label="Abdômen" value={m.abdomen} />
                   <MeasureRow label="Quadril" value={m.hip} />
                   <div className="pt-4 mt-4 border-t border-border/40">
                     <MeasureRow label="Gordura Visceral" value={m.visceral_fat} unit="" />
@@ -374,9 +374,9 @@ export default function AdminPaciente() {
               </div>
 
               <div className="space-y-2">
-                <ComparisonRow label="BraÃ§o Relax." right={m.arm_relax_r} left={m.arm_relax_l} />
-                <ComparisonRow label="BraÃ§o Contr." right={m.arm_contract_r} left={m.arm_contract_l} />
-                <ComparisonRow label="AntebraÃ§o" right={m.forearm_r} left={m.forearm_l} />
+                <ComparisonRow label="Braço Relax." right={m.arm_relax_r} left={m.arm_relax_l} />
+                <ComparisonRow label="Braço Contr." right={m.arm_contract_r} left={m.arm_contract_l} />
+                <ComparisonRow label="Antebraço" right={m.forearm_r} left={m.forearm_l} />
                 <ComparisonRow label="Punho" right={m.wrist_r} left={m.wrist_l} />
                 <div className="h-4" />
                 <ComparisonRow label="Coxa Prox." right={m.thigh_prox_r} left={m.thigh_prox_l} />
@@ -387,7 +387,7 @@ export default function AdminPaciente() {
               <div className="mt-10 flex items-center justify-center gap-2 py-4 px-6 bg-muted/30 rounded-2xl border border-dashed border-border/60">
                 <Scale size={16} className="text-muted-foreground/40" />
                 <p className="text-[11px] font-bold text-muted-foreground/60 italic uppercase tracking-tighter text-center">
-                  DiferenÃ§as entre os lados podem indicar desequilÃ­brios musculares ou dominÃ¢ncia motora.
+                  Diferenças entre os lados podem indicar desequilíbrios musculares ou dominância motora.
                 </p>
               </div>
             </div>
@@ -402,7 +402,7 @@ export default function AdminPaciente() {
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4 text-primary">
                   <MessageSquareQuote size={20} />
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">Parecer TÃ©cnico Nutricional</h4>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">Parecer T?cnico Nutricional</h4>
                 </div>
                 <p className="text-lg text-foreground/80 leading-relaxed font-medium italic">
                   "{m.notes}"
@@ -423,7 +423,7 @@ export default function AdminPaciente() {
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <Link to="/admin/pacientes" className="hover:text-primary transition-colors">Pacientes</Link>
           <ChevronRight size={12} className="opacity-50" />
-          <span className="text-foreground/70">ProntuÃ¡rio</span>
+          <span className="text-foreground/70">Prontuário</span>
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
@@ -542,7 +542,7 @@ export default function AdminPaciente() {
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 1: Perfil (Cadastro BÃ¡sico)
+// TAB 1: Perfil (Cadastro Básico)
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PerfilTab({
@@ -581,14 +581,14 @@ function PerfilTab({
     // Valida CPF se preenchido
     const rawCpf = (form.cpf ?? "").replace(/\D/g, "");
     if (rawCpf && !validateCPF(rawCpf)) {
-      setCpfError("CPF invÃ¡lido â€” verifique os dÃ­gitos.");
+      setCpfError("CPF inválido — verifique os dígitos.");
       return;
     }
     setCpfError(null);
 
     setSaving(true);
     try {
-      // Persiste apenas dÃ­gitos (sem mÃ¡scara)
+      // Persiste apenas dígitos (sem máscara)
       const payload: Patient = { ...form, cpf: rawCpf || undefined };
       const updated = await upsertPatient(payload);
       if (updated) {
@@ -703,25 +703,25 @@ function PerfilTab({
           />
         </div>
 
-        {/* GÃªnero */}
+        {/* Gênero */}
         <div className="space-y-1.5">
-          <Label htmlFor="gender">GÃªnero</Label>
+          <Label htmlFor="gender">Gênero</Label>
           <select
             id="gender"
             value={form.gender || ""}
             onChange={(e) => set("gender", e.target.value)}
             className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Selecionarâ€¦</option>
+            <option value="">Selecionar...</option>
             <option value="M">Masculino</option>
             <option value="F">Feminino</option>
             <option value="outro">Outro</option>
           </select>
         </div>
 
-        {/* OcupaÃ§Ã£o */}
+        {/* Ocupação */}
         <div className="space-y-1.5">
-          <Label htmlFor="occupation">OcupaÃ§Ã£o</Label>
+          <Label htmlFor="occupation">Ocupação</Label>
           <Input
             id="occupation"
             value={form.occupation || ""}
@@ -729,9 +729,9 @@ function PerfilTab({
           />
         </div>
 
-        {/* ObservaÃ§Ãµes */}
+        {/* Observações */}
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="notes">ObservaÃ§Ãµes Gerais</Label>
+          <Label htmlFor="notes">Observações Gerais</Label>
           <Textarea
             id="notes"
             minRows={4}
@@ -753,7 +753,7 @@ function PerfilTab({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-foreground font-bold">
             <Camera size={20} className="text-primary" />
-            Galeria de EvoluÃ§Ã£o
+            Galeria de Evolução
           </div>
           <Button
             size="sm"
@@ -773,7 +773,7 @@ function PerfilTab({
         ) : photos.length === 0 ? (
           <div className="h-40 border-2 border-dashed border-border rounded-[24px] flex flex-col items-center justify-center text-muted-foreground/60 gap-3">
             <ImageIcon size={40} className="opacity-20" />
-            <p className="text-sm font-medium">Nenhuma foto de evoluÃ§Ã£o anexada.</p>
+            <p className="text-sm font-medium">Nenhuma foto de evolução anexada.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -801,11 +801,11 @@ function PerfilTab({
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 2: Anamnese (HistÃ³rico ClÃ­nico)
+// TAB 2: Anamnese (Histórico Clínico)
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Field auxiliar da Anamnese â€” fora do componente para nÃ£o perder foco
+// Field auxiliar da Anamnese â€” fora do componente para não perder foco
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
@@ -1205,7 +1205,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 
     const payload: Record<string, unknown> = { patient_id: pid, assessment_date: form.assessment_date };
 
-    // Medidas bÃ¡sicas e circunferÃªncias
+    // Medidas básicas e circunferências
     const numFields = [
       "weight", "height",
       "neck", "shoulder", "chest", "waist", "abdomen", "hip",
@@ -1223,7 +1223,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     // Gordura visceral (sempre salva se preenchida, vem da bio)
     if (form.visceral_fat) payload.visceral_fat = parseFloat(form.visceral_fat);
 
-    // Dobras cutÃ¢neas â€” salvar todos os campos preenchidos independente do protocolo
+    // Dobras cutâneas — salvar todos os campos preenchidos independente do protocolo
     const sfValues = {
       sf_pectoral:    form.sf_pectoral    ? parseFloat(form.sf_pectoral)    : undefined,
       sf_midaxillary: form.sf_midaxillary ? parseFloat(form.sf_midaxillary) : undefined,
@@ -1237,7 +1237,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
     };
     Object.entries(sfValues).forEach(([k, v]) => { if (v != null) payload[k] = v; });
 
-    // Calcular resultado do adipÃ´metro (independe de ser oficial)
+    // Calcular resultado do adipômetro (independe de ser oficial)
     const { calcBodyFat } = await import("@/lib/anthropometryUtils");
     const sfResult = calcBodyFat(protocol, sfValues, patientAge, genderKey);
     if (sfResult) {
@@ -1246,7 +1246,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         ? parseFloat(sfResult.density.toFixed(6)) : 0;
     }
 
-    // Resultado oficial â€” determina body_fat e lean_mass salvos
+    // Resultado oficial — determina body_fat e lean_mass salvos
     const weight = form.weight ? parseFloat(form.weight) : null;
     if (officialSource === "bio" && form.bio_fat_pct) {
       payload.body_fat = parseFloat(form.bio_fat_pct);
@@ -1261,7 +1261,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         ? parseFloat((weight * (1 - sfResult.fatPct / 100)).toFixed(2))
         : undefined;
     } else if (officialSource === null) {
-      // Auto-detect: usa adipÃ´metro se disponÃ­vel, senÃ£o bio
+      // Auto-detect: usa adipômetro se disponível, senão bio
       if (sfResult) {
         payload.body_fat  = parseFloat(sfResult.fatPct.toFixed(2));
         payload.lean_mass = weight != null
@@ -1295,24 +1295,24 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         if (res) {
           setMeasurements((p) => p.map((m) => m.id === editingId ? res : m));
           ctxSetMeasurement(res);
-          toast.success("AvaliaÃ§Ã£o atualizada!");
+          toast.success("Avaliação atualizada!");
           setEditingMeasurement(null);
         } else {
-          toast.error("Erro ao atualizar avaliaÃ§Ã£o.");
+          toast.error("Erro ao atualizar avaliação.");
         }
       } else {
         const res = await insertMeasurement(payload as Measurement);
         if (res) {
           setMeasurements((p) => [res, ...p]);
           ctxSetMeasurement(res);
-          toast.success("AvaliaÃ§Ã£o registrada!");
+          toast.success("Avaliação registrada!");
         } else {
-          toast.error("Erro ao salvar avaliaÃ§Ã£o.");
+          toast.error("Erro ao salvar avaliação.");
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[handleSave] excessÃ£o:", err);
+      console.error("[handleSave] exceção:", err);
       toast.error(`Erro ao salvar: ${msg}`);
     } finally {
       setSaving(false);
@@ -1320,7 +1320,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
   };
 
   const handleDelete = async (mid: number) => {
-    if (!confirm("Excluir avaliaÃ§Ã£o?")) return;
+    if (!confirm("Excluir avaliação?")) return;
     if (await deleteMeasurement(mid)) {
       setMeasurements(p => p.filter(m => m.id !== mid));
       toast.success("Removida.");
@@ -1337,17 +1337,17 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       {latest && (
         <div className="flex items-stretch gap-0 border border-border rounded-md overflow-hidden">
           <div className="px-4 py-3.5 bg-muted/50 border-r border-border flex flex-col justify-center shrink-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">PÃºltima</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Última</p>
             <p className="text-sm font-medium text-foreground mt-0.5">
-              {latest.assessment_date ? formatDate(latest.assessment_date) : "â€”"}
+              {latest.assessment_date ? formatDate(latest.assessment_date) : "—"}
             </p>
           </div>
           {([
-            { label: "Peso",      value: latest.weight   != null ? `${latest.weight} kg` : "â€”", badge: null      },
-            { label: "Altura",    value: latest.height   != null ? `${latest.height} cm` : "â€”", badge: null      },
-            { label: "IMC",       value: latestBmi ?? "â€”",                                       badge: latestBmi },
-            { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%`  : "â€”", badge: null      },
-            { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`   : "â€”", badge: null      },
+            { label: "Peso",      value: latest.weight   != null ? `${latest.weight} kg` : "—", badge: null      },
+            { label: "Altura",    value: latest.height   != null ? `${latest.height} cm` : "—", badge: null      },
+            { label: "IMC",       value: latestBmi ?? "—",                                       badge: latestBmi },
+            { label: "% Gordura", value: latest.body_fat != null ? `${latest.body_fat}%`  : "—", badge: null      },
+            { label: "Cintura",   value: latest.waist    != null ? `${latest.waist} cm`   : "—", badge: null      },
           ] as { label: string; value: string; badge: string | null }[]).map((s, i) => (
             <div key={s.label} className={`flex-1 px-4 py-3.5 bg-card flex flex-col justify-center min-w-0${i > 0 ? " border-l border-border" : ""}`}>
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{s.label}</p>
@@ -1360,18 +1360,18 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
         </div>
       )}
 
-      {/* â”€â”€ BotÃ£o Ver RelatÃ³rio (quando hÃ¡ histÃ³rico) â”€â”€ */}
+      {/* â”€â”€ Botão Ver Relatório (quando há histórico) â”€â”€ */}
       {measurements.length > 0 && (
         <div className="flex justify-end">
           <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`}>
             <Button variant="outline" size="sm" className="h-8 rounded-md text-sm gap-1.5">
-              <Eye size={13} /> Ver RelatÃ³rio
+              <Eye size={13} /> Ver Relatório
             </Button>
           </Link>
         </div>
       )}
 
-      {/* â”€â”€ Form de avaliaÃ§Ã£o (nova ou ediÃ§Ã£o) â”€â”€ */}
+      {/* â”€â”€ Form de avaliação (nova ou edição) â”€â”€ */}
       <AnthropometryWizard
         patient={patient}
         latestMeasurement={measurements[0] ?? null}
@@ -1390,14 +1390,14 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
       ) : measurements.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 gap-2 border border-border rounded-md bg-card text-muted-foreground">
           <Scale size={26} className="opacity-30" />
-          <p className="text-sm">Nenhuma avaliaÃ§Ã£o registrada.</p>
+          <p className="text-sm">Nenhuma avaliação registrada.</p>
         </div>
       ) : (
         <div className="border border-border rounded-md overflow-hidden bg-card">
           <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-2">
             <Activity size={15} className="text-muted-foreground" />
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              HistÃ³rico â€” {measurements.length} avaliaÃ§Ã£o{measurements.length !== 1 ? "Ãµes" : ""}
+              Histórico — {measurements.length} avaliação{measurements.length !== 1 ? "es" : ""}
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -1419,22 +1419,22 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                       <td className="px-4 py-3 text-sm font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {idx === 0 && <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">Recente</span>}
-                          {m.assessment_date ? formatDate(m.assessment_date) : "â€”"}
+                          {m.assessment_date ? formatDate(m.assessment_date) : "—"}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.weight ? `${m.weight} kg` : "â€”"}</td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.height ? `${m.height} cm` : "â€”"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.weight ? `${m.weight} kg` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.height ? `${m.height} cm` : "—"}</td>
                       <td className="px-4 py-3 text-right text-sm">
                         {bmi ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <span className="font-semibold tabular-nums">{bmi}</span>
                             <BMIBadge bmi={bmi} />
                           </div>
-                        ) : "â€”"}
+                        ) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "â€”"}</td>
-                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{m.sf_protocol ?? "â€”"}</td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.waist ? `${m.waist} cm` : "â€”"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.body_fat != null ? `${m.body_fat}%` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">{m.sf_protocol ?? "—"}</td>
+                      <td className="px-4 py-3 text-right text-sm tabular-nums">{m.waist ? `${m.waist} cm` : "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           <Link to={`/admin/pacientes/${patientId}/relatorio-antropometrico`} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
@@ -1443,7 +1443,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
                           <button
                             onClick={() => { setEditingMeasurement(m); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                             className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                            title="Editar avaliaÃ§Ã£o"
+                            title="Editar avaliação"
                           >
                             <Pencil size={14} />
                           </button>
@@ -1460,7 +1460,7 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
           </div>
           <div className="px-4 py-2.5 border-t border-border/60 bg-muted/30">
             <p className="text-xs text-muted-foreground">
-              {measurements.length} avaliaÃ§Ã£o{measurements.length !== 1 ? "Ãµes" : ""} registrada{measurements.length !== 1 ? "s" : ""}
+              {measurements.length} avaliação{measurements.length !== 1 ? "es" : ""} registrada{measurements.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -1474,9 +1474,9 @@ function AntropometriaTab({ patientId, patient, onViewDetail }: {
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
-  deficit:     { label: "DÃ©ficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  maintenance: { label: "ManutenÃ§Ã£o",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  surplus:     { label: "SuperÃ¡vit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  deficit:     { label: "Déficit",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  maintenance: { label: "Manutenção",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  surplus:     { label: "Superávit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
 };
 
 function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
@@ -1496,7 +1496,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
     }).finally(() => setLoading(false));
   }, [pid]);
 
-  // Monta EnergyInput a partir da mediÃ§Ã£o mais recente + dados do paciente
+  // Monta EnergyInput a partir da medição mais recente + dados do paciente
   const energyInput: EnergyInput | undefined = (() => {
     if (!latestMeasurement?.weight || !latestMeasurement?.height) return undefined;
     if (!patient?.birth_date) return undefined;
@@ -1569,7 +1569,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                     <BookOpen size={24} />
                   </div>
                   <div className="space-y-1">
-                    <p className="font-black text-foreground">{p.title || "Plano sem tÃ­tulo"}</p>
+                    <p className="font-black text-foreground">{p.title || "Plano sem título"}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {strategyInfo && (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${strategyInfo.cls}`}>
@@ -1578,7 +1578,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                       )}
                       {p.target_calories && (
                         <span className="text-[10px] text-muted-foreground font-semibold">
-                          {p.target_calories} kcal Â· {p.target_protein_g}g PTN Â· {p.target_carbs_g}g CHO Â· {p.target_fat_g}g LIP
+                          {p.target_calories} kcal · {p.target_protein_g}g PTN · {p.target_carbs_g}g CHO · {p.target_fat_g}g LIP
                         </span>
                       )}
                       {!p.target_calories && (

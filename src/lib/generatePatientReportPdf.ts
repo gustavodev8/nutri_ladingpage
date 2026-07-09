@@ -109,7 +109,7 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
   const text = report.report_text.trim();
   const lineHeight = 5;
   const headerHeight = 34;
-  const footerHeight = 12;
+  const footerHeight = 24;
   let y = margin + headerHeight + 8;
   const maxY = pageHeight - margin - footerHeight;
 
@@ -168,6 +168,22 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
     doc.text("O relatorio ainda esta em branco.", margin + 4, y + 9);
     y += 18;
   }
+
+  ensureSpace(22);
+  const signatureWidth = 74;
+  const signatureX = (pageWidth - signatureWidth) / 2;
+  const signatureLineY = y + 16;
+  doc.setDrawColor(...RGB.text);
+  doc.setLineWidth(0.2);
+  doc.line(signatureX, signatureLineY, signatureX + signatureWidth, signatureLineY);
+  doc.setTextColor(...RGB.text);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Dr. Fillipe David", pageWidth / 2, signatureLineY + 5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...RGB.muted);
+  doc.text("Nutricionista · CRN-5", pageWidth / 2, signatureLineY + 10, { align: "center" });
 
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {

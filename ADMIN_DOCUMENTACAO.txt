@@ -194,6 +194,16 @@ FAQ, CTA, Endereço & Redes, e Alterar Senha.
   - Editar alimentos personalizados ou criar override dos padrões
   - Excluir apenas alimentos personalizados
   - Indicador visual de "Personalizado" vs padrão
+  - Importação em massa via CSV/TACO com deduplicação por nome
+  - Rastreamento de origem do alimento: source, source_ref e source_code
+
+  Importação em massa:
+    - Script local: scripts/import-foods-csv.mjs
+    - Entrada padrão: alimentos.csv
+    - Saída padrão: supabase/seeds/master_foods_seed.sql
+    - Compatível com CSV exportado da TACO e com planilhas semiautomatizadas
+    - Deduplica alimentos pelo nome normalizado
+    - Normaliza categorias para o padrão do app
 
 --------------------------------------------------------------------------------
 5. AGENDAMENTOS

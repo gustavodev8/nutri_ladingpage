@@ -233,6 +233,9 @@ export async function fetchFoodsFromSupabase(query?: string, category?: string):
     carbs: Number(f.carbs_per_100g) || 0,
     fat: Number(f.fat_per_100g) || 0,
     fiber: Number(f.fiber_per_100g) || undefined,
+    source: f.source || "custom",
+    source_ref: f.source_ref || undefined,
+    source_code: f.source_code || undefined,
   }));
 }
 
@@ -249,6 +252,10 @@ export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase"
     protein: fields.protein,
     carbs: fields.carbs,
     fat: fields.fat,
+    fiber: fields.fiber,
+    source: fields.source,
+    source_ref: fields.source_ref,
+    source_code: fields.source_code,
   };
 
   const numericId = typeof id === "number" ? id : Number(id);

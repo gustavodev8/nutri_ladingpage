@@ -313,6 +313,12 @@ export default function AdminAlimentos() {
               <div className="min-w-0">
                 <h3 className="truncate font-semibold text-foreground">{food.name}</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">{food.category}</p>
+                {food.source && food.source !== "custom" && (
+                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-primary">
+                    Origem: {food.source === "taco_csv" ? "TACO" : food.source}
+                    {food.source_code ? ` · ${food.source_code}` : ""}
+                  </p>
+                )}
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Kcal: {food.kcal}</span>
                   <span>P: {food.protein}g</span>

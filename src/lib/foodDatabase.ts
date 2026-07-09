@@ -13,6 +13,9 @@ export interface FoodItem {
   fat: number;     // per 100g (g)
   fiber?: number;  // per 100g (g)
   household_measures?: HouseholdMeasure[];
+  source?: string;
+  source_ref?: string;
+  source_code?: string;
 }
 
 export const FOOD_CATEGORIES = [

@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "foods:seed": "node scripts/import-foods-csv.mjs --input alimentos.csv --output supabase/seeds/master_foods_seed.sql",
     "test": "vitest run",
     "test:watch": "vitest"
   },
