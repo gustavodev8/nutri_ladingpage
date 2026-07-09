@@ -505,6 +505,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
     (acc[s.category] ??= []).push(s);
     return acc;
   }, {});
+  const protocolVisibleSubs = substrates.filter((sub) =>
+    sub.name.toLowerCase().includes(protocolSubSearch.toLowerCase()) ||
+    sub.category.toLowerCase().includes(protocolSubSearch.toLowerCase())
+  );
+  const protocolGroupedSubs = protocolVisibleSubs.reduce<Record<string, Substrate[]>>((acc, sub) => {
+    (acc[sub.category] ??= []).push(sub);
+    return acc;
+  }, {});
 
   const totalItems = blocks.reduce((n, b) => n + b.items.length, 0);
 
@@ -606,6 +614,187 @@ export function PrescriptionBuilder({ patientId }: Props) {
             ))}
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (creatingProtocol) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm p-3 md:p-6 overflow-hidden">
+        <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col overflow-hidden rounded-[28px] border border-border/60 bg-background shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 bg-gradient-to-r from-background to-muted/20">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Modo protocolo</p>
+              <h2 className="text-xl font-semibold text-foreground">Criar novo protocolo magistral</h2>
+              <p className="text-sm text-muted-foreground">Escolha substratos cadastrados com espaço amplo e leitura limpa.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSaveProtocol}
+                disabled={savingProtocol || protocolDraft.length === 0 || !protocolName.trim()}
+                className="h-9 text-sm gap-1.5"
+              >
+                {savingProtocol ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Salvar protocolo
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={cancelProtocolMode}
+                className="h-9 text-sm text-muted-foreground"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid flex-1 min-h-0 gap-0 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <div className="border-r border-border/60 bg-muted/20 p-5 space-y-4 min-h-0 overflow-y-auto">
+              <div className="space-y-1">
+                <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Identificação</p>
+                <Input
+                  value={protocolName}
+                  onChange={(e) => setProtocolName(e.target.value)}
+                  placeholder="Nome do protocolo"
+                  className="h-10 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  value={protocolObjective}
+                  onChange={(e) => setProtocolObjective(e.target.value)}
+                  placeholder="Objetivo"
+                  className="h-10 text-sm"
+                />
+                <select
+                  value={protocolPharmaForm}
+                  onChange={(e) => setProtocolPharmaForm(e.target.value)}
+                  className="h-10 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground"
+                >
+                  {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
+                </select>
+              </div>
+
+              <Textarea
+                value={protocolPosology}
+                onChange={(e) => setProtocolPosology(e.target.value)}
+                placeholder="Posologia (opcional)"
+                className="min-h-24 text-sm resize-none"
+              />
+
+              <div className="rounded-2xl border border-border/60 bg-background p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Selecionados</p>
+                    <p className="text-xs text-muted-foreground">Itens que vão compor o protocolo.</p>
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-muted-foreground">{protocolDraft.length}</span>
+                </div>
+
+                {protocolDraft.length > 0 ? (
+                  <div className="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
+                    {protocolDraft.map((item) => (
+                      <div key={item.substrateId ?? item.name} className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5">
+                        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{item.name}</span>
+                        <Input
+                          type="number"
+                          step="any"
+                          value={item.dose}
+                          onChange={(e) => patchProtocolItem(item.substrateId, { dose: parseFloat(e.target.value) || 0 })}
+                          className="h-8 w-24 text-sm text-right tabular-nums"
+                        />
+                        <span className="w-10 text-sm text-muted-foreground">{item.unit}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeProtocolItem(item.substrateId)}
+                          className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 px-4 py-5 text-center">
+                    <p className="text-sm text-muted-foreground">Nenhum substrato selecionado ainda.</p>
+                    <p className="text-xs text-muted-foreground/80 mt-1">Escolha itens na coluna ao lado para montar o protocolo.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-col bg-background">
+              <div className="border-b border-border/60 px-5 py-4 bg-muted/10">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Substratos cadastrados</p>
+                    <p className="text-xs text-muted-foreground">Toque em adicionar para incluir no protocolo.</p>
+                  </div>
+                  <div className="relative w-full xl:max-w-md">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={protocolSubSearch}
+                      onChange={(e) => setProtocolSubSearch(e.target.value)}
+                      placeholder="Buscar substrato"
+                      className="pl-9 h-10 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto p-5">
+                <div className="space-y-4">
+                  {Object.entries(protocolGroupedSubs).map(([cat, subs]) => (
+                    <div key={cat}>
+                      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">{cat}</p>
+                      <div className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+                        {subs.map((sub) => {
+                          const selected = protocolDraft.some((item) => item.substrateId === sub.id);
+                          return (
+                            <div key={sub.id} className="rounded-2xl border border-border/60 bg-background p-4 shadow-sm hover:border-primary/30 transition-colors">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-foreground truncate">{sub.name}</p>
+                                  <p className="text-[11px] text-muted-foreground mt-1">
+                                    Dose ideal: {sub.ideal_dose ?? "-"} {sub.unit}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant={selected ? "secondary" : "outline"}
+                                  size="sm"
+                                  onClick={() => addSubstrateToProtocol(sub)}
+                                  className="h-8 shrink-0 gap-1.5 text-xs"
+                                  disabled={selected}
+                                >
+                                  <Plus size={12} />
+                                  {selected ? "Adicionado" : "Adicionar"}
+                                </Button>
+                              </div>
+                              {sub.purpose && (
+                                <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{sub.purpose}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {protocolVisibleSubs.length === 0 && (
+                    <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                      <p className="text-sm text-muted-foreground">Nenhum substrato encontrado.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
