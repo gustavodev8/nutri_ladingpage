@@ -909,7 +909,7 @@ function ReportTab({
     else createNewReport();
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     const doc = await generatePatientReportPdf(patient, draft);
     doc.save(`${draft.title.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   };
