@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Trash2, Printer, Save, Loader2, Search, FlaskConical,
-  ChevronDown, FileText, Beaker, History, ChevronRight, Pencil, X,
+  ChevronDown, FileText, Beaker, History, ChevronRight, Pencil, X, BookmarkPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,8 +169,15 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const [newSubIdealDose, setNewSubIdealDose] = useState("");
   const [registeringSub, setRegisteringSub] = useState(false);
 
+  const [protocolDraft, setProtocolDraft] = useState<BlockItem[]>([]);
+  const [protocolName, setProtocolName] = useState("");
+  const [protocolObjective, setProtocolObjective] = useState("Geral");
+  const [protocolPharmaForm, setProtocolPharmaForm] = useState(PHARMA_FORMS[0]);
+  const [protocolPosology, setProtocolPosology] = useState("");
+  const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
+  const [savingProtocol, setSavingProtocol] = useState(false);
+
   const [readyFormulaOpen, setReadyFormulaOpen] = useState(false);
-  const [readyFormulaSourceId, setReadyFormulaSourceId] = useState<string | null>(null);
   const [readyFormulaName, setReadyFormulaName] = useState("");
   const [readyFormulaObjective, setReadyFormulaObjective] = useState("Geral");
   const [readyFormulaPharmaForm, setReadyFormulaPharmaForm] = useState(PHARMA_FORMS[0]);
@@ -278,29 +285,58 @@ export function PrescriptionBuilder({ patientId }: Props) {
     setBlocks((prev) => [...prev, addBlock()]);
   };
 
-  const openReadyFormulaDialog = (block: PrescriptionBlock) => {
-    setReadyFormulaSourceId(block.localId);
-    setReadyFormulaName(block.label.trim() ? block.label.trim() : "Nova fórmula pronta");
-    setReadyFormulaObjective("Geral");
-    setReadyFormulaPharmaForm(block.pharmaceuticalForm || PHARMA_FORMS[0]);
-    setReadyFormulaPosology(block.posology);
+  const addToProtocolDraft = (sub: Substrate) => {
+    const exists = protocolDraft.some((item) => item.substrateId === sub.id);
+    if (exists) {
+      toast.info("Esse substrato já está no protocolo em montagem.");
+      return;
+    }
+
+    setProtocolDraft((prev) => [
+      ...prev,
+      {
+        substrateId: sub.id,
+        name: sub.name,
+        dose: sub.ideal_dose ?? sub.min_dose ?? 0,
+        unit: sub.unit,
+      },
+    ]);
+  };
+
+  const removeProtocolItem = (substrateId?: number) => {
+    setProtocolDraft((prev) => prev.filter((item) => item.substrateId !== substrateId));
+  };
+
+  const patchProtocolItem = (substrateId: number | undefined, patch: Partial<BlockItem>) => {
+    setProtocolDraft((prev) => prev.map((item) =>
+      item.substrateId === substrateId ? { ...item, ...patch } : item
+    ));
+  };
+
+  const clearProtocolDraft = () => {
+    setProtocolDraft([]);
+    setProtocolName("");
+    setProtocolObjective("Geral");
+    setProtocolPharmaForm(PHARMA_FORMS[0]);
+    setProtocolPosology("");
+  };
+
+  const openProtocolDialog = () => {
+    setReadyFormulaName(protocolName.trim() || "Novo protocolo");
+    setReadyFormulaObjective(protocolObjective);
+    setReadyFormulaPharmaForm(protocolPharmaForm);
+    setReadyFormulaPosology(protocolPosology);
     setReadyFormulaOpen(true);
   };
 
   const handleSaveReadyFormula = async () => {
     if (!readyFormulaName.trim()) {
-      toast.error("Digite o nome da fórmula pronta.");
+      toast.error("Digite o nome do protocolo.");
       return;
     }
 
-    const sourceBlock = blocks.find((block) => block.localId === readyFormulaSourceId);
-    if (!sourceBlock) {
-      toast.error("Selecione um bloco válido para salvar.");
-      return;
-    }
-
-    if (sourceBlock.items.length === 0) {
-      toast.error("Adicione pelo menos um ativo ao bloco antes de salvar.");
+    if (protocolDraft.length === 0) {
+      toast.error("Adicione pelo menos um substrato ao protocolo.");
       return;
     }
 
@@ -310,7 +346,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
       objective: readyFormulaObjective.trim() || "Geral",
       posology: readyFormulaPosology.trim() || null,
       pharmaceuticalForm: readyFormulaPharmaForm,
-      items: sourceBlock.items.map((item) => ({
+      items: protocolDraft.map((item) => ({
         substrateId: item.substrateId ?? null,
         name: item.name,
         appliedDose: item.dose,
@@ -320,14 +356,15 @@ export function PrescriptionBuilder({ patientId }: Props) {
     setSavingReadyFormula(false);
 
     if (!ok) {
-      toast.error("Não foi possível salvar a fórmula pronta.");
+      toast.error("Não foi possível salvar o protocolo.");
       return;
     }
 
     const refreshed = await fetchReadyFormulas();
     setFormulas(refreshed);
     setReadyFormulaOpen(false);
-    toast.success("Fórmula pronta salva com sucesso.");
+    clearProtocolDraft();
+    toast.success("Protocolo salvo com sucesso.");
   };
 
   const handleCancelEdit = () => {
@@ -684,6 +721,63 @@ export function PrescriptionBuilder({ patientId }: Props) {
         {leftTab === "substrates" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="p-3 border-b border-border/40 shrink-0 space-y-2">
+              <div className="rounded-lg border border-border/60 bg-background p-3 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-primary">Protocolo em montagem</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Junte substratos avulsos e salve como um protocolo reutilizável.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                    {protocolDraft.length} item(ns)
+                  </span>
+                </div>
+                {protocolDraft.length > 0 ? (
+                  <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                    {protocolDraft.map((item) => (
+                      <div key={item.substrateId ?? item.name} className="flex items-center justify-between gap-2 text-[11px] bg-muted/40 rounded-md px-2 py-1.5">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">{item.name}</p>
+                          <p className="text-muted-foreground tabular-nums">{item.dose} {item.unit}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeProtocolItem(item.substrateId)}
+                          className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Nenhum substrato adicionado ainda.</p>
+                )}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openProtocolDialog}
+                    disabled={protocolDraft.length === 0}
+                    className="h-7 text-[11px] gap-1.5 border-primary/20 text-primary"
+                  >
+                    <Save size={11} />
+                    Salvar protocolo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearProtocolDraft}
+                    disabled={protocolDraft.length === 0}
+                    className="h-7 text-[11px] text-muted-foreground"
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -787,6 +881,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            title="Adicionar ao protocolo"
+                            onClick={() => addToProtocolDraft(sub)}
+                            className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors flex items-center justify-center"
+                          >
+                            <BookmarkPlus size={12} />
+                          </button>
                           {blocks.map((b) => (
                             <button
                               key={b.localId}
@@ -924,18 +1026,6 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openReadyFormulaDialog(block)}
-                        disabled={block.items.length === 0}
-                        className="h-7 gap-1 text-[11px] border-primary/15 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
-                        title="Salvar este bloco como fórmula pronta"
-                      >
-                        <Save size={11} />
-                        Fórmula pronta
-                      </Button>
                       <button
                         type="button"
                         onClick={() => removeBlock(block.localId)}
@@ -1046,19 +1136,19 @@ export function PrescriptionBuilder({ patientId }: Props) {
       <Dialog open={readyFormulaOpen} onOpenChange={setReadyFormulaOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Salvar como fórmula pronta</DialogTitle>
+            <DialogTitle>Salvar protocolo magistral</DialogTitle>
             <DialogDescription>
-              Crie um modelo reutilizável a partir do bloco atual para acelerar próximas prescrições.
+              Crie um modelo reutilizável com os substratos avulsos selecionados.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground">Nome da fórmula</p>
+              <p className="text-xs font-medium text-foreground">Nome do protocolo</p>
               <Input
                 value={readyFormulaName}
                 onChange={(e) => setReadyFormulaName(e.target.value)}
-                placeholder="Ex: Protocolo Energia e Foco"
+                placeholder="Ex: Protocolo Dor de Coluna"
               />
             </div>
 
@@ -1096,7 +1186,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
             </div>
 
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              Itens cadastrados e ativos avulsos serão preservados na fórmula pronta.
+              Esse protocolo vai salvar exatamente os substratos escolhidos no rascunho.
             </div>
           </div>
 
@@ -1110,7 +1200,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
             </Button>
             <Button onClick={handleSaveReadyFormula} disabled={savingReadyFormula}>
               {savingReadyFormula ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Save size={14} className="mr-1.5" />}
-              {savingReadyFormula ? "Salvando..." : "Salvar fórmula pronta"}
+              {savingReadyFormula ? "Salvando..." : "Salvar protocolo"}
             </Button>
           </DialogFooter>
         </DialogContent>
