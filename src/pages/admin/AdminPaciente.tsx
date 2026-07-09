@@ -910,12 +910,12 @@ function ReportTab({
   };
 
   const handleDownloadPdf = () => {
-    const doc = generatePatientReportPdf(patient, draft);
+    const doc = await generatePatientReportPdf(patient, draft);
     doc.save(`${draft.title.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   };
 
-  const handlePreviewPdf = () => {
-    const doc = generatePatientReportPdf(patient, draft);
+  const handlePreviewPdf = async () => {
+    const doc = await generatePatientReportPdf(patient, draft);
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank', 'noopener,noreferrer');

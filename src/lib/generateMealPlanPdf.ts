@@ -91,6 +91,10 @@ function mealQty(food: NonNullable<Meal["foods"]>[number]) {
   return `${food.quantity}${food.unit ?? "g"}`;
 }
 
+export interface MealPlanPdfOptions {
+  selectedAlternatives?: Record<number, number[]>;
+}
+
 function drawMeal(
   doc: jsPDF,
   meal: Meal,
@@ -99,6 +103,7 @@ function drawMeal(
   pageHeight: number,
   margin: number,
   y: number,
+  variant: "main" | "substitution" = "main",
 ) {
   const contentW = pageWidth - margin * 2;
   const estH = mealHeight(meal);
@@ -112,17 +117,25 @@ function drawMeal(
   const notes = (meal.notes ?? "").trim();
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim());
 
-  roundRect(doc, margin, y, contentW, estH, 2.4, C.white, C.lineStrong);
-  doc.setFillColor(...C.soft);
+  const borderColor = variant === "substitution" ? C.accent : C.lineStrong;
+  const headerFill = variant === "substitution" ? C.soft2 : C.soft;
+  const headerText = variant === "substitution" ? "SUBSTITUIÇÃO" : label;
+
+  roundRect(doc, margin, y, contentW, estH, 2.4, C.white, borderColor);
+  doc.setFillColor(...headerFill);
   doc.rect(margin, y, contentW, 9, "F");
+  if (variant === "substitution") {
+    doc.setFillColor(...C.accent);
+    doc.rect(margin, y, 2.5, 9, "F");
+  }
   doc.setDrawColor(...C.lineStrong);
   doc.setLineWidth(0.2);
   doc.line(margin, y + 9, margin + contentW, y + 9);
 
-  doc.setTextColor(...C.ink);
+  doc.setTextColor(...(variant === "substitution" ? C.accent : C.ink));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.2);
-  doc.text(`${label} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
+  doc.text(`${headerText} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
   if (meal.time_suggestion) {
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
@@ -246,7 +259,12 @@ function drawMeal(
   return totalY + 8;
 }
 
-export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Patient | null): jsPDF {
+export function generateMealPlanPdf(
+  plan: MealPlan,
+  meals: Meal[],
+  patient: Patient | null,
+  options?: MealPlanPdfOptions,
+): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -341,10 +359,17 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
 
   meals.forEach((meal, index) => {
     const label = String(index + 1).padStart(2, "0");
-    y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y);
+    y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y, "main");
 
     if (meal.alternative_meals && meal.alternative_meals.length > 0) {
-      meal.alternative_meals.forEach((alt, altIdx) => {
+      const selected = options?.selectedAlternatives?.[index];
+      const altIndexes = selected && selected.length > 0
+        ? meal.alternative_meals.map((_, altIdx) => altIdx).filter((altIdx) => selected.includes(altIdx))
+        : meal.alternative_meals.map((_, altIdx) => altIdx);
+
+      altIndexes.forEach((altIdx) => {
+        const alt = meal.alternative_meals?.[altIdx];
+        if (!alt) return;
         const altMeal: Meal = {
           plan_id: meal.plan_id,
           meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 2}`,
@@ -353,7 +378,7 @@ export function generateMealPlanPdf(plan: MealPlan, meals: Meal[], patient: Pati
           foods: alt.foods,
         };
         const subLabel = `${label}.${String.fromCharCode(97 + altIdx)}`; // e.g. "01.a", "01.b"
-        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y);
+        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y, "substitution");
       });
     }
   });

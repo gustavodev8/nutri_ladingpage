@@ -29,7 +29,7 @@ export function EmailPatientReportModal({ patient, report, onClose }: Props) {
 
     setSending(true);
     try {
-      const doc = generatePatientReportPdf(patient, report);
+      const doc = await generatePatientReportPdf(patient, report);
       const pdfB64 = doc.output("datauristring").split(",")[1];
 
       const { data, error } = await supabase.functions.invoke("send-material", {

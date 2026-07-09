@@ -91,7 +91,22 @@ function wrapParagraph(doc: jsPDF, paragraph: string, maxWidth: number): string[
   return lines;
 }
 
-export function generatePatientReportPdf(patient: Patient, report: PatientReport): jsPDF {
+async function loadImageDataUrl(src: string): Promise<string> {
+  const response = await fetch(src);
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar imagem: ${src}`);
+  }
+
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(`Falha ao ler imagem: ${src}`));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function generatePatientReportPdf(patient: Patient, report: PatientReport): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -169,13 +184,23 @@ export function generatePatientReportPdf(patient: Patient, report: PatientReport
     y += 18;
   }
 
-  ensureSpace(22);
-  const signatureWidth = 74;
-  const signatureX = (pageWidth - signatureWidth) / 2;
-  const signatureLineY = y + 16;
+  const signatureBottom = pageHeight - margin - 10;
+  const signatureLineY = signatureBottom - 5;
+  const signatureImageWidth = 42;
+  const signatureImageHeight = 16;
+  const signatureImageX = (pageWidth - signatureImageWidth) / 2;
+  const signatureImageY = signatureLineY - signatureImageHeight - 1;
+
+  try {
+    const signatureImage = await loadImageDataUrl("/assinatura.png");
+    doc.addImage(signatureImage, "PNG", signatureImageX, signatureImageY, signatureImageWidth, signatureImageHeight);
+  } catch (error) {
+    console.warn("[generatePatientReportPdf] Assinatura não carregou:", error);
+  }
+
   doc.setDrawColor(...RGB.text);
   doc.setLineWidth(0.2);
-  doc.line(signatureX, signatureLineY, signatureX + signatureWidth, signatureLineY);
+  doc.line(pageWidth / 2 - 28, signatureLineY, pageWidth / 2 + 28, signatureLineY);
   doc.setTextColor(...RGB.text);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
