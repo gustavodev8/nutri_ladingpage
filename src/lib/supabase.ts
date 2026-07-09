@@ -1735,24 +1735,47 @@ export async function fetchReadyFormulas(): Promise<ReadyFormula[]> {
   }));
 }
 
+export async function insertSubstrate(sub: Omit<Substrate, "id">): Promise<Substrate | null> {
+  const { data, error } = await supabaseAdmin
+    .from("substrates")
+    .insert(sub)
+    .select()
+    .single();
+  if (error) { console.error("[Supabase] insertSubstrate:", error.message); return null; }
+  return data;
+}
+
 export async function savePrescription(
   patientId: number,
   blocks: PrescriptionBlockInput[],
+  prescriptionId?: number,
 ): Promise<boolean> {
-  const { data, error } = await supabaseAdmin
-    .from("prescriptions")
-    .insert({ patient_id: patientId })
-    .select("id")
-    .single();
-  if (error || !data?.id) { console.error("[Supabase] savePrescription:", error?.message); return false; }
-  const prescriptionId = data.id as number;
+  let targetId = prescriptionId;
+
+  if (targetId) {
+    // Editing: Delete old blocks (which deletes old items cascadingly)
+    const { error: deleteErr } = await supabaseAdmin
+      .from("prescription_blocks")
+      .delete()
+      .eq("prescription_id", targetId);
+    if (deleteErr) { console.error("[Supabase] savePrescription update blocks delete:", deleteErr.message); return false; }
+  } else {
+    // Creating: Insert new prescription
+    const { data, error } = await supabaseAdmin
+      .from("prescriptions")
+      .insert({ patient_id: patientId })
+      .select("id")
+      .single();
+    if (error || !data?.id) { console.error("[Supabase] savePrescription insert:", error?.message); return false; }
+    targetId = data.id as number;
+  }
 
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i];
     const { data: blockData, error: blockErr } = await supabaseAdmin
       .from("prescription_blocks")
       .insert({
-        prescription_id:     prescriptionId,
+        prescription_id:     targetId,
         label:               b.label,
         pharmaceutical_form: b.pharmaceuticalForm,
         posology:            b.posology || null,
@@ -1760,7 +1783,7 @@ export async function savePrescription(
       })
       .select("id")
       .single();
-    if (blockErr || !blockData?.id) { console.error("[Supabase] savePrescription block:", blockErr?.message); return false; }
+    if (blockErr || !blockData?.id) { console.error("[Supabase] savePrescription block insert:", blockErr?.message); return false; }
     const blockId = blockData.id as number;
 
     if (b.items.length > 0) {
@@ -1773,7 +1796,7 @@ export async function savePrescription(
         sort_order:   j,
       }));
       const { error: itemErr } = await supabaseAdmin.from("prescription_block_items").insert(itemRows);
-      if (itemErr) { console.error("[Supabase] savePrescription items:", itemErr.message); return false; }
+      if (itemErr) { console.error("[Supabase] savePrescription items insert:", itemErr.message); return false; }
     }
   }
   return true;
@@ -1789,14 +1812,14 @@ export interface SavedPrescription {
     pharmaceutical_form:string;
     posology?:          string | null;
     sort_order:         number;
-    items: { name: string; dose: number; unit: string; sort_order: number }[];
+    items: { substrate_id?: number | null; name: string; dose: number; unit: string; sort_order: number }[];
   }[];
 }
 
 export async function fetchPrescriptions(patientId: number): Promise<SavedPrescription[]> {
   const { data, error } = await supabaseAdmin
     .from("prescriptions")
-    .select(`id, created_at, notes, blocks:prescription_blocks(id, label, pharmaceutical_form, posology, sort_order, items:prescription_block_items(name, dose, unit, sort_order))`)
+    .select(`id, created_at, notes, blocks:prescription_blocks(id, label, pharmaceutical_form, posology, sort_order, items:prescription_block_items(substrate_id, name, dose, unit, sort_order))`)
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
   if (error) { console.error("[Supabase] fetchPrescriptions:", error.message); return []; }

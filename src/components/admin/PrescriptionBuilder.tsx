@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Trash2, Printer, Save, Loader2, Search, FlaskConical,
-  ChevronDown, FileText, Beaker, History, ChevronRight,
+  ChevronDown, FileText, Beaker, History, ChevronRight, Pencil, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchSubstrates, fetchReadyFormulas, savePrescription, fetchPatient,
-  fetchPrescriptions, deletePrescription,
+  fetchPrescriptions, deletePrescription, insertSubstrate,
   type Substrate, type ReadyFormula, type SavedPrescription,
 } from "@/lib/supabase";
 
@@ -154,6 +154,19 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const [expandedId,   setExpandedId]   = useState<number | null>(null);
   const objRef = useRef<HTMLDivElement>(null);
 
+  const [editingPrescriptionId, setEditingPrescriptionId] = useState<number | undefined>(undefined);
+  
+  // Registering substrate state
+  const [showNewSubForm, setShowNewSubForm] = useState(false);
+  const [newSubName, setNewSubName] = useState("");
+  const [newSubCategory, setNewSubCategory] = useState("Outros");
+  const [newSubUnit, setNewSubUnit] = useState("mg");
+  const [newSubIdealDose, setNewSubIdealDose] = useState("");
+  const [registeringSub, setRegisteringSub] = useState(false);
+
+  // Custom inline item input state
+  const [customItemInputs, setCustomItemInputs] = useState<Record<string, { name: string; dose: string; unit: string }>>({});
+
   const loadHistory = useCallback(async () => {
     const data = await fetchPrescriptions(patientId);
     setHistory(data);
@@ -248,6 +261,83 @@ export function PrescriptionBuilder({ patientId }: Props) {
         : b
     ));
 
+  const handleAddEmptyBlock = () => {
+    setBlocks((prev) => [...prev, addBlock()]);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPrescriptionId(undefined);
+    setBlocks([]);
+    toast.info("Edição cancelada.");
+  };
+
+  const handleEditPrescription = (p: SavedPrescription) => {
+    setEditingPrescriptionId(p.id);
+    const mappedBlocks: PrescriptionBlock[] = p.blocks.map((b) => ({
+      localId:            crypto.randomUUID(),
+      label:              b.label,
+      pharmaceuticalForm: b.pharmaceutical_form,
+      posology:           b.posology ?? "",
+      items:              b.items.map((i) => ({
+        substrateId: i.substrate_id ?? undefined,
+        name:        i.name,
+        dose:        i.dose,
+        unit:        i.unit,
+      })),
+    }));
+    setBlocks(mappedBlocks);
+    setView("builder");
+    toast.info(`Editando Prescrição #${p.id}.`);
+  };
+
+  const handleRegisterSubstrate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubName.trim()) { toast.error("Digite o nome do ativo."); return; }
+
+    setRegisteringSub(true);
+    const added = await insertSubstrate({
+      name:         newSubName.trim(),
+      category:     newSubCategory,
+      unit:         newSubUnit,
+      ideal_dose:   newSubIdealDose ? parseFloat(newSubIdealDose) : null,
+    });
+    setRegisteringSub(false);
+
+    if (added) {
+      toast.success("Ativo cadastrado com sucesso!");
+      setSubstrates((prev) => [...prev, added].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewSubName("");
+      setNewSubIdealDose("");
+      setShowNewSubForm(false);
+    } else {
+      toast.error("Erro ao cadastrar ativo no banco.");
+    }
+  };
+
+  const handleAddCustomItem = (blockLocalId: string) => {
+    const input = customItemInputs[blockLocalId];
+    if (!input?.name?.trim()) { toast.error("Digite o nome do ativo."); return; }
+    const doseVal = parseFloat(input.dose) || 0;
+
+    const newItem: BlockItem = {
+      name: input.name.trim(),
+      dose: doseVal,
+      unit: input.unit || "mg",
+    };
+
+    setBlocks((prev) => prev.map((b) =>
+      b.localId === blockLocalId
+        ? { ...b, items: [...b.items, newItem] }
+        : b
+    ));
+
+    // Clear input
+    setCustomItemInputs((prev) => ({
+      ...prev,
+      [blockLocalId]: { name: "", dose: "", unit: "mg" }
+    }));
+  };
+
   const handleSave = async () => {
     const filled = blocks.filter((b) => b.items.length > 0);
     if (filled.length === 0) { toast.error("Adicione pelo menos um ativo ao receituário."); return; }
@@ -262,11 +352,12 @@ export function PrescriptionBuilder({ patientId }: Props) {
         dose:        it.dose,
         unit:        it.unit,
       })),
-    })));
+    })), editingPrescriptionId);
     setSaving(false);
     if (!ok) { toast.error("Erro ao salvar a prescrição."); return; }
-    toast.success("Prescrição salva com sucesso.");
+    toast.success(editingPrescriptionId ? "Prescrição atualizada com sucesso." : "Prescrição salva com sucesso.");
     setBlocks([]);
+    setEditingPrescriptionId(undefined);
     await loadHistory();
     setView("history");
   };
@@ -276,6 +367,10 @@ export function PrescriptionBuilder({ patientId }: Props) {
     if (await deletePrescription(id)) {
       toast.success("Prescrição excluída.");
       setHistory((prev) => prev.filter((p) => p.id !== id));
+      if (editingPrescriptionId === id) {
+        setEditingPrescriptionId(undefined);
+        setBlocks([]);
+      }
     } else {
       toast.error("Erro ao excluir.");
     }
@@ -367,6 +462,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleEditPrescription(p); }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded border border-border/50 hover:border-primary/30"
+                      title="Editar esta prescrição"
+                    >
+                      <Pencil size={11} /> Editar
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); printSaved(p); }}
@@ -515,16 +618,90 @@ export function PrescriptionBuilder({ patientId }: Props) {
         {/* ── Substratos Avulsos ── */}
         {leftTab === "substrates" && (
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="p-3 border-b border-border/40 shrink-0">
-              <div className="relative">
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={subSearch}
-                  onChange={(e) => setSubSearch(e.target.value)}
-                  placeholder="Buscar substrato…"
-                  className="pl-7 h-8 text-xs"
-                />
+            <div className="p-3 border-b border-border/40 shrink-0 space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={subSearch}
+                    onChange={(e) => setSubSearch(e.target.value)}
+                    placeholder="Buscar substrato…"
+                    className="pl-7 h-8 text-xs"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewSubForm(!showNewSubForm)}
+                  className="h-8 text-xs gap-1 shrink-0 px-2.5"
+                >
+                  <Plus size={12} /> Ativo
+                </Button>
               </div>
+
+              {/* Form to register new substrate directly in the catalog */}
+              {showNewSubForm && (
+                <form onSubmit={handleRegisterSubstrate} className="p-3 border border-border/60 rounded-lg bg-background/50 space-y-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-foreground">Novo Ativo no Catálogo</p>
+                  <div className="space-y-1.5">
+                    <Input
+                      placeholder="Nome do ativo (ex: Creatina Creapure)"
+                      value={newSubName}
+                      onChange={(e) => setNewSubName(e.target.value)}
+                      className="h-7 text-xs"
+                      required
+                    />
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <select
+                        value={newSubCategory}
+                        onChange={(e) => setNewSubCategory(e.target.value)}
+                        className="h-7 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
+                      >
+                        {["Adaptógeno", "Termogênico", "Fitoterápico", "Vitamina", "Mineral", "Aminoácido", "Lipídio", "Probiótico", "Antioxidante", "Hormonal", "Outros"].map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={newSubUnit}
+                        onChange={(e) => setNewSubUnit(e.target.value)}
+                        className="h-7 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
+                      >
+                        {["mg", "mcg", "g", "UI", "ml", "gotas", "UFC"].map(u => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder="Dose sugerida (opcional)"
+                      value={newSubIdealDose}
+                      onChange={(e) => setNewSubIdealDose(e.target.value)}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewSubForm(false)}
+                      className="h-6 text-[10px] px-2"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={registeringSub}
+                      className="h-6 text-[10px] px-2.5"
+                    >
+                      {registeringSub ? "Salvando..." : "Cadastrar"}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {Object.entries(groupedSubs).map(([cat, subs]) => (
@@ -602,6 +779,16 @@ export function PrescriptionBuilder({ patientId }: Props) {
             <Button
               variant="outline"
               size="sm"
+              onClick={handleAddEmptyBlock}
+              className="gap-1 h-7 text-xs border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
+              title="Criar nova fórmula (bloco em branco)"
+            >
+              <Plus size={12} />
+              Fórmula
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePrint}
               disabled={totalItems === 0}
               className="gap-1.5 h-7 text-xs"
@@ -621,75 +808,138 @@ export function PrescriptionBuilder({ patientId }: Props) {
           </div>
         </div>
 
+        {editingPrescriptionId && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-800 shrink-0">
+            <span>Editando Prescrição <strong>#{editingPrescriptionId}</strong> (as alterações serão salvas ao clicar em Salvar)</span>
+            <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="h-6 text-[10px] text-amber-800 hover:text-amber-900 gap-1 hover:bg-amber-500/10">
+              <X size={10} /> Cancelar
+            </Button>
+          </div>
+        )}
+
         {/* Blocks */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {blocks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-12">
               <Beaker size={32} className="opacity-20" />
               <div className="text-center">
                 <p className="text-sm font-medium">Receituário vazio</p>
                 <p className="text-xs mt-0.5">Adicione uma fórmula ou substrato pelo painel esquerdo.</p>
               </div>
+              <Button variant="outline" size="sm" onClick={handleAddEmptyBlock} className="text-xs gap-1.5 mt-2">
+                <Plus size={13} />
+                Criar Fórmula em Branco
+              </Button>
             </div>
           ) : (
-            blocks.map((block) => (
-              <div key={block.localId} className="rounded-xl border border-border/70 overflow-hidden">
+            <>
+              <div className="space-y-4">
+                {blocks.map((block) => (
+                  <div key={block.localId} className="rounded-xl border border-border/70 overflow-hidden">
 
-                {/* Block header */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
-                  <Input
-                    value={block.label}
-                    onChange={(e) => patchBlock(block.localId, { label: e.target.value })}
-                    className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-border focus:border-border w-28 px-1.5"
-                  />
-                  <div className="flex items-center gap-1.5 flex-1 flex-wrap">
-                    <select
-                      value={block.pharmaceuticalForm}
-                      onChange={(e) => patchBlock(block.localId, { pharmaceuticalForm: e.target.value })}
-                      className="h-6 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
-                    >
-                      {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
-                    </select>
-                    <Input
-                      value={block.posology}
-                      onChange={(e) => patchBlock(block.localId, { posology: e.target.value })}
-                      placeholder="Posologia (ex: 1x ao dia)"
-                      className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeBlock(block.localId)}
-                    className="text-muted-foreground/30 hover:text-destructive transition-colors shrink-0"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+                    {/* Block header */}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
+                      <Input
+                        value={block.label}
+                        onChange={(e) => patchBlock(block.localId, { label: e.target.value })}
+                        className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-border focus:border-border w-28 px-1.5"
+                      />
+                      <div className="flex items-center gap-1.5 flex-1 flex-wrap">
+                        <select
+                          value={block.pharmaceuticalForm}
+                          onChange={(e) => patchBlock(block.localId, { pharmaceuticalForm: e.target.value })}
+                          className="h-6 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
+                        >
+                          {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
+                        </select>
+                        <Input
+                          value={block.posology}
+                          onChange={(e) => patchBlock(block.localId, { posology: e.target.value })}
+                          placeholder="Posologia (ex: 1x ao dia)"
+                          className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeBlock(block.localId)}
+                        className="text-muted-foreground/30 hover:text-destructive transition-colors shrink-0"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
 
-                {/* Items */}
-                <div className="divide-y divide-border/30">
-                  {block.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/10 transition-colors group">
-                      <span className="flex-1 text-xs font-medium text-foreground">{item.name}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Items */}
+                    <div className="divide-y divide-border/30">
+                      {block.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/10 transition-colors group">
+                          <span className="flex-1 text-xs font-medium text-foreground">{item.name}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Input
+                              type="number"
+                              step="any"
+                              value={item.dose}
+                              onChange={(e) => patchItem(block.localId, idx, { dose: parseFloat(e.target.value) || 0 })}
+                              className="h-6 w-20 text-xs text-right tabular-nums border-border/50"
+                            />
+                            <span className="text-[11px] text-muted-foreground w-8">{item.unit}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(block.localId, idx)}
+                              className="text-muted-foreground/20 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {block.items.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic px-3 py-2">
+                          Nenhum ativo neste bloco.
+                        </p>
+                      )}
+
+                      {/* Inline Form to Add Custom/Avulso Item */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/10 border-t border-border/20">
+                        <Input
+                          placeholder="Adicionar ativo avulso..."
+                          value={customItemInputs[block.localId]?.name ?? ""}
+                          onChange={(e) => setCustomItemInputs(prev => ({
+                            ...prev,
+                            [block.localId]: { ...prev[block.localId] || { name: "", dose: "", unit: "mg" }, name: e.target.value }
+                          }))}
+                          className="h-7 text-xs flex-1 bg-background"
+                        />
                         <Input
                           type="number"
-                          step="any"
-                          value={item.dose}
-                          onChange={(e) => patchItem(block.localId, idx, { dose: parseFloat(e.target.value) || 0 })}
-                          className="h-6 w-20 text-xs text-right tabular-nums border-border/50"
+                          placeholder="Qtd"
+                          value={customItemInputs[block.localId]?.dose ?? ""}
+                          onChange={(e) => setCustomItemInputs(prev => ({
+                            ...prev,
+                            [block.localId]: { ...prev[block.localId] || { name: "", dose: "", unit: "mg" }, dose: e.target.value }
+                          }))}
+                          className="h-7 w-14 text-xs text-right bg-background"
                         />
-                        <span className="text-[11px] text-muted-foreground w-8">{item.unit}</span>
+                        <select
+                          value={customItemInputs[block.localId]?.unit ?? "mg"}
+                          onChange={(e) => setCustomItemInputs(prev => ({
+                            ...prev,
+                            [block.localId]: { ...prev[block.localId] || { name: "", dose: "", unit: "mg" }, unit: e.target.value }
+                          }))}
+                          className="h-7 text-[11px] border border-border/60 rounded bg-background px-1 text-foreground"
+                        >
+                          {["mg", "mcg", "g", "UI", "ml", "gotas", "UFC"].map(u => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
                         <button
                           type="button"
-                          onClick={() => removeItem(block.localId, idx)}
-                          className="text-muted-foreground/20 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={() => handleAddCustomItem(block.localId)}
+                          className="h-7 w-7 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs font-semibold rounded transition-colors flex items-center justify-center shrink-0"
                         >
-                          <Trash2 size={12} />
+                          <Plus size={12} />
                         </button>
                       </div>
                     </div>
-                  ))}
                   {block.items.length === 0 && (
                     <p className="text-xs text-muted-foreground italic px-3 py-2">
                       Nenhum ativo neste bloco.
