@@ -5,11 +5,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchSubstrates, fetchReadyFormulas, savePrescription, fetchPatient,
-  fetchPrescriptions, deletePrescription, insertSubstrate,
+  fetchPrescriptions, deletePrescription, insertSubstrate, insertReadyFormula,
   type Substrate, type ReadyFormula, type SavedPrescription,
 } from "@/lib/supabase";
 
@@ -164,6 +169,14 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const [newSubIdealDose, setNewSubIdealDose] = useState("");
   const [registeringSub, setRegisteringSub] = useState(false);
 
+  const [readyFormulaOpen, setReadyFormulaOpen] = useState(false);
+  const [readyFormulaSourceId, setReadyFormulaSourceId] = useState<string | null>(null);
+  const [readyFormulaName, setReadyFormulaName] = useState("");
+  const [readyFormulaObjective, setReadyFormulaObjective] = useState("Geral");
+  const [readyFormulaPharmaForm, setReadyFormulaPharmaForm] = useState(PHARMA_FORMS[0]);
+  const [readyFormulaPosology, setReadyFormulaPosology] = useState("");
+  const [savingReadyFormula, setSavingReadyFormula] = useState(false);
+
   // Custom inline item input state
   const [customItemInputs, setCustomItemInputs] = useState<Record<string, { name: string; dose: string; unit: string }>>({});
 
@@ -205,7 +218,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
   const addFormula = (formula: ReadyFormula) => {
     const items: BlockItem[] = (formula.items ?? []).map((fi) => ({
       substrateId: fi.substrate_id,
-      name:        fi.substrate_name ?? fi.substrate?.name ?? "",
+      name:        fi.name ?? fi.substrate_name ?? fi.substrate?.name ?? "",
       dose:        fi.applied_dose,
       unit:        fi.unit,
     }));
@@ -263,6 +276,58 @@ export function PrescriptionBuilder({ patientId }: Props) {
 
   const handleAddEmptyBlock = () => {
     setBlocks((prev) => [...prev, addBlock()]);
+  };
+
+  const openReadyFormulaDialog = (block: PrescriptionBlock) => {
+    setReadyFormulaSourceId(block.localId);
+    setReadyFormulaName(block.label.trim() ? block.label.trim() : "Nova fórmula pronta");
+    setReadyFormulaObjective("Geral");
+    setReadyFormulaPharmaForm(block.pharmaceuticalForm || PHARMA_FORMS[0]);
+    setReadyFormulaPosology(block.posology);
+    setReadyFormulaOpen(true);
+  };
+
+  const handleSaveReadyFormula = async () => {
+    if (!readyFormulaName.trim()) {
+      toast.error("Digite o nome da fórmula pronta.");
+      return;
+    }
+
+    const sourceBlock = blocks.find((block) => block.localId === readyFormulaSourceId);
+    if (!sourceBlock) {
+      toast.error("Selecione um bloco válido para salvar.");
+      return;
+    }
+
+    if (sourceBlock.items.length === 0) {
+      toast.error("Adicione pelo menos um ativo ao bloco antes de salvar.");
+      return;
+    }
+
+    setSavingReadyFormula(true);
+    const ok = await insertReadyFormula({
+      name: readyFormulaName.trim(),
+      objective: readyFormulaObjective.trim() || "Geral",
+      posology: readyFormulaPosology.trim() || null,
+      pharmaceuticalForm: readyFormulaPharmaForm,
+      items: sourceBlock.items.map((item) => ({
+        substrateId: item.substrateId ?? null,
+        name: item.name,
+        appliedDose: item.dose,
+        unit: item.unit,
+      })),
+    });
+    setSavingReadyFormula(false);
+
+    if (!ok) {
+      toast.error("Não foi possível salvar a fórmula pronta.");
+      return;
+    }
+
+    const refreshed = await fetchReadyFormulas();
+    setFormulas(refreshed);
+    setReadyFormulaOpen(false);
+    toast.success("Fórmula pronta salva com sucesso.");
   };
 
   const handleCancelEdit = () => {
@@ -859,6 +924,18 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
                         />
                       </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReadyFormulaDialog(block)}
+                        disabled={block.items.length === 0}
+                        className="h-7 gap-1 text-[11px] border-primary/15 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
+                        title="Salvar este bloco como fórmula pronta"
+                      >
+                        <Save size={11} />
+                        Fórmula pronta
+                      </Button>
                       <button
                         type="button"
                         onClick={() => removeBlock(block.localId)}
@@ -965,6 +1042,79 @@ export function PrescriptionBuilder({ patientId }: Props) {
           </div>
         )}
       </div>
+
+      <Dialog open={readyFormulaOpen} onOpenChange={setReadyFormulaOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Salvar como fórmula pronta</DialogTitle>
+            <DialogDescription>
+              Crie um modelo reutilizável a partir do bloco atual para acelerar próximas prescrições.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Nome da fórmula</p>
+              <Input
+                value={readyFormulaName}
+                onChange={(e) => setReadyFormulaName(e.target.value)}
+                placeholder="Ex: Protocolo Energia e Foco"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">Objetivo</p>
+                <Input
+                  value={readyFormulaObjective}
+                  onChange={(e) => setReadyFormulaObjective(e.target.value)}
+                  placeholder="Ex: Energia"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">Forma farmacêutica</p>
+                <select
+                  value={readyFormulaPharmaForm}
+                  onChange={(e) => setReadyFormulaPharmaForm(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {PHARMA_FORMS.map((form) => (
+                    <option key={form} value={form}>{form}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Posologia</p>
+              <Textarea
+                value={readyFormulaPosology}
+                onChange={(e) => setReadyFormulaPosology(e.target.value)}
+                placeholder="Ex: 1 cápsula ao dia, preferencialmente pela manhã."
+                className="min-h-24 resize-none"
+              />
+            </div>
+
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+              Itens cadastrados e ativos avulsos serão preservados na fórmula pronta.
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setReadyFormulaOpen(false)}
+              className="sm:mr-auto"
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveReadyFormula} disabled={savingReadyFormula}>
+              {savingReadyFormula ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Save size={14} className="mr-1.5" />}
+              {savingReadyFormula ? "Salvando..." : "Salvar fórmula pronta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

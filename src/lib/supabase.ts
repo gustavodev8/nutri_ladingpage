@@ -1676,9 +1676,10 @@ export interface Substrate {
 }
 
 export interface FormulaItem {
-  substrate_id:   number;
+  name?:          string | null;
+  substrate_id?:  number | null;
   substrate_name?: string;
-  substrate?:     { name: string };
+  substrate?:     { name: string } | null;
   applied_dose:   number;
   unit:           string;
   sort_order?:    number;
@@ -1718,21 +1719,110 @@ export async function fetchSubstrates(): Promise<Substrate[]> {
 }
 
 export async function fetchReadyFormulas(): Promise<ReadyFormula[]> {
-  const { data, error } = await supabaseAdmin
-    .from("ready_formulas")
-    .select(`*, items:formula_items(substrate_id, applied_dose, unit, sort_order, substrate:substrates(name))`)
-    .order("objective")
-    .order("name");
-  if (error) { console.error("[Supabase] fetchReadyFormulas:", error.message); return []; }
-  return (data ?? []).map((f) => ({
+  const mapFormulas = (rows: Array<{
+    items?: FormulaItem[];
+  } & Omit<ReadyFormula, "items">>): ReadyFormula[] => rows.map((f) => ({
     ...f,
     items: (f.items ?? [])
       .sort((a: FormulaItem, b: FormulaItem) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((fi: FormulaItem) => ({
         ...fi,
-        substrate_name: fi.substrate?.name ?? "",
-      })),
+        substrate_name: fi.name ?? fi.substrate?.name ?? "",
+    })),
   }));
+
+  const { data, error } = await supabaseAdmin
+    .from("ready_formulas")
+    .select(`*, items:formula_items(name, substrate_id, applied_dose, unit, sort_order, substrate:substrates(name))`)
+    .order("objective")
+    .order("name");
+  if (!error) return mapFormulas((data ?? []) as Array<ReadyFormula & { items?: FormulaItem[] }>);
+
+  const legacy = await supabaseAdmin
+    .from("ready_formulas")
+    .select(`*, items:formula_items(substrate_id, applied_dose, unit, sort_order, substrate:substrates(name))`)
+    .order("objective")
+    .order("name");
+  if (legacy.error) {
+    console.error("[Supabase] fetchReadyFormulas:", legacy.error.message);
+    return [];
+  }
+  return mapFormulas((legacy.data ?? []) as Array<ReadyFormula & { items?: FormulaItem[] }>);
+}
+
+export interface ReadyFormulaCreateInput {
+  name: string;
+  objective: string;
+  posology?: string | null;
+  pharmaceuticalForm: string;
+  items: {
+    substrateId?: number | null;
+    name: string;
+    appliedDose: number;
+    unit: string;
+  }[];
+}
+
+export async function insertReadyFormula(input: ReadyFormulaCreateInput): Promise<boolean> {
+  if (input.items.length === 0) {
+    console.error("[Supabase] insertReadyFormula: no items provided");
+    return false;
+  }
+
+  const createFormulaRow = async () => supabaseAdmin
+    .from("ready_formulas")
+    .insert({
+      name: input.name,
+      objective: input.objective,
+      posology: input.posology ?? null,
+      pharmaceutical_form: input.pharmaceuticalForm,
+    })
+    .select("id")
+    .single();
+
+  const createItems = async (formulaId: number, includeName: boolean) => {
+    const rows = input.items.map((item, index) => ({
+      formula_id: formulaId,
+      substrate_id: item.substrateId ?? null,
+      ...(includeName ? { name: item.name } : {}),
+      applied_dose: item.appliedDose,
+      unit: item.unit,
+      sort_order: index,
+    }));
+    return supabaseAdmin.from("formula_items").insert(rows);
+  };
+
+  const { data, error } = await createFormulaRow();
+
+  if (error || !data?.id) {
+    console.error("[Supabase] insertReadyFormula:", error?.message);
+    return false;
+  }
+
+  const { error: itemsError } = await createItems(data.id as number, true);
+
+  if (itemsError) {
+    console.error("[Supabase] insertReadyFormula items:", itemsError.message);
+    await supabaseAdmin.from("ready_formulas").delete().eq("id", data.id as number);
+    if (input.items.every((item) => item.substrateId != null)) {
+      const legacyCreate = await createFormulaRow();
+      if (legacyCreate.error || !legacyCreate.data?.id) {
+        console.error("[Supabase] insertReadyFormula legacy:", legacyCreate.error?.message);
+        return false;
+      }
+
+      const { error: legacyItemsError } = await createItems(legacyCreate.data.id as number, false);
+      if (legacyItemsError) {
+        console.error("[Supabase] insertReadyFormula legacy items:", legacyItemsError.message);
+        await supabaseAdmin.from("ready_formulas").delete().eq("id", legacyCreate.data.id as number);
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  return true;
 }
 
 export async function insertSubstrate(sub: Omit<Substrate, "id">): Promise<Substrate | null> {
