@@ -362,9 +362,12 @@ export function generateMealPlanPdf(
     y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y, "main");
 
     if (meal.alternative_meals && meal.alternative_meals.length > 0) {
-      const selected = options?.selectedAlternatives?.[index];
-      const altIndexes = selected && selected.length > 0
-        ? meal.alternative_meals.map((_, altIdx) => altIdx).filter((altIdx) => selected.includes(altIdx))
+      const hasSelection = options?.selectedAlternatives
+        ? Object.prototype.hasOwnProperty.call(options.selectedAlternatives, index)
+        : false;
+      const selected = options?.selectedAlternatives?.[index] ?? [];
+      const altIndexes = hasSelection
+        ? selected
         : meal.alternative_meals.map((_, altIdx) => altIdx);
 
       altIndexes.forEach((altIdx) => {

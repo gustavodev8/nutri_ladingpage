@@ -19,16 +19,8 @@ interface Props {
 }
 
 function buildInitialSelection(meals: Meal[]) {
-  const nextSelection: SelectedAlternatives = {};
-
-  meals.forEach((meal, mealIndex) => {
-    const alternatives = meal.alternative_meals ?? [];
-    if (alternatives.length > 0) {
-      nextSelection[mealIndex] = alternatives.map((_, altIndex) => altIndex);
-    }
-  });
-
-  return nextSelection;
+  void meals;
+  return {};
 }
 
 export function MealPlanPdfOptionsDialog({
@@ -68,7 +60,16 @@ export function MealPlanPdfOptionsDialog({
   };
 
   const handleConfirm = () => {
-    onConfirm(selection);
+    const normalizedSelection: SelectedAlternatives = {};
+
+    meals.forEach((meal, mealIndex) => {
+      const alternatives = meal.alternative_meals ?? [];
+      if (alternatives.length > 0) {
+        normalizedSelection[mealIndex] = selection[mealIndex] ?? [];
+      }
+    });
+
+    onConfirm(normalizedSelection);
   };
 
   const mealsWithAlternatives = meals.filter((meal) => (meal.alternative_meals?.length ?? 0) > 0);
@@ -91,7 +92,7 @@ export function MealPlanPdfOptionsDialog({
               const alternatives = meal.alternative_meals ?? [];
               if (alternatives.length === 0) return null;
 
-              const selected = selection[mealIndex] ?? alternatives.map((_, altIndex) => altIndex);
+              const selected = selection[mealIndex] ?? [];
 
               return (
                 <div key={`${meal.meal_name}-${mealIndex}`} className="rounded-2xl border border-border/70 bg-background p-4">
