@@ -1,8 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { CalendarRange, ChevronRight, FileText, Loader2, Mail, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { generateMealPlanPdf } from "@/lib/generateMealPlanPdf";
+import { MealPlanPdfOptionsDialog } from "@/components/admin/MealPlanPdfOptionsDialog";
 import type { MealPlan, Meal, Patient } from "@/lib/supabase";
 
 interface Props {
@@ -24,18 +25,20 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
     `Olá${patient?.name ? `, ${patient.name.split(" ")[0]}` : ""}!\n\nSegue em anexo seu plano alimentar personalizado.\n\nResumo:\n• Plano: ${plan.title}\n• Refeições: ${meals.length}\n• Meta diária: ${formatKcal(plan.daily_calories)}\n\nSe precisar de ajustes, fico à disposição.\n\nAbraços!`
   );
   const [sending, setSending] = useState(false);
+  const [showPdfOptions, setShowPdfOptions] = useState(false);
 
   const pdfFilename = `plano-${plan.title.toLowerCase().replace(/\s+/g, "-")}-${patient?.name?.split(" ")[0]?.toLowerCase() ?? "paciente"}.pdf`;
 
-  const handleSend = async () => {
+  const handleSend = async (selectedAlternatives: Record<number, number[]>) => {
     if (!to.trim()) {
       toast.error("Informe o e-mail do destinatário.");
       return;
     }
 
     setSending(true);
+    setShowPdfOptions(false);
     try {
-      const doc = generateMealPlanPdf(plan, meals, patient);
+      const doc = generateMealPlanPdf(plan, meals, patient, { selectedAlternatives });
       const pdfB64 = doc.output("datauristring").split(",")[1];
 
       const { data, error } = await supabase.functions.invoke("send-material", {
@@ -82,9 +85,7 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold tracking-tight text-foreground">Enviar dieta por e-mail</h2>
-                  <p className="text-xs text-muted-foreground">
-                    O PDF será gerado automaticamente com apresentação clínica.
-                  </p>
+                  <p className="text-xs text-muted-foreground">O PDF será gerado automaticamente com apresentação clínica.</p>
                 </div>
               </div>
             </div>
@@ -167,9 +168,7 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">{pdfFilename}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      PDF gerado automaticamente com a identidade visual do plano.
-                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">PDF gerado automaticamente com a identidade visual do plano.</p>
                   </div>
                 </div>
               </div>
@@ -193,7 +192,13 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
           </button>
           <button
             type="button"
-            onClick={handleSend}
+            onClick={() => {
+              if (!to.trim()) {
+                toast.error("Informe o e-mail do destinatário.");
+                return;
+              }
+              setShowPdfOptions(true);
+            }}
             disabled={sending || !to.trim()}
             className="flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
@@ -202,6 +207,19 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      <MealPlanPdfOptionsDialog
+        open={showPdfOptions}
+        meals={meals}
+        title="Escolher substituições do PDF"
+        description="Marque quais opções substitutas devem aparecer no PDF do e-mail. Elas serão impressas abaixo da refeição principal, em destaque."
+        confirmLabel={sending ? "Enviando..." : "Enviar e-mail"}
+        emptyMessage="Nenhuma refeição com substituição foi encontrada neste plano."
+        onOpenChange={(open) => {
+          if (!sending) setShowPdfOptions(open);
+        }}
+        onConfirm={handleSend}
+      />
     </div>
   );
 }

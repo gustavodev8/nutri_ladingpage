@@ -409,12 +409,13 @@ async function getRules(): Promise<SubstitutionRule[]> {
 }
 
 export function MealSection({
-  meal, idx, onUpdate, onRemove, targetCalories,
+  meal, idx, onUpdate, onRemove, targetCalories, resetKey,
 }: {
   meal: EditorMeal; idx: number;
   onUpdate: (m: EditorMeal) => void;
   onRemove: () => void;
   targetCalories?: number;
+  resetKey?: string | number;
 }) {
   const alternatives  = meal.alternative_meals ?? [];
   const totalOptions  = alternatives.length + 1; // principal + substitutas
@@ -487,6 +488,14 @@ export function MealSection({
     const t = clamped === 0 ? meal : alternatives[clamped - 1];
     setShowNotes(!!t?.notes);
   };
+
+  useEffect(() => {
+    setActiveOptionIdx(0);
+    setShowNotes(!!meal.notes);
+    setShowSubs((meal.substitution_items ?? []).length > 0);
+    loaded.current = false;
+    setSuggestions([]);
+  }, [resetKey]); // reset when loading a different plan/meal record
 
   // ── Helpers para atualizar a opção ativa ─────────────────────────────────
   const updateCurrentOption = (patch: Partial<Pick<AlternativeMealDraft, "meal_name" | "time_suggestion" | "notes" | "foods">>) => {

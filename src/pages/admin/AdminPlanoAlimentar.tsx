@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -32,6 +31,7 @@ import {
 import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
+import { MealPlanPdfOptionsDialog } from "@/components/admin/MealPlanPdfOptionsDialog";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { MealPresetImportModal } from "@/components/admin/MealPresetImportModal";
 import { useConsultation } from "@/contexts/ConsultationContext";
@@ -122,7 +122,6 @@ export default function AdminPlanoAlimentar() {
   const [mealPresetDraftDescription, setMealPresetDraftDescription] = useState("");
   const [savingMealPreset, setSavingMealPreset] = useState(false);
   const [showPdfOptions, setShowPdfOptions] = useState(false);
-  const [pdfAlternativeSelection, setPdfAlternativeSelection] = useState<Record<number, number[]>>({});
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
   const [previousPlan, setPreviousPlan]  = useState<MealPlan | null>(null);
 
@@ -221,80 +220,28 @@ export default function AdminPlanoAlimentar() {
     if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
   };
 
-  const handleDownloadPdf = () => {
-    if (isNew || !plan.id) {
-      toast.info("Salve o plano antes de gerar o PDF.");
-      return;
-    }
-
-    try {
-      const doc = generateMealPlanPdf(
-        plan,
-        meals.map((m) => editorToMeal(m, plan.id ?? 0)),
-        patient,
-      );
-      const safeTitle = plan.title
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-      const fileName = `${safeTitle || "plano-alimentar"}-${patient?.name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "paciente"}.pdf`;
-      doc.save(fileName);
-      toast.success("PDF gerado com sucesso.");
-    } catch (error) {
-      toast.error("Não foi possível gerar o PDF.");
-      console.error("[AdminPlanoAlimentar] handleDownloadPdf:", error);
-    }
-  };
-
   const normalizeFilePart = (value: string | undefined) =>
-    (value ?? "")
+    (value ?? '')
       .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
   const buildPdfFileName = () =>
     `${normalizeFilePart(plan.title) || "plano-alimentar"}-${normalizeFilePart(patient?.name) || "paciente"}.pdf`;
 
   const openPdfOptions = () => {
     if (isNew || !plan.id) {
-      toast.info("Salve o plano antes de gerar o PDF.");
+      toast.info('Salve o plano antes de gerar o PDF.');
       return;
     }
-
-    const nextSelection: Record<number, number[]> = {};
-    meals.forEach((meal, mealIndex) => {
-      const altCount = meal.alternative_meals?.length ?? 0;
-      if (altCount > 0) {
-        nextSelection[mealIndex] = meal.alternative_meals!.map((_, altIndex) => altIndex);
-      }
-    });
-
-    setPdfAlternativeSelection(nextSelection);
     setShowPdfOptions(true);
   };
 
-  const togglePdfAlternative = (mealIndex: number, altIndex: number) => {
-    setPdfAlternativeSelection((current) => {
-      const selected = current[mealIndex] ?? [];
-      const nextSelected = selected.includes(altIndex)
-        ? selected.filter((index) => index !== altIndex)
-        : [...selected, altIndex];
-      return { ...current, [mealIndex]: nextSelected };
-    });
-  };
-
-  const confirmDownloadPdf = () => {
+  const confirmDownloadPdf = (selectedAlternatives: Record<number, number[]>) => {
     if (isNew || !plan.id) {
-      toast.info("Salve o plano antes de gerar o PDF.");
+      toast.info('Salve o plano antes de gerar o PDF.');
       return;
     }
 
@@ -303,14 +250,14 @@ export default function AdminPlanoAlimentar() {
         plan,
         meals.map((m) => editorToMeal(m, plan.id ?? 0)),
         patient,
-        { selectedAlternatives: pdfAlternativeSelection },
+        { selectedAlternatives },
       );
       doc.save(buildPdfFileName());
-      toast.success("PDF gerado com sucesso.");
+      toast.success('PDF gerado com sucesso.');
       setShowPdfOptions(false);
     } catch (error) {
-      toast.error("Não foi possível gerar o PDF.");
-      console.error("[AdminPlanoAlimentar] confirmDownloadPdf:", error);
+      toast.error('N?o foi poss?vel gerar o PDF.');
+      console.error('[AdminPlanoAlimentar] confirmDownloadPdf:', error);
     }
   };
 
@@ -1041,6 +988,7 @@ export default function AdminPlanoAlimentar() {
                   </button>
                 </div>
                 <MealSection key={i} meal={meal} idx={i}
+                  resetKey={plan.id ?? resolvedPlanId}
                   onUpdate={(m) => updateMeal(i, m)}
                   onRemove={() => removeMeal(i)}
                   targetCalories={mealTargets[i]?.targetCalories}
@@ -1152,105 +1100,16 @@ export default function AdminPlanoAlimentar() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showPdfOptions} onOpenChange={setShowPdfOptions}>
-        <DialogContent className="max-w-3xl rounded-3xl border-border/60">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="text-xl font-semibold">Escolher substituições do PDF</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-              Marque quais opções substitutas devem aparecer no PDF. Elas serão impressas abaixo da refeição principal, em destaque.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-            {meals.filter((meal) => (meal.alternative_meals?.length ?? 0) > 0).length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-                Nenhuma refeição com substituição foi encontrada neste plano.
-              </div>
-            ) : (
-              meals.map((meal, mealIndex) => {
-                const alternatives = meal.alternative_meals ?? [];
-                if (alternatives.length === 0) return null;
-
-                const selected = pdfAlternativeSelection[mealIndex] ?? alternatives.map((_, altIndex) => altIndex);
-
-                return (
-                  <div key={`${meal.meal_name}-${mealIndex}`} className="rounded-2xl border border-border/70 bg-background p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Refeição {mealIndex + 1}</p>
-                        <h3 className="mt-1 text-base font-semibold text-foreground">{meal.meal_name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {alternatives.length} opção{alternatives.length === 1 ? "" : "ões"} de substituição
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onClick={() => setPdfAlternativeSelection((current) => ({
-                          ...current,
-                          [mealIndex]: alternatives.map((_, altIndex) => altIndex),
-                        }))}
-                      >
-                        Selecionar todas
-                      </Button>
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      {alternatives.map((alt, altIndex) => {
-                        const checked = selected.includes(altIndex);
-                        return (
-                          <label
-                            key={`${mealIndex}-${altIndex}`}
-                            className={cn(
-                              "flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors",
-                              checked
-                                ? "border-primary bg-primary/5"
-                                : "border-border/70 bg-muted/10 hover:bg-muted/20",
-                            )}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={() => togglePdfAlternative(mealIndex, altIndex)}
-                              className="mt-0.5"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-                                  Substituição {altIndex + 1}
-                                </span>
-                                {alt.time_suggestion && (
-                                  <span className="text-xs text-muted-foreground">{alt.time_suggestion}</span>
-                                )}
-                              </div>
-                              <p className="mt-1 font-medium text-foreground">{alt.meal_name || `Opção ${altIndex + 1}`}</p>
-                              {alt.notes?.trim() && (
-                                <p className="mt-1 text-sm text-muted-foreground">{alt.notes}</p>
-                              )}
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button type="button" variant="outline" onClick={() => setShowPdfOptions(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={confirmDownloadPdf} className="gap-2">
-              <Printer size={14} />
-              Gerar PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <MealPlanPdfOptionsDialog
+        open={showPdfOptions}
+        meals={meals.map((m) => editorToMeal(m, plan.id ?? 0))}
+        title="Escolher substitui??es do PDF"
+        description="Marque quais op??es substitutas devem aparecer no PDF. Elas ser?o impressas abaixo da refei??o principal, em destaque."
+        confirmLabel="Gerar PDF"
+        emptyMessage="Nenhuma refei??o com substitui??o foi encontrada neste plano."
+        onOpenChange={setShowPdfOptions}
+        onConfirm={confirmDownloadPdf}
+      />
       {showEmail && (
         <EmailPlanModal
           plan={plan}
