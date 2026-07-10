@@ -200,6 +200,105 @@ function drawColumnsSubstitutions(
   return y;
 }
 
+function alternativeMealHeight(meal: Meal) {
+  const foods = meal.foods ?? [];
+  const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
+  const previewLines = foods.length > 0 ? Math.min(foods.length, 3) : 1;
+  const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
+  return 24 + previewLines * 4.5 + (notesLines ? 8 + notesLines * 3.5 : 0) + (subs ? 6 + subs * 2.8 : 0);
+}
+
+function drawAlternativeMealColumns(
+  doc: jsPDF,
+  meals: Meal[],
+  pageWidth: number,
+  pageHeight: number,
+  margin: number,
+  cursorY: number,
+) {
+  const contentW = pageWidth - margin * 2;
+  const gap = 4;
+  const cardW = (contentW - gap) / 2;
+  let y = cursorY;
+
+  for (let i = 0; i < meals.length; i += 2) {
+    const left = meals[i];
+    const right = meals[i + 1];
+    const leftH = alternativeMealHeight(left);
+    const rightH = right ? alternativeMealHeight(right) : 0;
+    const rowH = Math.max(leftH, rightH || leftH);
+
+    if (y + rowH > pageHeight - 16) {
+      doc.addPage();
+      y = 14;
+    }
+
+    const drawCard = (x: number, meal: Meal, index: number) => {
+      roundRect(doc, x, y, cardW, rowH, 2, C.white, C.lineStrong);
+      doc.setFillColor(...C.soft2);
+      doc.rect(x, y, cardW, 8, "F");
+
+      doc.setTextColor(...C.accent);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.2);
+      doc.text(`Substituição ${index + 1}`, x + 4, y + 5.1);
+
+      doc.setTextColor(...C.ink);
+      doc.setFontSize(8.8);
+      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, cardW - 8);
+      doc.text(titleLines, x + 4, y + 12);
+
+      let localY = y + 12 + titleLines.length * 3.6;
+      if (meal.time_suggestion) {
+        doc.setTextColor(...C.muted);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.2);
+        doc.text(meal.time_suggestion, x + 4, localY + 2.5);
+        localY += 5;
+      }
+
+      const totals = sum(meal.foods);
+      doc.setTextColor(...C.muted);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.text(`${Math.round(totals.cal)} kcal`, x + 4, localY + 2.5);
+      localY += 5;
+
+      const previewFoods = (meal.foods ?? [])
+        .map((food) => food.food_name)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" • ");
+      if (previewFoods) {
+        doc.setTextColor(...C.ink);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.6);
+        const previewLines = doc.splitTextToSize(previewFoods, cardW - 8);
+        doc.text(previewLines, x + 4, localY + 2.5);
+        localY += previewLines.length * 3.3;
+      }
+
+      const note = (meal.notes ?? "").trim();
+      if (note) {
+        doc.setTextColor(...C.muted);
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7);
+        const noteLines = doc.splitTextToSize(note, cardW - 8);
+        doc.text(noteLines, x + 4, Math.min(localY + 2.5, y + rowH - 5));
+      }
+    };
+
+    drawCard(margin, left, i);
+    if (right) {
+      drawCard(margin + cardW + gap, right, i + 1);
+    }
+
+    y += rowH + 2;
+  }
+
+  return y;
+}
+
 function drawMeal(
   doc: jsPDF,
   meal: Meal,
@@ -458,19 +557,26 @@ export function generateMealPlanPdf(
         ? selected
         : meal.alternative_meals.map((_, altIdx) => altIdx);
 
-      altIndexes.forEach((altIdx) => {
-        const alt = meal.alternative_meals?.[altIdx];
-        if (!alt) return;
-        const altMeal: Meal = {
+      const selectedAlternatives = altIndexes
+        .map((altIdx) => meal.alternative_meals?.[altIdx])
+        .filter((alt): alt is NonNullable<Meal["alternative_meals"]>[number] => Boolean(alt))
+        .map((alt, altIdx) => ({
           plan_id: meal.plan_id,
-          meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 2}`,
+          meal_name: alt.meal_name || `${meal.meal_name} ? Op??o ${altIdx + 2}`,
           time_suggestion: alt.time_suggestion,
           notes: alt.notes,
           foods: alt.foods,
-        };
-        const subLabel = `${label}.${String.fromCharCode(97 + altIdx)}`; // e.g. "01.a", "01.b"
-        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y, substitutionLayout, "substitution");
-      });
+          substitution_items: alt.substitution_items ?? [],
+        }));
+
+      if (substitutionLayout === "columns" && selectedAlternatives.length > 1) {
+        y = drawAlternativeMealColumns(doc, selectedAlternatives, pageWidth, pageHeight, margin, y);
+      } else {
+        selectedAlternatives.forEach((altMeal, altIdx) => {
+          const subLabel = `${label}.${String.fromCharCode(97 + altIdx)}`;
+          y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y, substitutionLayout, "substitution");
+        });
+      }
     }
   });
 
