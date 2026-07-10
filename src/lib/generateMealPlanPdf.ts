@@ -205,7 +205,7 @@ function alternativeMealHeight(meal: Meal) {
   const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
   const previewLines = foods.length > 0 ? Math.min(foods.length, 4) : 1;
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
-  return 28 + previewLines * 4.2 + (notesLines ? 8 + notesLines * 3.2 : 0) + (subs ? 6 + subs * 2.4 : 0);
+  return 34 + previewLines * 4.8 + (notesLines ? 8 + notesLines * 3.2 : 0) + (subs ? 6 + subs * 2.4 : 0);
 }
 
 function drawAlternativeMealColumns(
@@ -238,38 +238,38 @@ function drawAlternativeMealColumns(
 
     const drawCard = (x: number, w: number, meal: Meal, index: number, showAccentBar: boolean) => {
       roundRect(doc, x, y, w, rowH, 2, C.white, C.lineStrong);
-      doc.setFillColor(...C.soft2);
-      doc.rect(x, y, w, 8, "F");
+      doc.setFillColor(...C.accent);
+      doc.rect(x, y, w, 7.5, "F");
       if (showAccentBar) {
         doc.setFillColor(...C.accent);
         doc.rect(x, y, 2.4, rowH, "F");
       }
 
-      doc.setTextColor(...C.accent);
+      doc.setTextColor(...C.white);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.2);
-      doc.text(`Substituição ${index + 1}`, x + 4, y + 5.1);
+      doc.setFontSize(6.8);
+      doc.text(`Substituição ${index + 1}`, x + 4, y + 4.9);
 
       doc.setTextColor(...C.ink);
-      doc.setFontSize(8.6);
-      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, w - 8);
-      doc.text(titleLines, x + 4, y + 12);
+      doc.setFontSize(9.4);
+      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, w - 10);
+      doc.text(titleLines, x + 4, y + 11.8);
 
-      let localY = y + 12 + titleLines.length * 3.6;
+      let localY = y + 11.8 + titleLines.length * 4.1;
       if (meal.time_suggestion) {
         doc.setTextColor(...C.muted);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.2);
-        doc.text(meal.time_suggestion, x + 4, localY + 2.5);
-        localY += 5;
+        doc.setFontSize(7.5);
+        doc.text(meal.time_suggestion, x + 4, localY + 3);
+        localY += 5.5;
       }
 
       const totals = sum(meal.foods);
-      doc.setTextColor(...C.muted);
+      doc.setTextColor(...C.accent);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7);
-      doc.text(`${Math.round(totals.cal)} kcal`, x + 4, localY + 2.5);
-      localY += 5;
+      doc.setFontSize(7.6);
+      doc.text(`${Math.round(totals.cal)} kcal`, x + 4, localY + 3);
+      localY += 6;
 
       const foods = (meal.foods ?? [])
         .filter((food) => food.food_name.trim())
@@ -277,12 +277,13 @@ function drawAlternativeMealColumns(
       if (foods.length > 0) {
         doc.setTextColor(...C.ink);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.2);
+        doc.setFontSize(7.6);
         foods.forEach((food) => {
-          const line = `• ${food.food_name}${food.quantity ? ` ${mealQty(food)}` : ""}`;
-          const lines = doc.splitTextToSize(line, w - 8);
-          doc.text(lines, x + 4, localY + 2.2);
-          localY += lines.length * 3.5;
+          const qty = food.quantity ? ` ${mealQty(food)}` : "";
+          const line = `• ${food.food_name}${qty}`;
+          const lines = doc.splitTextToSize(line, w - 10);
+          doc.text(lines, x + 4, localY + 2.8);
+          localY += lines.length * 3.8;
         });
       }
 
@@ -290,9 +291,9 @@ function drawAlternativeMealColumns(
       if (note) {
         doc.setTextColor(...C.muted);
         doc.setFont("helvetica", "italic");
-        doc.setFontSize(7);
-        const noteLines = doc.splitTextToSize(note, w - 8);
-        doc.text(noteLines, x + 4, Math.min(localY + 2.5, y + rowH - 5));
+        doc.setFontSize(7.2);
+        const noteLines = doc.splitTextToSize(note, w - 10);
+        doc.text(noteLines, x + 4, Math.min(localY + 2.8, y + rowH - 5));
       }
     };
 
