@@ -225,8 +225,8 @@ function drawAlternativeMealColumns(
     const left = meals[i];
     const right = meals[i + 1];
     const leftH = alternativeMealHeight(left);
-    const rightH = right ? alternativeMealHeight(right) : 0;
-    const rowH = Math.max(leftH, rightH || leftH);
+    const rightH = right ? alternativeMealHeight(right) : leftH;
+    const rowH = Math.max(leftH, rightH);
 
     if (y + rowH > pageHeight - 16) {
       doc.addPage();
@@ -288,9 +288,24 @@ function drawAlternativeMealColumns(
       }
     };
 
+    const drawPlaceholder = (x: number) => {
+      roundRect(doc, x, y, cardW, rowH, 2, C.white, C.line);
+      doc.setFillColor(...C.soft);
+      doc.rect(x, y, cardW, 8, "F");
+      doc.setTextColor(...C.muted);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.text("Espaço reservado", x + 4, y + 5.1);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.8);
+      doc.text("Sem segunda opção nesta linha.", x + 4, y + 14);
+    };
+
     drawCard(margin, left, i);
     if (right) {
       drawCard(margin + cardW + gap, right, i + 1);
+    } else {
+      drawPlaceholder(margin + cardW + gap);
     }
 
     y += rowH + 2;
@@ -558,11 +573,14 @@ export function generateMealPlanPdf(
         : meal.alternative_meals.map((_, altIdx) => altIdx);
 
       const selectedAlternatives = altIndexes
-        .map((altIdx) => meal.alternative_meals?.[altIdx])
-        .filter((alt): alt is NonNullable<Meal["alternative_meals"]>[number] => Boolean(alt))
-        .map((alt, altIdx) => ({
+        .map((altIdx) => ({
+          altIdx,
+          alt: meal.alternative_meals?.[altIdx],
+        }))
+        .filter((item): item is { altIdx: number; alt: NonNullable<Meal["alternative_meals"]>[number] } => Boolean(item.alt))
+        .map(({ altIdx, alt }) => ({
           plan_id: meal.plan_id,
-          meal_name: alt.meal_name || `${meal.meal_name} ? Op??o ${altIdx + 2}`,
+          meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 1}`,
           time_suggestion: alt.time_suggestion,
           notes: alt.notes,
           foods: alt.foods,
