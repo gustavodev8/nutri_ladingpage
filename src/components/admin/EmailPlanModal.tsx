@@ -29,7 +29,10 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
 
   const pdfFilename = `plano-${plan.title.toLowerCase().replace(/\s+/g, "-")}-${patient?.name?.split(" ")[0]?.toLowerCase() ?? "paciente"}.pdf`;
 
-  const handleSend = async (selectedAlternatives: Record<number, number[]>) => {
+  const handleSend = async (
+    selectedAlternatives: Record<number, number[]>,
+    substitutionLayout: "stacked" | "columns",
+  ) => {
     if (!to.trim()) {
       toast.error("Informe o e-mail do destinatário.");
       return;
@@ -38,7 +41,7 @@ export function EmailPlanModal({ plan, meals, patient, onClose }: Props) {
     setSending(true);
     setShowPdfOptions(false);
     try {
-      const doc = generateMealPlanPdf(plan, meals, patient, { selectedAlternatives });
+      const doc = generateMealPlanPdf(plan, meals, patient, { selectedAlternatives, substitutionLayout });
       const pdfB64 = doc.output("datauristring").split(",")[1];
 
       const { data, error } = await supabase.functions.invoke("send-material", {

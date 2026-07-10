@@ -239,7 +239,10 @@ export default function AdminPlanoAlimentar() {
     setShowPdfOptions(true);
   };
 
-  const confirmDownloadPdf = (selectedAlternatives: Record<number, number[]>) => {
+  const confirmDownloadPdf = (
+    selectedAlternatives: Record<number, number[]>,
+    substitutionLayout: "stacked" | "columns",
+  ) => {
     if (isNew || !plan.id) {
       toast.info('Salve o plano antes de gerar o PDF.');
       return;
@@ -250,7 +253,7 @@ export default function AdminPlanoAlimentar() {
         plan,
         meals.map((m) => editorToMeal(m, plan.id ?? 0)),
         patient,
-        { selectedAlternatives },
+        { selectedAlternatives, substitutionLayout },
       );
       doc.save(buildPdfFileName());
       toast.success('PDF gerado com sucesso.');

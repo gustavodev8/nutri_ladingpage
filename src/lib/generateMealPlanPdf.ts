@@ -79,11 +79,17 @@ function labelValue(
   doc.text(value, x + 4, y + 13);
 }
 
-function mealHeight(meal: Meal) {
+function mealHeight(meal: Meal, substitutionLayout: "stacked" | "columns" = "stacked") {
   const foods = meal.foods ?? [];
   const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
-  return 30 + foods.length * 7.2 + (notesLines ? 10 + notesLines * 4.4 : 0) + (subs ? 10 + subs * 4 : 0);
+  const substitutionHeight =
+    subs === 0
+      ? 0
+      : substitutionLayout === "columns" && subs > 1
+        ? 12 + Math.ceil(subs / 2) * 20
+        : 10 + subs * 4;
+  return 30 + foods.length * 7.2 + (notesLines ? 10 + notesLines * 4.4 : 0) + substitutionHeight;
 }
 
 function mealQty(food: NonNullable<Meal["foods"]>[number]) {
@@ -93,6 +99,105 @@ function mealQty(food: NonNullable<Meal["foods"]>[number]) {
 
 export interface MealPlanPdfOptions {
   selectedAlternatives?: Record<number, number[]>;
+  substitutionLayout?: "stacked" | "columns";
+}
+
+function formatSubstitutionText(sub: NonNullable<Meal["substitution_items"]>[number], index: number) {
+  const qty = sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : "";
+  const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `Opção ${index + 1}: `;
+  const note = sub.notes ? ` - ${sub.notes}` : "";
+  return `${prefix}${qty}${sub.food_name}${note}`;
+}
+
+function drawStackedSubstitutions(
+  doc: jsPDF,
+  subs: NonNullable<Meal["substitution_items"]>,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number,
+  cursorY: number,
+) {
+  const contentW = pageWidth - margin * 2;
+  const text = subs
+    .map((sub, index) => formatSubstitutionText(sub, index))
+    .join("\n");
+  const lines = doc.splitTextToSize(text, contentW - 10);
+  const h = 8 + lines.length * 3.8;
+  if (cursorY + h > pageHeight - 16) {
+    doc.addPage();
+    cursorY = 14;
+  }
+  roundRect(doc, margin + 4, cursorY, contentW - 8, h, 2, [251, 251, 251], C.line);
+  doc.setTextColor(...C.ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.text("Substituições", margin + 8, cursorY + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.7);
+  doc.text(lines, margin + 8, cursorY + 9);
+  return cursorY + h + 2;
+}
+
+function drawColumnsSubstitutions(
+  doc: jsPDF,
+  subs: NonNullable<Meal["substitution_items"]>,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number,
+  cursorY: number,
+) {
+  const contentW = pageWidth - margin * 2;
+  const gap = 4;
+  const cardW = (contentW - 8 - gap) / 2;
+  let y = cursorY;
+
+  doc.setTextColor(...C.ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.text("Substituições", margin + 4, y + 5);
+  y += 8;
+
+  for (let i = 0; i < subs.length; i += 2) {
+    const left = subs[i];
+    const right = subs[i + 1];
+
+    const leftLines = doc.splitTextToSize(formatSubstitutionText(left, i), cardW - 8);
+    const rightLines = right ? doc.splitTextToSize(formatSubstitutionText(right, i + 1), cardW - 8) : [];
+    const leftH = 8 + leftLines.length * 3.5;
+    const rightH = right ? 8 + rightLines.length * 3.5 : 0;
+    const rowH = Math.max(leftH, rightH || leftH);
+
+    if (y + rowH > pageHeight - 16) {
+      doc.addPage();
+      y = 14;
+      doc.setTextColor(...C.ink);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.text("Substituições", margin + 4, y + 5);
+      y += 8;
+    }
+
+    const drawCard = (x: number, lines: string[], index: number) => {
+      roundRect(doc, x, y, cardW, rowH, 2, [251, 251, 251], C.line);
+      doc.setTextColor(...C.accent);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.8);
+      doc.text(`Opção ${index + 1}`, x + 4, y + 5);
+      doc.setTextColor(...C.ink);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(lines, x + 4, y + 9);
+    };
+
+    drawCard(margin + 4, leftLines, i);
+    if (right) {
+      drawCard(margin + 4 + cardW + gap, rightLines, i + 1);
+    }
+
+    y += rowH + 2;
+  }
+
+  return y;
 }
 
 function drawMeal(
@@ -103,10 +208,11 @@ function drawMeal(
   pageHeight: number,
   margin: number,
   y: number,
+  substitutionLayout: "stacked" | "columns" = "stacked",
   variant: "main" | "substitution" = "main",
 ) {
   const contentW = pageWidth - margin * 2;
-  const estH = mealHeight(meal);
+  const estH = mealHeight(meal, substitutionLayout);
   if (y + estH > pageHeight - 16) {
     doc.addPage();
     y = 14;
@@ -221,29 +327,10 @@ function drawMeal(
   }
 
   if (subs.length > 0) {
-    const text = subs
-      .map((sub, i) => {
-        const qty = sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : "";
-        const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `Opção ${i + 1}: `;
-        const note = sub.notes ? ` - ${sub.notes}` : "";
-        return `${prefix}${qty}${sub.food_name}${note}`;
-      })
-      .join("\n");
-    const lines = doc.splitTextToSize(text, contentW - 10);
-    const h = 8 + lines.length * 3.8;
-    if (cursorY + h > pageHeight - 16) {
-      doc.addPage();
-      cursorY = 14;
-    }
-    roundRect(doc, margin + 4, cursorY, contentW - 8, h, 2, [251, 251, 251], C.line);
-    doc.setTextColor(...C.ink);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.text("Substituições", margin + 8, cursorY + 5);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.7);
-    doc.text(lines, margin + 8, cursorY + 9);
-    cursorY += h + 2;
+    cursorY =
+      substitutionLayout === "columns" && subs.length > 1
+        ? drawColumnsSubstitutions(doc, subs, pageWidth, pageHeight, margin, cursorY)
+        : drawStackedSubstitutions(doc, subs, pageWidth, pageHeight, margin, cursorY);
   }
 
   const totalY = cursorY + 1.2;
@@ -269,6 +356,7 @@ export function generateMealPlanPdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
+  const substitutionLayout = options?.substitutionLayout ?? "stacked";
 
   const grand = meals.reduce(
     (acc, meal) => {
@@ -359,7 +447,7 @@ export function generateMealPlanPdf(
 
   meals.forEach((meal, index) => {
     const label = String(index + 1).padStart(2, "0");
-    y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y, "main");
+    y = drawMeal(doc, meal, label, pageWidth, pageHeight, margin, y, substitutionLayout, "main");
 
     if (meal.alternative_meals && meal.alternative_meals.length > 0) {
       const hasSelection = options?.selectedAlternatives
@@ -381,7 +469,7 @@ export function generateMealPlanPdf(
           foods: alt.foods,
         };
         const subLabel = `${label}.${String.fromCharCode(97 + altIdx)}`; // e.g. "01.a", "01.b"
-        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y, "substitution");
+        y = drawMeal(doc, altMeal, subLabel, pageWidth, pageHeight, margin, y, substitutionLayout, "substitution");
       });
     }
   });

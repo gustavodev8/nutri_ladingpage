@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Meal } from "@/lib/supabase";
 
 type SelectedAlternatives = Record<number, number[]>;
+export type PdfSubstitutionLayout = "stacked" | "columns";
 
 interface Props {
   open: boolean;
@@ -15,7 +16,7 @@ interface Props {
   confirmLabel: string;
   emptyMessage: string;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (selectedAlternatives: SelectedAlternatives) => void;
+  onConfirm: (selectedAlternatives: SelectedAlternatives, substitutionLayout: PdfSubstitutionLayout) => void;
 }
 
 function buildInitialSelection(meals: Meal[]) {
@@ -34,10 +35,12 @@ export function MealPlanPdfOptionsDialog({
   onConfirm,
 }: Props) {
   const [selection, setSelection] = useState<SelectedAlternatives>({});
+  const [layout, setLayout] = useState<PdfSubstitutionLayout>("stacked");
 
   useEffect(() => {
     if (open) {
       setSelection(buildInitialSelection(meals));
+      setLayout("stacked");
     }
   }, [open, meals]);
 
@@ -69,7 +72,7 @@ export function MealPlanPdfOptionsDialog({
       }
     });
 
-    onConfirm(normalizedSelection);
+    onConfirm(normalizedSelection, layout);
   };
 
   const mealsWithAlternatives = meals.filter((meal) => (meal.alternative_meals?.length ?? 0) > 0);
@@ -81,6 +84,36 @@ export function MealPlanPdfOptionsDialog({
           <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-muted-foreground">{description}</DialogDescription>
         </DialogHeader>
+
+        <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+            Layout das substituições
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setLayout("stacked")}
+              className={cn(
+                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                layout === "stacked" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
+              )}
+            >
+              <p className="text-sm font-semibold text-foreground">Empilhado</p>
+              <p className="mt-1 text-xs text-muted-foreground">Mostra uma substituição abaixo da outra.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayout("columns")}
+              className={cn(
+                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                layout === "columns" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
+              )}
+            >
+              <p className="text-sm font-semibold text-foreground">Lado a lado</p>
+              <p className="mt-1 text-xs text-muted-foreground">Mostra até duas substituições na mesma linha.</p>
+            </button>
+          </div>
+        </div>
 
         <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
           {mealsWithAlternatives.length === 0 ? (
