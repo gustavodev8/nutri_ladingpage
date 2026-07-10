@@ -203,9 +203,9 @@ function drawColumnsSubstitutions(
 function alternativeMealHeight(meal: Meal) {
   const foods = meal.foods ?? [];
   const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
-  const previewLines = foods.length > 0 ? Math.min(foods.length, 3) : 1;
+  const previewLines = foods.length > 0 ? Math.min(foods.length, 4) : 1;
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
-  return 24 + previewLines * 4.5 + (notesLines ? 8 + notesLines * 3.5 : 0) + (subs ? 6 + subs * 2.8 : 0);
+  return 28 + previewLines * 4.2 + (notesLines ? 8 + notesLines * 3.2 : 0) + (subs ? 6 + subs * 2.4 : 0);
 }
 
 function drawAlternativeMealColumns(
@@ -218,7 +218,7 @@ function drawAlternativeMealColumns(
 ) {
   const contentW = pageWidth - margin * 2;
   const gap = 4;
-  const cardW = (contentW - gap) / 2;
+  const halfCardW = (contentW - gap) / 2;
   let y = cursorY;
 
   for (let i = 0; i < meals.length; i += 2) {
@@ -227,16 +227,23 @@ function drawAlternativeMealColumns(
     const leftH = alternativeMealHeight(left);
     const rightH = right ? alternativeMealHeight(right) : leftH;
     const rowH = Math.max(leftH, rightH);
+    const rowHasPair = Boolean(right);
+    const leftW = rowHasPair ? halfCardW : contentW;
+    const rightX = margin + halfCardW + gap;
 
     if (y + rowH > pageHeight - 16) {
       doc.addPage();
       y = 14;
     }
 
-    const drawCard = (x: number, meal: Meal, index: number) => {
-      roundRect(doc, x, y, cardW, rowH, 2, C.white, C.lineStrong);
+    const drawCard = (x: number, w: number, meal: Meal, index: number, showAccentBar: boolean) => {
+      roundRect(doc, x, y, w, rowH, 2, C.white, C.lineStrong);
       doc.setFillColor(...C.soft2);
-      doc.rect(x, y, cardW, 8, "F");
+      doc.rect(x, y, w, 8, "F");
+      if (showAccentBar) {
+        doc.setFillColor(...C.accent);
+        doc.rect(x, y, 2.4, rowH, "F");
+      }
 
       doc.setTextColor(...C.accent);
       doc.setFont("helvetica", "bold");
@@ -244,8 +251,8 @@ function drawAlternativeMealColumns(
       doc.text(`Substituição ${index + 1}`, x + 4, y + 5.1);
 
       doc.setTextColor(...C.ink);
-      doc.setFontSize(8.8);
-      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, cardW - 8);
+      doc.setFontSize(8.6);
+      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, w - 8);
       doc.text(titleLines, x + 4, y + 12);
 
       let localY = y + 12 + titleLines.length * 3.6;
@@ -264,18 +271,19 @@ function drawAlternativeMealColumns(
       doc.text(`${Math.round(totals.cal)} kcal`, x + 4, localY + 2.5);
       localY += 5;
 
-      const previewFoods = (meal.foods ?? [])
-        .map((food) => food.food_name)
-        .filter(Boolean)
-        .slice(0, 3)
-        .join(" • ");
-      if (previewFoods) {
+      const foods = (meal.foods ?? [])
+        .filter((food) => food.food_name.trim())
+        .slice(0, 4);
+      if (foods.length > 0) {
         doc.setTextColor(...C.ink);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.6);
-        const previewLines = doc.splitTextToSize(previewFoods, cardW - 8);
-        doc.text(previewLines, x + 4, localY + 2.5);
-        localY += previewLines.length * 3.3;
+        doc.setFontSize(7.2);
+        foods.forEach((food) => {
+          const line = `• ${food.food_name}${food.quantity ? ` ${mealQty(food)}` : ""}`;
+          const lines = doc.splitTextToSize(line, w - 8);
+          doc.text(lines, x + 4, localY + 2.2);
+          localY += lines.length * 3.5;
+        });
       }
 
       const note = (meal.notes ?? "").trim();
@@ -283,29 +291,14 @@ function drawAlternativeMealColumns(
         doc.setTextColor(...C.muted);
         doc.setFont("helvetica", "italic");
         doc.setFontSize(7);
-        const noteLines = doc.splitTextToSize(note, cardW - 8);
+        const noteLines = doc.splitTextToSize(note, w - 8);
         doc.text(noteLines, x + 4, Math.min(localY + 2.5, y + rowH - 5));
       }
     };
 
-    const drawPlaceholder = (x: number) => {
-      roundRect(doc, x, y, cardW, rowH, 2, C.white, C.line);
-      doc.setFillColor(...C.soft);
-      doc.rect(x, y, cardW, 8, "F");
-      doc.setTextColor(...C.muted);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7);
-      doc.text("Espaço reservado", x + 4, y + 5.1);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.8);
-      doc.text("Sem segunda opção nesta linha.", x + 4, y + 14);
-    };
-
-    drawCard(margin, left, i);
+    drawCard(margin, leftW, left, i, true);
     if (right) {
-      drawCard(margin + cardW + gap, right, i + 1);
-    } else {
-      drawPlaceholder(margin + cardW + gap);
+      drawCard(rightX, halfCardW, right, i + 1, false);
     }
 
     y += rowH + 2;
