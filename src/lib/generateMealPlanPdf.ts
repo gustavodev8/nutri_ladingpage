@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+﻿import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { MealPlan, Meal, Patient } from "@/lib/supabase";
 
@@ -93,7 +93,7 @@ function mealHeight(meal: Meal, substitutionLayout: "stacked" | "columns" = "sta
 }
 
 function mealQty(food: NonNullable<Meal["foods"]>[number]) {
-  if (!food.quantity) return "—";
+  if (!food.quantity) return "â€”";
   return `${food.quantity}${food.unit ?? "g"}`;
 }
 
@@ -104,7 +104,7 @@ export interface MealPlanPdfOptions {
 
 function formatSubstitutionText(sub: NonNullable<Meal["substitution_items"]>[number], index: number) {
   const qty = sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : "";
-  const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `Opção ${index + 1}: `;
+  const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `OpÃ§Ã£o ${index + 1}: `;
   const note = sub.notes ? ` - ${sub.notes}` : "";
   return `${prefix}${qty}${sub.food_name}${note}`;
 }
@@ -131,7 +131,7 @@ function drawStackedSubstitutions(
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text("Substituições", margin + 8, cursorY + 5);
+  doc.text("SubstituiÃ§Ãµes", margin + 8, cursorY + 5);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.7);
   doc.text(lines, margin + 8, cursorY + 9);
@@ -154,7 +154,7 @@ function drawColumnsSubstitutions(
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text("Substituições", margin + 4, y + 5);
+  doc.text("SubstituiÃ§Ãµes", margin + 4, y + 5);
   y += 8;
 
   for (let i = 0; i < subs.length; i += 2) {
@@ -173,7 +173,7 @@ function drawColumnsSubstitutions(
       doc.setTextColor(...C.ink);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
-      doc.text("Substituições", margin + 4, y + 5);
+      doc.text("SubstituiÃ§Ãµes", margin + 4, y + 5);
       y += 8;
     }
 
@@ -182,7 +182,7 @@ function drawColumnsSubstitutions(
       doc.setTextColor(...C.accent);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(6.8);
-      doc.text(`Opção ${index + 1}`, x + 4, y + 5);
+      doc.text(`OpÃ§Ã£o ${index + 1}`, x + 4, y + 5);
       doc.setTextColor(...C.ink);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -205,7 +205,7 @@ function alternativeMealHeight(meal: Meal) {
   const notesLines = meal.notes?.trim() ? Math.max(1, meal.notes.trim().split(/\n+/).length) : 0;
   const previewLines = foods.length > 0 ? Math.min(foods.length, 4) : 1;
   const subs = (meal.substitution_items ?? []).filter((item) => item.food_name.trim()).length;
-  return 34 + previewLines * 4.8 + (notesLines ? 8 + notesLines * 3.2 : 0) + (subs ? 6 + subs * 2.4 : 0);
+  return 46 + previewLines * 5.2 + (notesLines ? 10 + notesLines * 3.4 : 0) + (subs ? 8 + subs * 2.6 : 0);
 }
 
 function drawAlternativeMealColumns(
@@ -237,63 +237,87 @@ function drawAlternativeMealColumns(
     }
 
     const drawCard = (x: number, w: number, meal: Meal, index: number, showAccentBar: boolean) => {
-      roundRect(doc, x, y, w, rowH, 2, C.white, C.lineStrong);
-      doc.setFillColor(...C.accent);
-      doc.rect(x, y, w, 7.5, "F");
+      const pad = 3.8;
+      const innerX = x + pad;
+      const innerW = w - pad * 2;
+      roundRect(doc, x, y, w, rowH, 2.4, C.white, C.lineStrong);
+
+      doc.setFillColor(...C.soft2);
+      doc.rect(x, y, w, 10, 'F');
       if (showAccentBar) {
         doc.setFillColor(...C.accent);
-        doc.rect(x, y, 2.4, rowH, "F");
+        doc.rect(x, y, 2.8, rowH, 'F');
       }
+      doc.setDrawColor(...C.lineStrong);
+      doc.setLineWidth(0.18);
+      doc.line(x, y + 10, x + w, y + 10);
 
-      doc.setTextColor(...C.white);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.8);
-      doc.text(`Substituição ${index + 1}`, x + 4, y + 4.9);
-
-      doc.setTextColor(...C.ink);
-      doc.setFontSize(9.4);
-      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, w - 10);
-      doc.text(titleLines, x + 4, y + 11.8);
-
-      let localY = y + 11.8 + titleLines.length * 4.1;
-      if (meal.time_suggestion) {
-        doc.setTextColor(...C.muted);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.text(meal.time_suggestion, x + 4, localY + 3);
-        localY += 5.5;
-      }
-
-      const totals = sum(meal.foods);
       doc.setTextColor(...C.accent);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.6);
-      doc.text(`${Math.round(totals.cal)} kcal`, x + 4, localY + 3);
-      localY += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.2);
+      doc.text(`Substituição ${index + 1}:`, innerX, y + 6.6);
 
-      const foods = (meal.foods ?? [])
-        .filter((food) => food.food_name.trim())
-        .slice(0, 4);
+      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, innerW);
+      doc.setTextColor(...C.ink);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(titleLines, innerX, y + 15.4);
+
+      let localY = y + 15.4 + titleLines.length * 4.3;
+      doc.setDrawColor(...C.lineStrong);
+      doc.setLineWidth(0.16);
+      doc.line(innerX, localY + 0.8, x + w - pad, localY + 0.8);
+      localY += 4.3;
+
+      const pill = (label: string, value: string, px: number, py: number, fill: RGB, text: RGB) => {
+        const width = Math.max(22, doc.getTextWidth(`${label}${value}`) + 8);
+        doc.setFillColor(...fill);
+        doc.roundedRect(px, py, width, 7.4, 3.7, 3.7, 'F');
+        doc.setTextColor(...text);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.8);
+        doc.text(`${label}${value}`, px + 4, py + 4.9);
+        return width;
+      };
+
+      let pillX = innerX;
+      if (meal.time_suggestion) {
+        const width = pill('⏱ ', meal.time_suggestion, pillX, localY, C.soft2, C.muted);
+        pillX += width + 3;
+      }
+      const totals = sum(meal.foods);
+      pill('kcal ', `${Math.round(totals.cal)}`, pillX, localY, C.accent, C.white);
+      localY += 10.6;
+
+      const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 4);
       if (foods.length > 0) {
+        const foodsH = Math.max(16, foods.length * 7.2 + 2);
+        doc.setFillColor(251, 252, 253);
+        doc.setDrawColor(...C.line);
+        doc.roundedRect(innerX, localY, innerW, foodsH, 2, 2, 'FD');
         doc.setTextColor(...C.ink);
-        doc.setFont("helvetica", "normal");
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.6);
-        foods.forEach((food) => {
-          const qty = food.quantity ? ` ${mealQty(food)}` : "";
+        foods.forEach((food, foodIndex) => {
+          const qty = food.quantity ? ` ${mealQty(food)}` : '';
           const line = `• ${food.food_name}${qty}`;
-          const lines = doc.splitTextToSize(line, w - 10);
-          doc.text(lines, x + 4, localY + 2.8);
-          localY += lines.length * 3.8;
+          const lines = doc.splitTextToSize(line, innerW - 6);
+          doc.text(lines, innerX + 3, localY + 5.3 + foodIndex * 7);
         });
+        localY += foodsH + 3.2;
       }
 
-      const note = (meal.notes ?? "").trim();
+      const note = (meal.notes ?? '').trim();
       if (note) {
+        const noteLines = doc.splitTextToSize(note, innerW - 8);
+        const noteH = Math.max(12, noteLines.length * 3.5 + 6);
+        doc.setFillColor(...C.soft);
+        doc.setDrawColor(...C.line);
+        doc.roundedRect(innerX, localY, innerW, noteH, 2, 2, 'FD');
         doc.setTextColor(...C.muted);
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(7.2);
-        const noteLines = doc.splitTextToSize(note, w - 10);
-        doc.text(noteLines, x + 4, Math.min(localY + 2.8, y + rowH - 5));
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.1);
+        doc.text(noteLines, innerX + 3, localY + 5);
       }
     };
 
@@ -333,7 +357,7 @@ function drawMeal(
 
   const borderColor = variant === "substitution" ? C.accent : C.lineStrong;
   const headerFill = variant === "substitution" ? C.soft2 : C.soft;
-  const headerText = variant === "substitution" ? "SUBSTITUIÇÃO" : label;
+  const headerText = variant === "substitution" ? "SUBSTITUIÃ‡ÃƒO" : label;
 
   roundRect(doc, margin, y, contentW, estH, 2.4, C.white, borderColor);
   doc.setFillColor(...headerFill);
@@ -349,7 +373,7 @@ function drawMeal(
   doc.setTextColor(...(variant === "substitution" ? C.accent : C.ink));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.2);
-  doc.text(`${headerText} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
+  doc.text(`${headerText} Â· ${meal.meal_name || "RefeiÃ§Ã£o"}`, margin + 4, y + 6.3);
   if (meal.time_suggestion) {
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
@@ -427,7 +451,7 @@ function drawMeal(
     doc.setTextColor(...C.ink);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.text("Observações", margin + 8, cursorY + 5);
+    doc.text("ObservaÃ§Ãµes", margin + 8, cursorY + 5);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.7);
     doc.text(lines, margin + 8, cursorY + 9);
@@ -449,7 +473,7 @@ function drawMeal(
   doc.setTextColor(...C.muted);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.2);
-  doc.text(`Total da refeição: ${Math.round(totals.cal)} kcal`, margin + 4, totalY);
+  doc.text(`Total da refeiÃ§Ã£o: ${Math.round(totals.cal)} kcal`, margin + 4, totalY);
 
   return totalY + 8;
 }
@@ -509,7 +533,7 @@ export function generateMealPlanPdf(
   const boxW = (pageWidth - margin * 2 - 6) / 4;
   const summary = [
     { label: "Energia", value: `${Math.round(grand.cal)} kcal` },
-    { label: "Proteínas", value: `${grand.prot.toFixed(1)} g` },
+    { label: "ProteÃ­nas", value: `${grand.prot.toFixed(1)} g` },
     { label: "Carboidratos", value: `${grand.carbs.toFixed(1)} g` },
     { label: "Gorduras", value: `${grand.fat.toFixed(1)} g` },
   ];
@@ -518,14 +542,14 @@ export function generateMealPlanPdf(
   });
 
   let y = 53;
-  labelValue(doc, margin, y, (pageWidth - margin * 2 - 4) / 3, "Período", period || "Sem período");
+  labelValue(doc, margin, y, (pageWidth - margin * 2 - 4) / 3, "PerÃ­odo", period || "Sem perÃ­odo");
   labelValue(
     doc,
     margin + ((pageWidth - margin * 2 - 4) / 3) + 2,
     y,
     (pageWidth - margin * 2 - 4) / 3,
-    "Meta diária",
-    plan.daily_calories ? `${plan.daily_calories} kcal/dia` : "Não informada",
+    "Meta diÃ¡ria",
+    plan.daily_calories ? `${plan.daily_calories} kcal/dia` : "NÃ£o informada",
   );
   labelValue(
     doc,
@@ -533,7 +557,7 @@ export function generateMealPlanPdf(
     y,
     (pageWidth - margin * 2 - 4) / 3,
     "Paciente",
-    age != null ? `${age} anos` : "Não informado",
+    age != null ? `${age} anos` : "NÃ£o informado",
   );
 
   y += 23;
@@ -545,7 +569,7 @@ export function generateMealPlanPdf(
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.text("Orientações gerais", margin + 4, y + 5);
+    doc.text("OrientaÃ§Ãµes gerais", margin + 4, y + 5);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.7);
     doc.setTextColor(...C.ink);
@@ -574,7 +598,7 @@ export function generateMealPlanPdf(
         .filter((item): item is { altIdx: number; alt: NonNullable<Meal["alternative_meals"]>[number] } => Boolean(item.alt))
         .map(({ altIdx, alt }) => ({
           plan_id: meal.plan_id,
-          meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 1}`,
+          meal_name: alt.meal_name || `${meal.meal_name} â€” OpÃ§Ã£o ${altIdx + 1}`,
           time_suggestion: alt.time_suggestion,
           notes: alt.notes,
           foods: alt.foods,
@@ -602,9 +626,10 @@ export function generateMealPlanPdf(
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.8);
-    doc.text("Documento clínico confidencial", margin, footerY);
-    doc.text(`Página ${p} de ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
+    doc.text("Documento clÃ­nico confidencial", margin, footerY);
+    doc.text(`PÃ¡gina ${p} de ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
   return doc;
 }
+
