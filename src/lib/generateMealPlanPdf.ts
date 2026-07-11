@@ -217,7 +217,8 @@ function alternativeMealHeight(doc: jsPDF, meal: Meal, cardW: number) {
   const titleLines = Math.min(2, Math.max(1, doc.splitTextToSize(title, innerW * 0.76).length));
   const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 4);
   const foodLines = foods.length > 0 ? foods.length : 1;
-  return 24 + titleLines * 4.2 + foodLines * 4.5;
+  const foodsHeight = Math.max(11, foodLines * 4.2 + 1.5);
+  return 18.5 + titleLines * 4.0 + foodsHeight;
 }
 
 function drawAlternativeMealColumns(
@@ -263,12 +264,6 @@ function drawAlternativeMealColumns(
       doc.text(`Substituição ${index + 1}:`, innerX, y + 5.4);
 
       const title = meal.meal_name || `Opção ${index + 1}`;
-      const titleText = fitText(doc, title, innerW - 2);
-      doc.setTextColor(...C.ink);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.3);
-      doc.text(titleText, innerX, y + 12);
-
       const totals = sum(meal.foods);
       const kcalText = `kcal ${Math.round(totals.cal)}`;
       const kcalW = Math.max(30, doc.getTextWidth(kcalText) + 10);
@@ -295,9 +290,17 @@ function drawAlternativeMealColumns(
         pillX -= 3;
       }
 
+      const chipBlockW = x + w - pad - pillX;
+      const titleMaxW = Math.max(28, innerW - chipBlockW - 4);
+      const titleText = fitText(doc, title, titleMaxW);
+      doc.setTextColor(...C.ink);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.3);
+      doc.text(titleText, innerX, y + 12);
+
       const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 3);
       if (foods.length > 0) {
-        const foodsH = Math.max(11, foods.length * 4.4 + 2);
+        const foodsH = Math.max(11, foods.length * 4.2 + 1.5);
         const foodsY = y + 20.2;
         doc.setFillColor(252, 253, 254);
         doc.setDrawColor(...C.line);
@@ -308,7 +311,7 @@ function drawAlternativeMealColumns(
         foods.forEach((food, foodIndex) => {
           const qty = food.quantity ? ` ${mealQty(food)}` : '';
           const line = fitText(doc, `• ${food.food_name}${qty}`, innerW - 6);
-          doc.text(line, innerX + 3, foodsY + 4.3 + foodIndex * 4.4);
+          doc.text(line, innerX + 3, foodsY + 4.2 + foodIndex * 4.2);
         });
       }
     };
