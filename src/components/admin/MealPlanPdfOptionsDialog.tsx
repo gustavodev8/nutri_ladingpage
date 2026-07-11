@@ -79,45 +79,45 @@ export function MealPlanPdfOptionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-3xl border-border/60">
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-muted-foreground">{description}</DialogDescription>
+      <DialogContent className="flex max-h-[86vh] w-[min(92vw,54rem)] flex-col overflow-hidden rounded-2xl border-border/60 p-4 sm:p-5">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-lg font-semibold sm:text-xl">{title}</DialogTitle>
+          <DialogDescription className="text-sm leading-snug text-muted-foreground">{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+        <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
             Layout das substituições
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setLayout("stacked")}
               className={cn(
-                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                "rounded-xl border px-3 py-2.5 text-left transition-colors",
                 layout === "stacked" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
               )}
             >
               <p className="text-sm font-semibold text-foreground">Empilhado</p>
-              <p className="mt-1 text-xs text-muted-foreground">Mostra uma substituição abaixo da outra.</p>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Mostra uma substituição abaixo da outra.</p>
             </button>
             <button
               type="button"
               onClick={() => setLayout("columns")}
               className={cn(
-                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                "rounded-xl border px-3 py-2.5 text-left transition-colors",
                 layout === "columns" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
               )}
             >
               <p className="text-sm font-semibold text-foreground">Lado a lado</p>
-              <p className="mt-1 text-xs text-muted-foreground">Mostra até duas substituições na mesma linha.</p>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Mostra até duas substituições na mesma linha.</p>
             </button>
           </div>
         </div>
 
-        <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 max-h-[56vh] space-y-3 overflow-y-auto pr-1">
           {mealsWithAlternatives.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
               {emptyMessage}
             </div>
           ) : (
@@ -128,14 +128,14 @@ export function MealPlanPdfOptionsDialog({
               const selected = selection[mealIndex] ?? [];
 
               return (
-                <div key={`${meal.meal_name}-${mealIndex}`} className="rounded-2xl border border-border/70 bg-background p-4">
-                  <div className="flex items-start justify-between gap-4">
+                <div key={`${meal.meal_name}-${mealIndex}`} className="rounded-xl border border-border/70 bg-background p-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">
                         Refeição {mealIndex + 1}
                       </p>
-                      <h3 className="mt-1 text-base font-semibold text-foreground">{meal.meal_name}</h3>
-                      <p className="text-xs text-muted-foreground">
+                      <h3 className="mt-0.5 text-sm font-semibold text-foreground sm:text-base">{meal.meal_name}</h3>
+                      <p className="text-[11px] text-muted-foreground">
                         {alternatives.length} opção{alternatives.length === 1 ? "" : "ões"} de substituição
                       </p>
                     </div>
@@ -143,40 +143,42 @@ export function MealPlanPdfOptionsDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="rounded-full"
+                      className="h-8 rounded-full px-3 text-xs"
                       onClick={() => selectAll(mealIndex, alternatives.length)}
                     >
                       Selecionar todas
                     </Button>
                   </div>
 
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-2">
                     {alternatives.map((alt, altIndex) => {
                       const checked = selected.includes(altIndex);
                       return (
                         <label
                           key={`${mealIndex}-${altIndex}`}
                           className={cn(
-                            "flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors",
+                            "flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 transition-colors",
                             checked ? "border-primary bg-primary/5" : "border-border/70 bg-muted/10 hover:bg-muted/20",
                           )}
                         >
                           <Checkbox
                             checked={checked}
                             onCheckedChange={() => toggleAlternative(mealIndex, altIndex)}
-                            className="mt-0.5"
+                            className="mt-0.5 size-4"
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
                                 Substituição {altIndex + 1}
                               </span>
                               {alt.time_suggestion && (
-                                <span className="text-xs text-muted-foreground">{alt.time_suggestion}</span>
+                                <span className="text-[11px] text-muted-foreground">{alt.time_suggestion}</span>
                               )}
                             </div>
-                            <p className="mt-1 font-medium text-foreground">{alt.meal_name || `Opção ${altIndex + 1}`}</p>
-                            {alt.notes?.trim() && <p className="mt-1 text-sm text-muted-foreground">{alt.notes}</p>}
+                            <p className="mt-1 text-sm font-medium leading-snug text-foreground">
+                              {alt.meal_name || `Opção ${altIndex + 1}`}
+                            </p>
+                            {alt.notes?.trim() && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{alt.notes}</p>}
                           </div>
                         </label>
                       );
@@ -188,7 +190,7 @@ export function MealPlanPdfOptionsDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 pt-1 sm:gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
