@@ -24,6 +24,8 @@ function buildInitialSelection(meals: Meal[]) {
   return {};
 }
 
+const MAX_COLUMNS_SELECTION = 3;
+
 export function MealPlanPdfOptionsDialog({
   open,
   meals,
@@ -44,22 +46,48 @@ export function MealPlanPdfOptionsDialog({
     }
   }, [open, meals]);
 
+  useEffect(() => {
+    if (layout !== "columns") return;
+    setSelection((current) => {
+      const next: SelectedAlternatives = {};
+      let changed = false;
+
+      Object.entries(current).forEach(([mealIndex, values]) => {
+        if (values.length > MAX_COLUMNS_SELECTION) {
+          next[Number(mealIndex)] = values.slice(0, MAX_COLUMNS_SELECTION);
+          changed = true;
+        } else {
+          next[Number(mealIndex)] = values;
+        }
+      });
+
+      return changed ? next : current;
+    });
+  }, [layout]);
+
   const toggleAlternative = (mealIndex: number, altIndex: number) => {
     setSelection((current) => {
       const selected = current[mealIndex] ?? [];
       const nextSelected = selected.includes(altIndex)
         ? selected.filter((index) => index !== altIndex)
-        : [...selected, altIndex];
+        : layout === "columns" && selected.length >= MAX_COLUMNS_SELECTION
+          ? selected
+          : [...selected, altIndex];
 
       return { ...current, [mealIndex]: nextSelected };
     });
   };
 
   const selectAll = (mealIndex: number, alternativesCount: number) => {
+    const limit = layout === "columns" ? Math.min(alternativesCount, MAX_COLUMNS_SELECTION) : alternativesCount;
     setSelection((current) => ({
       ...current,
-      [mealIndex]: Array.from({ length: alternativesCount }, (_, altIndex) => altIndex),
+      [mealIndex]: Array.from({ length: limit }, (_, altIndex) => altIndex),
     }));
+  };
+
+  const handleLayoutChange = (nextLayout: PdfSubstitutionLayout) => {
+    setLayout(nextLayout);
   };
 
   const handleConfirm = () => {
@@ -92,7 +120,7 @@ export function MealPlanPdfOptionsDialog({
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => setLayout("stacked")}
+              onClick={() => handleLayoutChange("stacked")}
               className={cn(
                 "rounded-xl border px-3 py-2.5 text-left transition-colors",
                 layout === "stacked" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
@@ -103,14 +131,14 @@ export function MealPlanPdfOptionsDialog({
             </button>
             <button
               type="button"
-              onClick={() => setLayout("columns")}
+              onClick={() => handleLayoutChange("columns")}
               className={cn(
                 "rounded-xl border px-3 py-2.5 text-left transition-colors",
                 layout === "columns" ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30",
               )}
             >
               <p className="text-sm font-semibold text-foreground">Lado a lado</p>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Mostra até duas substituições na mesma linha.</p>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Mostra até 3 substituições por refeição.</p>
             </button>
           </div>
         </div>
@@ -126,6 +154,7 @@ export function MealPlanPdfOptionsDialog({
               if (alternatives.length === 0) return null;
 
               const selected = selection[mealIndex] ?? [];
+              const selectionLimit = layout === "columns" ? MAX_COLUMNS_SELECTION : null;
 
               return (
                 <div key={`${meal.meal_name}-${mealIndex}`} className="rounded-xl border border-border/70 bg-background p-3">
@@ -137,6 +166,7 @@ export function MealPlanPdfOptionsDialog({
                       <h3 className="mt-0.5 text-sm font-semibold text-foreground sm:text-base">{meal.meal_name}</h3>
                       <p className="text-[11px] text-muted-foreground">
                         {alternatives.length} opção{alternatives.length === 1 ? "" : "ões"} de substituição
+                        {selectionLimit ? `, até ${selectionLimit} no modo lado a lado` : ""}
                       </p>
                     </div>
                     <Button
@@ -153,16 +183,20 @@ export function MealPlanPdfOptionsDialog({
                   <div className="mt-3 space-y-2">
                     {alternatives.map((alt, altIndex) => {
                       const checked = selected.includes(altIndex);
+                      const locked = layout === "columns" && !checked && selected.length >= MAX_COLUMNS_SELECTION;
+
                       return (
                         <label
                           key={`${mealIndex}-${altIndex}`}
                           className={cn(
                             "flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 transition-colors",
                             checked ? "border-primary bg-primary/5" : "border-border/70 bg-muted/10 hover:bg-muted/20",
+                            locked && "cursor-not-allowed opacity-55",
                           )}
                         >
                           <Checkbox
                             checked={checked}
+                            disabled={locked}
                             onCheckedChange={() => toggleAlternative(mealIndex, altIndex)}
                             className="mt-0.5 size-4"
                           />
