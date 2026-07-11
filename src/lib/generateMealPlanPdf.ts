@@ -217,7 +217,7 @@ function alternativeMealHeight(doc: jsPDF, meal: Meal, cardW: number) {
   const titleLines = Math.min(2, Math.max(1, doc.splitTextToSize(title, innerW * 0.76).length));
   const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 4);
   const foodLines = foods.length > 0 ? foods.length : 1;
-  return 28 + titleLines * 4.3 + 8.6 + foodLines * 4.9;
+  return 30 + titleLines * 4.8 + 12 + foodLines * 5.3;
 }
 
 function drawAlternativeMealColumns(
@@ -266,22 +266,28 @@ function drawAlternativeMealColumns(
       const titleText = fitText(doc, title, innerW - 2);
       doc.setTextColor(...C.ink);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.7);
-      doc.text(titleText, innerX, y + 12.2);
-
-      const pill = (label: string, value: string, px: number, py: number, fill: RGB, text: RGB) => {
-        const width = Math.max(20, doc.getTextWidth(`${label}${value}`) + 8);
-        doc.setFillColor(...fill);
-        doc.roundedRect(px, py, width, 7, 3.5, 3.5, 'F');
-        doc.setTextColor(...text);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.5);
-        doc.text(`${label}${value}`, px + 4, py + 4.6);
-        return width;
-      };
+      doc.setFontSize(9.9);
+      doc.text(titleText, innerX, y + 12.4);
 
       const totals = sum(meal.foods);
-      let pillX = x + w - pad - 1;
+      const statW = Math.min(26, Math.max(23, doc.getTextWidth(`${Math.round(totals.cal)}`) + 10));
+      const statH = 13;
+      const statX = x + w - pad - statW;
+      const statY = y + 9.4;
+      doc.setFillColor(...C.white);
+      doc.setDrawColor(...C.lineStrong);
+      doc.roundedRect(statX, statY, statW, statH, 2, 2, 'FD');
+      doc.setFillColor(...C.accent);
+      doc.rect(statX, statY, statW, 1.8, 'F');
+      doc.setTextColor(...C.muted);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(5.8);
+      doc.text('KCAL', statX + statW / 2, statY + 4.6, { align: 'center' });
+      doc.setTextColor(...C.ink);
+      doc.setFontSize(9.8);
+      doc.text(`${Math.round(totals.cal)}`, statX + statW / 2, statY + 10.1, { align: 'center' });
+
+      let pillX = statX - 3;
       if (meal.time_suggestion) {
         const timeWidth = doc.getTextWidth(meal.time_suggestion) + 10;
         pillX -= timeWidth;
@@ -292,22 +298,21 @@ function drawAlternativeMealColumns(
         doc.text(meal.time_suggestion, pillX + 4, y + 15.5);
         pillX -= 3;
       }
-      pill('kcal ', `${Math.round(totals.cal)}`, pillX, y + 11, C.accent, C.white);
 
       const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 3);
       if (foods.length > 0) {
-        const foodsH = Math.max(12, foods.length * 4.9 + 2.2);
-        const foodsY = y + 20;
+        const foodsH = Math.max(13, foods.length * 5.3 + 2.5);
+        const foodsY = y + 20.2;
         doc.setFillColor(252, 253, 254);
         doc.setDrawColor(...C.line);
         doc.roundedRect(innerX, foodsY, innerW, foodsH, 2, 2, 'FD');
         doc.setTextColor(...C.ink);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.6);
+        doc.setFontSize(8.2);
         foods.forEach((food, foodIndex) => {
           const qty = food.quantity ? ` ${mealQty(food)}` : '';
           const line = fitText(doc, `• ${food.food_name}${qty}`, innerW - 6);
-          doc.text(line, innerX + 3, foodsY + 4.4 + foodIndex * 4.9);
+          doc.text(line, innerX + 3, foodsY + 4.7 + foodIndex * 5.3);
         });
       }
     };
