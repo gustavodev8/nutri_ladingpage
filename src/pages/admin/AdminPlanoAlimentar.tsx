@@ -1106,10 +1106,10 @@ export default function AdminPlanoAlimentar() {
       <MealPlanPdfOptionsDialog
         open={showPdfOptions}
         meals={meals.map((m) => editorToMeal(m, plan.id ?? 0))}
-        title="Escolher substitui??es do PDF"
-        description="Marque quais op??es substitutas devem aparecer no PDF. Elas ser?o impressas abaixo da refei??o principal, em destaque."
+        title="Escolher substituições do PDF"
+        description="Marque quais opções substitutas devem aparecer no PDF. Elas serão impressas abaixo da refeição principal, em destaque."
         confirmLabel="Gerar PDF"
-        emptyMessage="Nenhuma refei??o com substitui??o foi encontrada neste plano."
+        emptyMessage="Nenhuma refeição com substituição foi encontrada neste plano."
         onOpenChange={setShowPdfOptions}
         onConfirm={confirmDownloadPdf}
       />
