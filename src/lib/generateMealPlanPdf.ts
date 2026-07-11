@@ -271,7 +271,7 @@ function drawAlternativeMealColumns(
 
       const totals = sum(meal.foods);
       const kcalText = `kcal ${Math.round(totals.cal)}`;
-      const kcalW = doc.getTextWidth(kcalText) + 8;
+      const kcalW = Math.max(30, doc.getTextWidth(kcalText) + 10);
       const kcalX = x + w - pad - kcalW;
       const kcalY = y + 10;
       doc.setFillColor(...C.soft);
@@ -279,15 +279,16 @@ function drawAlternativeMealColumns(
       doc.roundedRect(kcalX, kcalY, kcalW, 7.6, 3.8, 3.8, 'FD');
       doc.setTextColor(...C.muted);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.7);
-      doc.text(kcalText, kcalX + kcalW / 2, kcalY + 5, { align: 'center' });
+      doc.setFontSize(6.6);
+      doc.text(kcalText, kcalX + kcalW / 2, kcalY + 4.9, { align: 'center' });
 
       let pillX = kcalX - 3;
       if (meal.time_suggestion) {
-        const timeWidth = doc.getTextWidth(meal.time_suggestion) + 10;
+        const timeWidth = Math.max(22, doc.getTextWidth(meal.time_suggestion) + 10);
         pillX -= timeWidth;
+        doc.setFillColor(...C.accent);
         doc.roundedRect(pillX, y + 11, timeWidth, 7, 3.5, 3.5, 'F');
-        doc.setTextColor(...C.muted);
+        doc.setTextColor(...C.white);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(6.5);
         doc.text(meal.time_suggestion, pillX + 4, y + 15.5);
