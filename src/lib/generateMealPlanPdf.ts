@@ -237,87 +237,71 @@ function drawAlternativeMealColumns(
     }
 
     const drawCard = (x: number, w: number, meal: Meal, index: number, showAccentBar: boolean) => {
-      const pad = 3.8;
+      const pad = 4;
       const innerX = x + pad;
       const innerW = w - pad * 2;
       roundRect(doc, x, y, w, rowH, 2.4, C.white, C.lineStrong);
 
       doc.setFillColor(...C.soft2);
-      doc.rect(x, y, w, 10, 'F');
+      doc.rect(x, y, w, 8.5, 'F');
       if (showAccentBar) {
         doc.setFillColor(...C.accent);
-        doc.rect(x, y, 2.8, rowH, 'F');
+        doc.rect(x, y, 2.6, rowH, 'F');
       }
-      doc.setDrawColor(...C.lineStrong);
-      doc.setLineWidth(0.18);
-      doc.line(x, y + 10, x + w, y + 10);
 
       doc.setTextColor(...C.accent);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.2);
-      doc.text(`Substituição ${index + 1}:`, innerX, y + 6.6);
+      doc.text(`Substituição ${index + 1}:`, innerX, y + 5.7);
 
-      const titleLines = doc.splitTextToSize(meal.meal_name || `Opção ${index + 1}`, innerW);
+      const title = meal.meal_name || `Opção ${index + 1}`;
+      const titleLines = doc.splitTextToSize(title, innerW * 0.62);
       doc.setTextColor(...C.ink);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text(titleLines, innerX, y + 15.4);
-
-      let localY = y + 15.4 + titleLines.length * 4.3;
-      doc.setDrawColor(...C.lineStrong);
-      doc.setLineWidth(0.16);
-      doc.line(innerX, localY + 0.8, x + w - pad, localY + 0.8);
-      localY += 4.3;
+      doc.setFontSize(9.2);
+      doc.text(titleLines, innerX, y + 13.4);
 
       const pill = (label: string, value: string, px: number, py: number, fill: RGB, text: RGB) => {
-        const width = Math.max(22, doc.getTextWidth(`${label}${value}`) + 8);
+        const width = Math.max(20, doc.getTextWidth(`${label}${value}`) + 8);
         doc.setFillColor(...fill);
-        doc.roundedRect(px, py, width, 7.4, 3.7, 3.7, 'F');
+        doc.roundedRect(px, py, width, 7.1, 3.55, 3.55, 'F');
         doc.setTextColor(...text);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.8);
-        doc.text(`${label}${value}`, px + 4, py + 4.9);
+        doc.setFontSize(6.6);
+        doc.text(`${label}${value}`, px + 4, py + 4.7);
         return width;
       };
 
-      let pillX = innerX;
-      if (meal.time_suggestion) {
-        const width = pill('⏱ ', meal.time_suggestion, pillX, localY, C.soft2, C.muted);
-        pillX += width + 3;
-      }
       const totals = sum(meal.foods);
-      pill('kcal ', `${Math.round(totals.cal)}`, pillX, localY, C.accent, C.white);
-      localY += 10.6;
+      let pillX = x + w - pad - 1;
+      if (meal.time_suggestion) {
+        const timeWidth = doc.getTextWidth(meal.time_suggestion) + 12;
+        pillX -= timeWidth;
+        doc.roundedRect(pillX, y + 11.1, timeWidth, 7.1, 3.55, 3.55, 'F');
+        doc.setTextColor(...C.muted);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.6);
+        doc.text(meal.time_suggestion, pillX + 4, y + 15.8);
+        pillX -= 3;
+      }
+      pill('kcal ', `${Math.round(totals.cal)}`, pillX, y + 11.1, C.accent, C.white);
 
-      const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 4);
+      const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 3);
       if (foods.length > 0) {
-        const foodsH = Math.max(16, foods.length * 7.2 + 2);
-        doc.setFillColor(251, 252, 253);
+        const foodsH = Math.max(12, foods.length * 6.4 + 2);
+        const foodsY = y + 20.2;
+        doc.setFillColor(252, 253, 254);
         doc.setDrawColor(...C.line);
-        doc.roundedRect(innerX, localY, innerW, foodsH, 2, 2, 'FD');
+        doc.roundedRect(innerX, foodsY, innerW, foodsH, 2, 2, 'FD');
         doc.setTextColor(...C.ink);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.6);
+        doc.setFontSize(7.4);
         foods.forEach((food, foodIndex) => {
           const qty = food.quantity ? ` ${mealQty(food)}` : '';
           const line = `• ${food.food_name}${qty}`;
           const lines = doc.splitTextToSize(line, innerW - 6);
-          doc.text(lines, innerX + 3, localY + 5.3 + foodIndex * 7);
+          doc.text(lines, innerX + 3, foodsY + 4.8 + foodIndex * 6.4);
         });
-        localY += foodsH + 3.2;
-      }
-
-      const note = (meal.notes ?? '').trim();
-      if (note) {
-        const noteLines = doc.splitTextToSize(note, innerW - 8);
-        const noteH = Math.max(12, noteLines.length * 3.5 + 6);
-        doc.setFillColor(...C.soft);
-        doc.setDrawColor(...C.line);
-        doc.roundedRect(innerX, localY, innerW, noteH, 2, 2, 'FD');
-        doc.setTextColor(...C.muted);
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(7.1);
-        doc.text(noteLines, innerX + 3, localY + 5);
       }
     };
 
