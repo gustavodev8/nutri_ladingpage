@@ -214,11 +214,11 @@ function alternativeMealHeight(doc: jsPDF, meal: Meal, cardW: number) {
   const pad = 3.5;
   const innerW = cardW - pad * 2;
   const title = meal.meal_name || "Refeição";
-  const titleLines = Math.min(2, Math.max(1, doc.splitTextToSize(title, innerW * 0.76).length));
+  const titleLines = Math.min(2, Math.max(1, doc.splitTextToSize(title, innerW).length));
   const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 4);
   const foodLines = foods.length > 0 ? foods.length : 1;
   const foodsHeight = Math.max(11, foodLines * 4.2 + 1.5);
-  return 18.5 + titleLines * 4.0 + foodsHeight;
+  return 25.2 + titleLines * 4.2 + foodsHeight;
 }
 
 function drawAlternativeMealColumns(
@@ -245,7 +245,7 @@ function drawAlternativeMealColumns(
       y = 14;
     }
 
-    const drawCard = (x: number, w: number, meal: Meal, index: number, showAccentBar: boolean) => {
+    const drawCard = (x: number, w: number, meal: Meal, index: number) => {
       const pad = 3.5;
       const innerX = x + pad;
       const innerW = w - pad * 2;
@@ -253,10 +253,8 @@ function drawAlternativeMealColumns(
 
       doc.setFillColor(...C.soft2);
       doc.rect(x, y, w, 8, 'F');
-      if (showAccentBar) {
-        doc.setFillColor(...C.accent);
-        doc.rect(x, y, 2.6, rowH, 'F');
-      }
+      doc.setFillColor(...C.accent);
+      doc.rect(x, y, 2.4, rowH, 'F');
 
       doc.setTextColor(...C.accent);
       doc.setFont('helvetica', 'bold');
@@ -265,43 +263,30 @@ function drawAlternativeMealColumns(
 
       const title = meal.meal_name || `Opção ${index + 1}`;
       const totals = sum(meal.foods);
-      const kcalText = `kcal ${Math.round(totals.cal)}`;
-      const kcalW = Math.max(30, doc.getTextWidth(kcalText) + 10);
-      const kcalX = x + w - pad - kcalW;
-      const kcalY = y + 10;
-      doc.setFillColor(...C.soft);
-      doc.setDrawColor(...C.lineStrong);
-      doc.roundedRect(kcalX, kcalY, kcalW, 7.6, 3.8, 3.8, 'FD');
-      doc.setTextColor(...C.muted);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.6);
-      doc.text(kcalText, kcalX + kcalW / 2, kcalY + 4.9, { align: 'center' });
-
-      let pillX = kcalX - 3;
-      if (meal.time_suggestion) {
-        const timeWidth = Math.max(22, doc.getTextWidth(meal.time_suggestion) + 10);
-        pillX -= timeWidth;
-        doc.setFillColor(...C.accent);
-        doc.roundedRect(pillX, y + 11, timeWidth, 7, 3.5, 3.5, 'F');
-        doc.setTextColor(...C.white);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.5);
-        doc.text(meal.time_suggestion, pillX + 4, y + 15.5);
-        pillX -= 3;
-      }
-
-      const chipBlockW = x + w - pad - pillX;
-      const titleMaxW = Math.max(28, innerW - chipBlockW - 4);
-      const titleText = fitText(doc, title, titleMaxW);
+      const titleText = fitText(doc, title, innerW);
       doc.setTextColor(...C.ink);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.3);
-      doc.text(titleText, innerX, y + 12);
+      doc.text(titleText, innerX, y + 13.2);
+
+      const statsY = y + 16.5;
+      doc.setFillColor(252, 253, 254);
+      doc.setDrawColor(...C.line);
+      doc.roundedRect(innerX, statsY, innerW, 7.4, 2, 2, 'FD');
+      doc.setTextColor(...C.muted);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.4);
+      const timeText = meal.time_suggestion ? `Horário ${meal.time_suggestion}` : 'Horário -';
+      const energyText = `Energia ${Math.round(totals.cal)} kcal`;
+      doc.text(timeText, innerX + 3, statsY + 4.9);
+      doc.setDrawColor(...C.lineStrong);
+      doc.line(innerX + innerW / 2, statsY + 1.5, innerX + innerW / 2, statsY + 6);
+      doc.text(energyText, innerX + innerW - 3, statsY + 4.9, { align: 'right' });
 
       const foods = (meal.foods ?? []).filter((food) => food.food_name.trim()).slice(0, 3);
       if (foods.length > 0) {
         const foodsH = Math.max(11, foods.length * 4.2 + 1.5);
-        const foodsY = y + 20.2;
+        const foodsY = y + 26;
         doc.setFillColor(252, 253, 254);
         doc.setDrawColor(...C.line);
         doc.roundedRect(innerX, foodsY, innerW, foodsH, 2, 2, 'FD');
@@ -318,7 +303,7 @@ function drawAlternativeMealColumns(
 
     cards.forEach((meal, indexInRow) => {
       const x = margin + indexInRow * (rowCardW + gap);
-      drawCard(x, rowCardW, meal, i + indexInRow, indexInRow === 0);
+      drawCard(x, rowCardW, meal, i + indexInRow);
     });
 
     y += rowH + 2;
