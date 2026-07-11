@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap, Soup, ChevronUp, ChevronDown,
-  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer, Copy,
+  AlertTriangle, TrendingDown, TrendingUp, Info, LayoutList, Printer, Copy, ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +32,13 @@ import { EmailPlanModal } from "@/components/admin/EmailPlanModal";
 import { ClinicalInsightsPanel } from "@/components/admin/ClinicalInsightsPanel";
 import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { MealPlanPdfOptionsDialog } from "@/components/admin/MealPlanPdfOptionsDialog";
+import { MonthlyShoppingListDialog } from "@/components/admin/MonthlyShoppingListDialog";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
 import { MealPresetImportModal } from "@/components/admin/MealPresetImportModal";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { generateMealPlanPdf } from "@/lib/generateMealPlanPdf";
+import { generateMonthlyShoppingList } from "@/lib/monthlyShoppingList";
 import {
   getMealNutritionTargets,
   generateMealPlanConsistencyAlerts,
@@ -117,6 +119,7 @@ export default function AdminPlanoAlimentar() {
   const [presetTargetMealIndex, setPresetTargetMealIndex] = useState(0);
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const [showSaveMealPresetDialog, setShowSaveMealPresetDialog] = useState(false);
+  const [showShoppingList, setShowShoppingList] = useState(false);
   const [mealPresetSourceMealIndex, setMealPresetSourceMealIndex] = useState<number | null>(null);
   const [mealPresetDraftName, setMealPresetDraftName] = useState("");
   const [mealPresetDraftDescription, setMealPresetDraftDescription] = useState("");
@@ -427,6 +430,7 @@ export default function AdminPlanoAlimentar() {
     (a, m) => { const t = sumFoods(m.foods); return { cal: a.cal + t.cal, prot: a.prot + t.prot, carbs: a.carbs + t.carbs, fat: a.fat + t.fat }; },
     { cal: 0, prot: 0, carbs: 0, fat: 0 }
   );
+  const shoppingList = useMemo(() => generateMonthlyShoppingList(meals, 30), [meals]);
 
   const mealTargets = useMemo(
     () => getMealCalorieTargets(meals, plan.daily_calories),
@@ -925,6 +929,12 @@ export default function AdminPlanoAlimentar() {
                 <span className="hidden sm:inline">Importar refeição</span>
                 <span className="sm:hidden">Refeição</span>
               </button>
+              <button type="button" onClick={() => setShowShoppingList(true)}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <ShoppingCart size={13} />
+                <span className="hidden sm:inline">Lista do mês</span>
+                <span className="sm:hidden">Compras</span>
+              </button>
               <button type="button" onClick={addMeal}
                 className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
                 <Plus size={13} />
@@ -1113,6 +1123,20 @@ export default function AdminPlanoAlimentar() {
         onOpenChange={setShowPdfOptions}
         onConfirm={confirmDownloadPdf}
       />
+
+      <MonthlyShoppingListDialog
+        open={showShoppingList}
+        onOpenChange={setShowShoppingList}
+        planTitle={plan.title}
+        patientName={patient?.name}
+        days={30}
+        groups={shoppingList.groups}
+        missingItems={shoppingList.missingItems}
+        totalItems={shoppingList.totalItems}
+        totalGroups={shoppingList.totalGroups}
+        totalMissingOccurrences={shoppingList.totalMissingOccurrences}
+      />
+
       {showEmail && (
         <EmailPlanModal
           plan={plan}
