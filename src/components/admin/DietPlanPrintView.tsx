@@ -23,9 +23,9 @@ function formatDate(iso?: string | null) {
   return `${d}/${m}/${y}`;
 }
 
-function formatQty(meal: Meal["foods"][number]) {
-  if (!meal.quantity) return "";
-  return `${meal.quantity}${meal.unit ?? "g"}`;
+function formatQty(food: Meal["foods"][number]) {
+  if (!food.quantity) return "";
+  return `${food.quantity}${food.unit ?? "g"}`;
 }
 
 function buildDocument(plan: MealPlan, meals: Meal[], patient: Patient | null) {
@@ -51,8 +51,7 @@ function buildDocument(plan: MealPlan, meals: Meal[], patient: Patient | null) {
     })
     .join("");
 
-  return `
-<!doctype html>
+  return `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
@@ -163,7 +162,6 @@ function buildDocument(plan: MealPlan, meals: Meal[], patient: Patient | null) {
       <span>${new Date().toLocaleDateString("pt-BR")}</span>
     </div>
   </div>
-
 </body>
 </html>`;
 }
@@ -176,11 +174,7 @@ export function DietPlanPrintView({ plan, meals, patient, onClose }: Props) {
     openedRef.current = true;
 
     const html = buildDocument(plan, meals, patient);
-    const popup = window.open(
-      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
-      "_blank",
-      "width=900,height=1100"
-    );
+    const popup = window.open(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`, "_blank", "width=900,height=1100");
 
     if (!popup) {
       onClose();

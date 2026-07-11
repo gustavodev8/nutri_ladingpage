@@ -259,7 +259,7 @@ export default function AdminPlanoAlimentar() {
       toast.success('PDF gerado com sucesso.');
       setShowPdfOptions(false);
     } catch (error) {
-      toast.error('N?o foi poss?vel gerar o PDF.');
+      toast.error('Não foi possível gerar o PDF.');
       console.error('[AdminPlanoAlimentar] confirmDownloadPdf:', error);
     }
   };

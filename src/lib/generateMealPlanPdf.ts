@@ -103,7 +103,7 @@ function mealHeight(meal: Meal, substitutionLayout: "stacked" | "columns" = "sta
 }
 
 function mealQty(food: NonNullable<Meal["foods"]>[number]) {
-  if (!food.quantity) return "â€”";
+  if (!food.quantity) return "-";
   return `${food.quantity}${food.unit ?? "g"}`;
 }
 
@@ -114,7 +114,7 @@ export interface MealPlanPdfOptions {
 
 function formatSubstitutionText(sub: NonNullable<Meal["substitution_items"]>[number], index: number) {
   const qty = sub.quantity ? `${sub.quantity}${sub.unit ?? "g"} de ` : "";
-  const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `OpÃ§Ã£o ${index + 1}: `;
+  const prefix = sub.replaces_food ? `No lugar de ${sub.replaces_food}: ` : `Opção ${index + 1}: `;
   const note = sub.notes ? ` - ${sub.notes}` : "";
   return `${prefix}${qty}${sub.food_name}${note}`;
 }
@@ -141,7 +141,7 @@ function drawStackedSubstitutions(
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text("SubstituiÃ§Ãµes", margin + 8, cursorY + 5);
+  doc.text("Substituições", margin + 8, cursorY + 5);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.7);
   doc.text(lines, margin + 8, cursorY + 9);
@@ -164,7 +164,7 @@ function drawColumnsSubstitutions(
   doc.setTextColor(...C.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text("SubstituiÃ§Ãµes", margin + 4, y + 5);
+  doc.text("Substituições", margin + 4, y + 5);
   y += 8;
 
   for (let i = 0; i < subs.length; i += 2) {
@@ -183,7 +183,7 @@ function drawColumnsSubstitutions(
       doc.setTextColor(...C.ink);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
-      doc.text("SubstituiÃ§Ãµes", margin + 4, y + 5);
+      doc.text("Substituições", margin + 4, y + 5);
       y += 8;
     }
 
@@ -192,7 +192,7 @@ function drawColumnsSubstitutions(
       doc.setTextColor(...C.accent);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(6.8);
-      doc.text(`OpÃ§Ã£o ${index + 1}`, x + 4, y + 5);
+      doc.text(`Opção ${index + 1}`, x + 4, y + 5);
       doc.setTextColor(...C.ink);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -231,15 +231,13 @@ function drawAlternativeMealColumns(
   const contentW = pageWidth - margin * 2;
   const columns = pageWidth > pageHeight ? 3 : 2;
   const gap = 3.5;
-  const cardW = (contentW - gap * (columns - 1)) / columns;
   let y = cursorY;
 
   for (let i = 0; i < meals.length; i += columns) {
-    const left = meals[i];
-    const middle = meals[i + 1];
-    const right = meals[i + 2];
-    const cards = [left, middle, right].filter(Boolean) as Meal[];
-    const rowH = Math.max(...cards.map((meal) => alternativeMealHeight(doc, meal, cardW)));
+    const cards = meals.slice(i, i + columns);
+    const rowColumns = cards.length;
+    const rowCardW = (contentW - gap * (rowColumns - 1)) / rowColumns;
+    const rowH = Math.max(...cards.map((meal) => alternativeMealHeight(doc, meal, rowCardW)));
 
     if (y + rowH > pageHeight - 16) {
       doc.addPage();
@@ -305,7 +303,7 @@ function drawAlternativeMealColumns(
         doc.roundedRect(innerX, foodsY, innerW, foodsH, 2, 2, 'FD');
         doc.setTextColor(...C.ink);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.1);
+        doc.setFontSize(7.6);
         foods.forEach((food, foodIndex) => {
           const qty = food.quantity ? ` ${mealQty(food)}` : '';
           const line = fitText(doc, `• ${food.food_name}${qty}`, innerW - 6);
@@ -315,8 +313,8 @@ function drawAlternativeMealColumns(
     };
 
     cards.forEach((meal, indexInRow) => {
-      const x = margin + indexInRow * (cardW + gap);
-      drawCard(x, cardW, meal, i + indexInRow, indexInRow === 0);
+      const x = margin + indexInRow * (rowCardW + gap);
+      drawCard(x, rowCardW, meal, i + indexInRow, indexInRow === 0);
     });
 
     y += rowH + 2;
@@ -350,7 +348,7 @@ function drawMeal(
 
   const borderColor = variant === "substitution" ? C.accent : C.lineStrong;
   const headerFill = variant === "substitution" ? C.soft2 : C.soft;
-  const headerText = variant === "substitution" ? "SUBSTITUIÃ‡ÃƒO" : label;
+  const headerText = variant === "substitution" ? "SUBSTITUIÇÃO" : label;
 
   roundRect(doc, margin, y, contentW, estH, 2.4, C.white, borderColor);
   doc.setFillColor(...headerFill);
@@ -366,7 +364,7 @@ function drawMeal(
   doc.setTextColor(...(variant === "substitution" ? C.accent : C.ink));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.2);
-  doc.text(`${headerText} Â· ${meal.meal_name || "RefeiÃ§Ã£o"}`, margin + 4, y + 6.3);
+  doc.text(`${headerText} · ${meal.meal_name || "Refeição"}`, margin + 4, y + 6.3);
   if (meal.time_suggestion) {
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
@@ -444,7 +442,7 @@ function drawMeal(
     doc.setTextColor(...C.ink);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.text("ObservaÃ§Ãµes", margin + 8, cursorY + 5);
+    doc.text("Observações", margin + 8, cursorY + 5);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.7);
     doc.text(lines, margin + 8, cursorY + 9);
@@ -466,7 +464,7 @@ function drawMeal(
   doc.setTextColor(...C.muted);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.2);
-  doc.text(`Total da refeiÃ§Ã£o: ${Math.round(totals.cal)} kcal`, margin + 4, totalY);
+  doc.text(`Total da refeição: ${Math.round(totals.cal)} kcal`, margin + 4, totalY);
 
   return totalY + 8;
 }
@@ -530,7 +528,7 @@ export function generateMealPlanPdf(
   const boxW = (pageWidth - margin * 2 - 6) / 4;
   const summary = [
     { label: "Energia", value: `${Math.round(grand.cal)} kcal` },
-    { label: "ProteÃ­nas", value: `${grand.prot.toFixed(1)} g` },
+    { label: "Proteínas", value: `${grand.prot.toFixed(1)} g` },
     { label: "Carboidratos", value: `${grand.carbs.toFixed(1)} g` },
     { label: "Gorduras", value: `${grand.fat.toFixed(1)} g` },
   ];
@@ -539,14 +537,14 @@ export function generateMealPlanPdf(
   });
 
   let y = 53;
-  labelValue(doc, margin, y, (pageWidth - margin * 2 - 4) / 3, "PerÃ­odo", period || "Sem perÃ­odo");
+  labelValue(doc, margin, y, (pageWidth - margin * 2 - 4) / 3, "Período", period || "Sem período");
   labelValue(
     doc,
     margin + ((pageWidth - margin * 2 - 4) / 3) + 2,
     y,
     (pageWidth - margin * 2 - 4) / 3,
-    "Meta diÃ¡ria",
-    plan.daily_calories ? `${plan.daily_calories} kcal/dia` : "NÃ£o informada",
+    "Meta diária",
+    plan.daily_calories ? `${plan.daily_calories} kcal/dia` : "Não informada",
   );
   labelValue(
     doc,
@@ -554,7 +552,7 @@ export function generateMealPlanPdf(
     y,
     (pageWidth - margin * 2 - 4) / 3,
     "Paciente",
-    age != null ? `${age} anos` : "NÃ£o informado",
+    age != null ? `${age} anos` : "Não informado",
   );
 
   y += 23;
@@ -566,7 +564,7 @@ export function generateMealPlanPdf(
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.text("OrientaÃ§Ãµes gerais", margin + 4, y + 5);
+    doc.text("Orientações gerais", margin + 4, y + 5);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.7);
     doc.setTextColor(...C.ink);
@@ -595,7 +593,7 @@ export function generateMealPlanPdf(
         .filter((item): item is { altIdx: number; alt: NonNullable<Meal["alternative_meals"]>[number] } => Boolean(item.alt))
         .map(({ altIdx, alt }) => ({
           plan_id: meal.plan_id,
-          meal_name: alt.meal_name || `${meal.meal_name} â€” OpÃ§Ã£o ${altIdx + 1}`,
+          meal_name: alt.meal_name || `${meal.meal_name} — Opção ${altIdx + 1}`,
           time_suggestion: alt.time_suggestion,
           notes: alt.notes,
           foods: alt.foods,
@@ -623,8 +621,8 @@ export function generateMealPlanPdf(
     doc.setTextColor(...C.muted);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.8);
-    doc.text("Documento clÃ­nico confidencial", margin, footerY);
-    doc.text(`PÃ¡gina ${p} de ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
+    doc.text("Documento clínico confidencial", margin, footerY);
+    doc.text(`Página ${p} de ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
   return doc;
