@@ -1,7 +1,9 @@
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatShoppingQuantity, type MissingShoppingListItem, type MonthlyShoppingListGroup } from "@/lib/monthlyShoppingList";
+import { buildMonthlyShoppingListFileName, generateMonthlyShoppingListPdf } from "@/lib/generateMonthlyShoppingListPdf";
 
 interface Props {
   open: boolean;
@@ -28,7 +30,29 @@ export function MonthlyShoppingListDialog({
   totalGroups,
   totalMissingOccurrences,
 }: Props) {
-  const handlePrint = () => window.print();
+  const handleDownloadPdf = () => {
+    try {
+      const doc = generateMonthlyShoppingListPdf(
+        {
+          groups,
+          missingItems,
+          totalItems,
+          totalGroups,
+          totalMissingOccurrences,
+        },
+        {
+          planTitle,
+          patientName,
+          days,
+        },
+      );
+      doc.save(buildMonthlyShoppingListFileName(planTitle, patientName));
+      toast.success("PDF da lista gerado com sucesso.");
+    } catch (error) {
+      console.error("[MonthlyShoppingListDialog] Erro ao gerar PDF:", error);
+      toast.error("Não foi possível gerar o PDF da lista.");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,8 +170,8 @@ export function MonthlyShoppingListDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-          <Button type="button" onClick={handlePrint}>
-            Imprimir lista
+          <Button type="button" onClick={handleDownloadPdf}>
+            Baixar PDF
           </Button>
         </DialogFooter>
       </DialogContent>
