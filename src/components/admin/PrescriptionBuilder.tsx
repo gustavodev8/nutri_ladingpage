@@ -1252,15 +1252,15 @@ export function PrescriptionBuilder({ patientId }: Props) {
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
 
         {/* Panel header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 px-4 py-3 border-b border-border/60 shrink-0 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
             <FileText size={15} className="text-primary" />
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold text-foreground">Receituário</p>
-              <p className="text-[10px] text-muted-foreground">{patientName}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{patientName}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setView("history")}
@@ -1269,25 +1269,27 @@ export function PrescriptionBuilder({ patientId }: Props) {
               <History size={12} />
               Histórico {history.length > 0 && <span className="ml-0.5 tabular-nums">({history.length})</span>}
             </button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void handlePrint()}
-              disabled={totalItems === 0}
-              className="gap-1.5 h-7 text-xs"
-            >
-              <Printer size={12} />
-              Imprimir PDF
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || totalItems === 0}
-              className="gap-1.5 h-7 text-xs"
-            >
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              {saving ? "Salvando…" : "Salvar"}
-            </Button>
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 p-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handlePrint()}
+                disabled={totalItems === 0}
+                className="h-7 gap-1.5 border-border/60 bg-background text-xs"
+              >
+                <Printer size={12} />
+                Imprimir PDF
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={saving || totalItems === 0}
+                className="h-7 gap-1.5 text-xs"
+              >
+                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                {saving ? "Salvando…" : "Salvar"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1321,17 +1323,40 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   <div key={block.localId} className="rounded-xl border border-border/70 overflow-hidden">
 
                     {/* Block header */}
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
-                      <Input
-                        value={block.label}
-                        onChange={(e) => patchBlock(block.localId, { label: e.target.value })}
-                        className="h-7 text-xs font-semibold bg-transparent border-transparent hover:border-border focus:border-border w-28 px-1.5"
-                      />
-                      <div className="flex items-center gap-1.5 flex-1 flex-wrap">
+                    <div className="space-y-2 bg-muted/30 px-3 py-3 border-b border-border/40">
+                      <div className="flex items-start justify-between gap-3">
+                        <Input
+                          value={block.label}
+                          onChange={(e) => patchBlock(block.localId, { label: e.target.value })}
+                          className="h-8 max-w-[180px] flex-1 border-transparent bg-transparent px-1.5 text-sm font-semibold hover:border-border focus:border-border"
+                        />
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => saveBlockAsProtocol(block)}
+                            className="h-8 gap-1.5 border-primary/20 px-3 text-xs text-primary hover:bg-primary/5 hover:text-primary"
+                          >
+                            <Save size={12} />
+                            Salvar protocolo
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => removeBlock(block.localId)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            title="Remover fórmula"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-[120px_minmax(0,1fr)]">
                         <select
                           value={block.pharmaceuticalForm}
                           onChange={(e) => patchBlock(block.localId, { pharmaceuticalForm: e.target.value })}
-                          className="h-6 text-[11px] border border-border/60 rounded bg-background px-1.5 text-foreground"
+                          className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground"
                         >
                           {PHARMA_FORMS.map((f) => <option key={f}>{f}</option>)}
                         </select>
@@ -1339,26 +1364,9 @@ export function PrescriptionBuilder({ patientId }: Props) {
                           value={block.posology}
                           onChange={(e) => patchBlock(block.localId, { posology: e.target.value })}
                           placeholder="Posologia (ex: 1x ao dia)"
-                          className="h-6 text-[11px] border-border/60 bg-background flex-1 min-w-[140px] px-2"
+                          className="h-8 border-border/60 bg-background px-2 text-xs"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeBlock(block.localId)}
-                        className="text-muted-foreground/30 hover:text-destructive transition-colors shrink-0"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => saveBlockAsProtocol(block)}
-                        className="h-7 gap-1.5 text-[11px] border-primary/20 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
-                      >
-                        <Save size={11} />
-                        Salvar protocolo
-                      </Button>
                     </div>
 
                     {/* Items */}
