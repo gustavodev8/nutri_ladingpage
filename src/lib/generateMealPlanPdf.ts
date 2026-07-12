@@ -236,7 +236,7 @@ function drawAlternativeMealColumns(
 
   for (let i = 0; i < meals.length; i += columns) {
     const cards = meals.slice(i, i + columns);
-    const rowColumns = cards.length;
+    const rowColumns = cards.length === 1 ? columns : cards.length;
     const rowCardW = (contentW - gap * (rowColumns - 1)) / rowColumns;
     const rowH = Math.max(...cards.map((meal) => alternativeMealHeight(doc, meal, rowCardW)));
 
@@ -589,7 +589,7 @@ export function generateMealPlanPdf(
           substitution_items: alt.substitution_items ?? [],
         }));
 
-      if (substitutionLayout === "columns" && selectedAlternatives.length > 1) {
+      if (substitutionLayout === "columns" && selectedAlternatives.length > 0) {
         y = drawAlternativeMealColumns(doc, selectedAlternatives, pageWidth, pageHeight, margin, y);
       } else {
         selectedAlternatives.forEach((altMeal, altIdx) => {
