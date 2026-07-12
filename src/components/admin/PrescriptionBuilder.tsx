@@ -821,8 +821,30 @@ export function PrescriptionBuilder({ patientId }: Props) {
                     </div>
                   ))}
                   {protocolVisibleSubs.length === 0 && (
-                    <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10">
+                    <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 px-6 text-center">
                       <p className="text-sm text-muted-foreground">Nenhum substrato encontrado.</p>
+                      <p className="mt-1 text-xs text-muted-foreground/80">
+                        Você pode cadastrar esse ativo no sistema e depois voltar para incluir no protocolo.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const query = protocolSubSearch.trim();
+                          setLeftTab("substrates");
+                          setShowNewSubForm(true);
+                          setSubSearch(query);
+                          setNewSubName(query);
+                          setNewSubCategory("Outros");
+                          setNewSubUnit("mg");
+                          setNewSubIdealDose("");
+                        }}
+                        className="mt-4 gap-1.5 border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
+                      >
+                        <Plus size={12} />
+                        Cadastrar substrato no sistema
+                      </Button>
                     </div>
                   )}
                 </div>
