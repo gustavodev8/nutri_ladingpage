@@ -826,97 +826,108 @@ export function PrescriptionBuilder({ patientId }: Props) {
                     </div>
                   ))}
                   {protocolVisibleSubs.length === 0 && (
-                    <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 px-6 text-center">
+                    <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-gradient-to-b from-muted/10 to-background/60 px-6 py-8 text-center">
                       {protocolSubFormSeed === null ? (
-                        <>
-                          <p className="text-sm text-muted-foreground">Nenhum substrato encontrado.</p>
-                          <p className="mt-1 text-xs text-muted-foreground/80">
+                        <div className="w-full max-w-xl rounded-3xl border border-border/60 bg-background/95 text-left shadow-sm overflow-hidden">
+                          <div className="border-b border-border/50 bg-muted/30 px-4 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Novo ativo no catálogo</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
                             Você pode cadastrar esse ativo no sistema e depois voltar para incluir no protocolo.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const seed = protocolSubSearch.trim();
-                              setProtocolSubFormSeed(seed);
-                              setNewSubName(seed);
-                              setNewSubCategory("Outros");
-                              setNewSubUnit("mg");
-                              setNewSubIdealDose("");
-                            }}
-                            className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary/20 bg-background px-3 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/5"
-                          >
-                            <Plus size={12} />
-                            Cadastrar substrato no sistema
-                          </button>
-                        </>
+                            </p>
+                          </div>
+                          <div className="px-4 py-4">
+                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 px-4 py-10 text-center">
+                              <p className="text-sm font-medium text-foreground">Nenhum substrato encontrado.</p>
+                              <p className="mt-1 text-xs text-muted-foreground/80">
+                                A busca por <span className="font-semibold text-foreground">"{protocolSubSearch.trim()}"</span> não retornou resultados.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const seed = protocolSubSearch.trim();
+                                  setProtocolSubFormSeed(seed);
+                                  setNewSubName(seed);
+                                  setNewSubCategory("Outros");
+                                  setNewSubUnit("mg");
+                                  setNewSubIdealDose("");
+                                }}
+                                className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary/20 bg-background px-3 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/5"
+                              >
+                                <Plus size={12} />
+                                Cadastrar substrato no sistema
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <form
                           onSubmit={handleRegisterSubstrate}
-                          className="mt-2 w-full max-w-lg rounded-2xl border border-border/60 bg-background p-4 text-left shadow-sm"
+                          className="mt-2 w-full max-w-xl overflow-hidden rounded-3xl border border-border/60 bg-background text-left shadow-sm"
                         >
-                          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                            Novo ativo no catálogo
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Cadastre o substrato abaixo para voltar e adicioná-lo ao protocolo.
-                          </p>
-
-                          <div className="mt-3 space-y-2.5">
-                            <Input
-                              placeholder="Nome do ativo"
-                              value={newSubName}
-                              onChange={(e) => setNewSubName(e.target.value)}
-                              className="h-8 text-xs"
-                              required
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <select
-                                value={newSubCategory}
-                                onChange={(e) => setNewSubCategory(e.target.value)}
-                                className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground"
-                              >
-                                {["Adaptógeno", "Termogênico", "Fitoterápico", "Vitamina", "Mineral", "Aminoácido", "Lipídio", "Probiótico", "Antioxidante", "Hormonal", "Outros"].map((c) => (
-                                  <option key={c} value={c}>{c}</option>
-                                ))}
-                              </select>
-                              <select
-                                value={newSubUnit}
-                                onChange={(e) => setNewSubUnit(e.target.value)}
-                                className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground"
-                              >
-                                {["mg", "mcg", "g", "UI", "ml", "gotas", "UFC"].map((u) => (
-                                  <option key={u} value={u}>{u}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <Input
-                              type="number"
-                              step="any"
-                              placeholder="Dose sugerida (opcional)"
-                              value={newSubIdealDose}
-                              onChange={(e) => setNewSubIdealDose(e.target.value)}
-                              className="h-8 text-xs"
-                            />
+                          <div className="border-b border-border/50 bg-muted/25 px-4 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Novo ativo no catálogo</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Cadastre o substrato abaixo para voltar e adicioná-lo ao protocolo.
+                            </p>
                           </div>
+                          <div className="p-4">
+                            <div className="space-y-2.5">
+                              <Input
+                                placeholder="Nome do ativo"
+                                value={newSubName}
+                                onChange={(e) => setNewSubName(e.target.value)}
+                                className="h-9 text-sm"
+                                required
+                              />
+                              <div className="grid gap-2 md:grid-cols-[1.3fr_0.8fr]">
+                                <select
+                                  value={newSubCategory}
+                                  onChange={(e) => setNewSubCategory(e.target.value)}
+                                  className="h-9 rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground"
+                                >
+                                  {["Adaptógeno", "Termogênico", "Fitoterápico", "Vitamina", "Mineral", "Aminoácido", "Lipídio", "Probiótico", "Antioxidante", "Hormonal", "Outros"].map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={newSubUnit}
+                                  onChange={(e) => setNewSubUnit(e.target.value)}
+                                  className="h-9 rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground"
+                                >
+                                  {["mg", "mcg", "g", "UI", "ml", "gotas", "UFC"].map((u) => (
+                                    <option key={u} value={u}>{u}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <Input
+                                type="number"
+                                step="any"
+                                placeholder="Dose sugerida (opcional)"
+                                value={newSubIdealDose}
+                                onChange={(e) => setNewSubIdealDose(e.target.value)}
+                                className="h-9 text-sm"
+                              />
+                            </div>
 
-                          <div className="mt-3 flex justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setProtocolSubFormSeed(null)}
-                              className="h-8 text-xs px-3"
-                            >
-                              Cancelar
-                            </Button>
-                            <Button
-                              type="submit"
-                              size="sm"
-                              disabled={registeringSub}
-                              className="h-8 text-xs px-3"
-                            >
-                              {registeringSub ? "Salvando..." : "Cadastrar"}
-                            </Button>
+                            <div className="mt-4 flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setProtocolSubFormSeed(null)}
+                                className="h-9 text-sm px-3"
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                type="submit"
+                                size="sm"
+                                disabled={registeringSub}
+                                className="h-9 text-sm px-3"
+                              >
+                                {registeringSub ? "Salvando..." : "Cadastrar"}
+                              </Button>
+                            </div>
                           </div>
                         </form>
                       )}
