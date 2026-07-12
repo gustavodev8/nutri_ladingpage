@@ -41,10 +41,32 @@ const PHARMA_FORMS = ["Cápsulas", "Sachê", "Solução oral", "Comprimidos", "C
 
 // â”€â”€â”€ PDF generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
+async function loadImageDataUrl(src: string): Promise<string> {
+  const response = await fetch(src);
+  if (!response.ok) {
+    throw new Error(`Falha ao carregar imagem: ${src}`);
+  }
+
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(`Falha ao ler imagem: ${src}`));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
   const today = new Date().toLocaleDateString("pt-BR", {
     day: "2-digit", month: "long", year: "numeric",
   });
+
+  let signatureDataUrl = "";
+  try {
+    signatureDataUrl = await loadImageDataUrl("/assinatura.png");
+  } catch (error) {
+    console.warn("[PrescriptionBuilder] Assinatura não carregou:", error);
+  }
 
   const blockRows = blocks
     .filter((b) => b.items.length > 0)
@@ -96,10 +118,11 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
   .posology { padding: 5px 12px 7px; background: #f5fbf7; font-size: 9.5pt; color: #444; border-top: 1px solid #e0ede8; }
   .footer { margin-top: 32px; border-top: 1px solid #ddd; padding-top: 16px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
   .signature-block { flex: 1; text-align: center; }
-  .signature-line { border-top: 1px solid #333; margin-bottom: 5px; margin-top: 40px; }
+  .signature-line { border-top: 1px solid #333; margin-bottom: 10px; margin-top: 34px; width: 100%; }
+  .signature-image-wrap { display: flex; justify-content: center; margin-bottom: 8px; min-height: 28px; }
+  .signature-image { max-width: 78px; max-height: 28px; object-fit: contain; display: block; }
   .signature-name { font-size: 10pt; font-weight: bold; }
   .signature-sub { font-size: 8.5pt; color: #555; }
-  .stamp-box { width: 90px; height: 90px; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #bbb; text-align: center; padding: 6px; }
   @media print { body { padding: 0; } .page { padding: 14mm 18mm 18mm; } }
 </style>
 </head>
@@ -121,10 +144,10 @@ function printPrescription(blocks: PrescriptionBlock[], patientName: string) {
   <div class="footer">
     <div class="signature-block">
       <div class="signature-line"></div>
+      ${signatureDataUrl ? `<div class="signature-image-wrap"><img class="signature-image" src="${signatureDataUrl}" alt="Assinatura"></div>` : ""}
       <div class="signature-name">Dr. Fillipe David</div>
       <div class="signature-sub">Nutricionista · CRN-5</div>
     </div>
-    <div class="stamp-box">Carimbo</div>
   </div>
 </div>
 <script>window.onload = () => { window.print(); }</script>
@@ -471,7 +494,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
     }
   };
 
-  const printSaved = (p: SavedPrescription) => {
+  const printSaved = async (p: SavedPrescription) => {
     const blocks: PrescriptionBlock[] = p.blocks.map((b) => ({
       localId:            String(b.id),
       label:              b.label,
@@ -479,13 +502,13 @@ export function PrescriptionBuilder({ patientId }: Props) {
       posology:           b.posology ?? "",
       items:              b.items.map((i) => ({ name: i.name, dose: i.dose, unit: i.unit })),
     }));
-    printPrescription(blocks, patientName);
+    await printPrescription(blocks, patientName);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const filled = blocks.filter((b) => b.items.length > 0);
     if (filled.length === 0) { toast.error("Adicione pelo menos um ativo para imprimir."); return; }
-    printPrescription(filled, patientName);
+    await printPrescription(filled, patientName);
   };
 
   // Filtered data
@@ -575,7 +598,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); printSaved(p); }}
+                      onClick={(e) => { e.stopPropagation(); void printSaved(p); }}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded border border-border/50 hover:border-primary/30"
                     >
                       <Printer size={11} /> PDF
@@ -1237,7 +1260,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handlePrint}
+              onClick={() => void handlePrint()}
               disabled={totalItems === 0}
               className="gap-1.5 h-7 text-xs"
             >
