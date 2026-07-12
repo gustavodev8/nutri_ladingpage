@@ -90,13 +90,17 @@ function wrapLines(doc: jsPDF, text: string, maxWidth: number): string[] {
 }
 
 function drawHeader(doc: jsPDF, planTitle: string, patientName: string | undefined, days: number, pageWidth: number) {
-  const headerHeight = 33;
-  doc.setFillColor(...C.accentDark);
+  const headerHeight = 32;
+  doc.setFillColor(...C.white);
   doc.rect(0, 0, pageWidth, headerHeight, "F");
+  doc.setFillColor(...C.accentDark);
+  doc.rect(0, 0, 5, headerHeight, "F");
+  doc.setFillColor(...C.soft);
+  doc.rect(5, headerHeight - 4, pageWidth - 5, 4, "F");
 
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...C.accentDark);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
+  doc.setFontSize(16);
   doc.text("Lista de compras do mês", 14, 13);
 
   doc.setFont("helvetica", "normal");
@@ -106,15 +110,12 @@ function drawHeader(doc: jsPDF, planTitle: string, patientName: string | undefin
     patientName ? `Paciente: ${patientName}` : null,
     `${days} dias de referência`,
   ].filter(Boolean).join("  ·  ");
+  doc.setTextColor(...C.muted);
   doc.text(subtitle, 14, 23);
 
   doc.setFontSize(8);
-  doc.setTextColor(212, 255, 247);
+  doc.setTextColor(...C.muted);
   doc.text(`Gerado em ${formatToday()}`, pageWidth - 14, 13, { align: "right" });
-
-  doc.setDrawColor(255, 255, 255);
-  doc.setLineWidth(0.35);
-  doc.line(14, 28, pageWidth - 14, 28);
 }
 
 function drawIntro(doc: jsPDF, y: number, pageWidth: number) {
@@ -135,7 +136,7 @@ function drawIntro(doc: jsPDF, y: number, pageWidth: number) {
   doc.setFontSize(8);
   const lines = wrapLines(
     doc,
-    "A lista foi organizada para orientar a compra com mais clareza. Sempre confira a quantidade cadastrada no plano e ajuste os itens sem medida definida antes de ir ao mercado.",
+    "Este documento transforma a dieta em uma lista prática de mercado. A quantidade mensal é uma estimativa baseada nas porções diárias cadastradas no plano alimentar.",
     boxW - 8,
   );
   doc.text(lines.slice(0, 2), boxX + 4, y + 13);
@@ -231,18 +232,18 @@ function drawGroupTitle(doc: jsPDF, y: number, pageWidth: number, title: string,
   return y + 14;
 }
 
-function buildRows(groupItems: MonthlyShoppingListResult["groups"][number]["items"], doc: jsPDF) {
+function buildRows(groupItems: MonthlyShoppingListResult["groups"][number]["items"]) {
   return groupItems.map((item) => ({
     item: item.foodName,
     qty: `${item.displayQuantity.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${item.displayUnit}`,
+    daily: `${item.dailyQuantity.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${item.unit}`,
     meal: item.sourceMeals.join(" · "),
     note:
       item.missingOccurrences > 0
         ? `Falta quantidade em ${item.missingOccurrences} ocorrência${item.missingOccurrences === 1 ? "" : "s"}`
         : item.quantifiedOccurrences > 1
-        ? "Somado de várias refeições"
-        : "Item único",
-    widthHint: doc.getTextWidth(item.foodName),
+        ? `Somado de ${item.quantifiedOccurrences} refeições`
+        : "Aparece em 1 refeição",
   }));
 }
 
@@ -273,7 +274,7 @@ export function generateMonthlyShoppingListPdf(
   y = drawMissingSection(doc, y, pageWidth, result.missingItems);
 
   result.groups.forEach((group) => {
-    const rows = buildRows(group.items, doc);
+    const rows = buildRows(group.items);
     const estimatedHeight = 16 + rows.length * 8.4;
     ensureSpace(estimatedHeight + 10);
 
@@ -283,13 +284,13 @@ export function generateMonthlyShoppingListPdf(
       startY: y,
       margin: { left: 14, right: 14 },
       tableWidth: pageWidth - 28,
-      head: [["Alimento", "Quantidade mensal", "Origem", "Orientação"]],
-      body: rows.map((row) => [row.item, row.qty, fitText(doc, row.meal, 56), row.note]),
+      head: [["Alimento", "Comprar no mês", "Por dia", "Onde aparece", "Observação"]],
+      body: rows.map((row) => [row.item, row.qty, row.daily, fitText(doc, row.meal, 42), row.note]),
       theme: "plain",
       styles: {
         font: "helvetica",
-        fontSize: 8.4,
-        cellPadding: 2.2,
+        fontSize: 8,
+        cellPadding: 2,
         textColor: C.ink,
         lineColor: C.line,
         lineWidth: 0.15,
@@ -305,10 +306,11 @@ export function generateMonthlyShoppingListPdf(
         fillColor: C.soft,
       },
       columnStyles: {
-        0: { cellWidth: 61 },
-        1: { cellWidth: 31, halign: "right" },
-        2: { cellWidth: 54 },
-        3: { cellWidth: "auto" },
+        0: { cellWidth: 49 },
+        1: { cellWidth: 29, halign: "right", fontStyle: "bold" },
+        2: { cellWidth: 24, halign: "right" },
+        3: { cellWidth: 39 },
+        4: { cellWidth: "auto" },
       },
     });
 
@@ -317,15 +319,6 @@ export function generateMonthlyShoppingListPdf(
   });
 
   const finalFooterY = pageHeight - 10;
-  doc.setDrawColor(...C.line);
-  doc.setLineWidth(0.2);
-  doc.line(14, finalFooterY - 3, pageWidth - 14, finalFooterY - 3);
-  doc.setTextColor(...C.muted);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.2);
-  doc.text("Orientação clínica: a lista é uma base de compra, não substitui a conferência das porções e medidas caseiras.", 14, finalFooterY);
-  doc.text(`Página 1`, pageWidth - 14, finalFooterY, { align: "right" });
-
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
