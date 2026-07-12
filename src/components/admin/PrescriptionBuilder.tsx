@@ -182,6 +182,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
   
   // Registering substrate state
   const [showNewSubForm, setShowNewSubForm] = useState(false);
+  const [protocolSubFormSeed, setProtocolSubFormSeed] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
   const [newSubCategory, setNewSubCategory] = useState("Outros");
   const [newSubUnit, setNewSubUnit] = useState("mg");
@@ -439,6 +440,7 @@ export function PrescriptionBuilder({ patientId }: Props) {
       setNewSubName("");
       setNewSubIdealDose("");
       setShowNewSubForm(false);
+      setProtocolSubFormSeed(null);
     } else {
       toast.error("Erro ao cadastrar ativo no banco.");
     }
@@ -774,7 +776,10 @@ export function PrescriptionBuilder({ patientId }: Props) {
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={protocolSubSearch}
-                      onChange={(e) => setProtocolSubSearch(e.target.value)}
+                      onChange={(e) => {
+                        setProtocolSubSearch(e.target.value);
+                        setProtocolSubFormSeed(null);
+                      }}
                       placeholder="Buscar substrato"
                       className="pl-9 h-10 text-sm"
                     />
@@ -822,29 +827,99 @@ export function PrescriptionBuilder({ patientId }: Props) {
                   ))}
                   {protocolVisibleSubs.length === 0 && (
                     <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 px-6 text-center">
-                      <p className="text-sm text-muted-foreground">Nenhum substrato encontrado.</p>
-                      <p className="mt-1 text-xs text-muted-foreground/80">
-                        Você pode cadastrar esse ativo no sistema e depois voltar para incluir no protocolo.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const query = protocolSubSearch.trim();
-                          setLeftTab("substrates");
-                          setShowNewSubForm(true);
-                          setSubSearch(query);
-                          setNewSubName(query);
-                          setNewSubCategory("Outros");
-                          setNewSubUnit("mg");
-                          setNewSubIdealDose("");
-                        }}
-                        className="mt-4 gap-1.5 border-primary/20 text-primary hover:bg-primary/5 hover:text-primary"
-                      >
-                        <Plus size={12} />
-                        Cadastrar substrato no sistema
-                      </Button>
+                      {protocolSubFormSeed === null ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">Nenhum substrato encontrado.</p>
+                          <p className="mt-1 text-xs text-muted-foreground/80">
+                            Você pode cadastrar esse ativo no sistema e depois voltar para incluir no protocolo.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const seed = protocolSubSearch.trim();
+                              setProtocolSubFormSeed(seed);
+                              setNewSubName(seed);
+                              setNewSubCategory("Outros");
+                              setNewSubUnit("mg");
+                              setNewSubIdealDose("");
+                            }}
+                            className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary/20 bg-background px-3 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/5"
+                          >
+                            <Plus size={12} />
+                            Cadastrar substrato no sistema
+                          </button>
+                        </>
+                      ) : (
+                        <form
+                          onSubmit={handleRegisterSubstrate}
+                          className="mt-2 w-full max-w-lg rounded-2xl border border-border/60 bg-background p-4 text-left shadow-sm"
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                            Novo ativo no catálogo
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Cadastre o substrato abaixo para voltar e adicioná-lo ao protocolo.
+                          </p>
+
+                          <div className="mt-3 space-y-2.5">
+                            <Input
+                              placeholder="Nome do ativo"
+                              value={newSubName}
+                              onChange={(e) => setNewSubName(e.target.value)}
+                              className="h-8 text-xs"
+                              required
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <select
+                                value={newSubCategory}
+                                onChange={(e) => setNewSubCategory(e.target.value)}
+                                className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground"
+                              >
+                                {["Adaptógeno", "Termogênico", "Fitoterápico", "Vitamina", "Mineral", "Aminoácido", "Lipídio", "Probiótico", "Antioxidante", "Hormonal", "Outros"].map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={newSubUnit}
+                                onChange={(e) => setNewSubUnit(e.target.value)}
+                                className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground"
+                              >
+                                {["mg", "mcg", "g", "UI", "ml", "gotas", "UFC"].map((u) => (
+                                  <option key={u} value={u}>{u}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <Input
+                              type="number"
+                              step="any"
+                              placeholder="Dose sugerida (opcional)"
+                              value={newSubIdealDose}
+                              onChange={(e) => setNewSubIdealDose(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="mt-3 flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setProtocolSubFormSeed(null)}
+                              className="h-8 text-xs px-3"
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={registeringSub}
+                              className="h-8 text-xs px-3"
+                            >
+                              {registeringSub ? "Salvando..." : "Cadastrar"}
+                            </Button>
+                          </div>
+                        </form>
+                      )}
                     </div>
                   )}
                 </div>
