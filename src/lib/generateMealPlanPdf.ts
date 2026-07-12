@@ -236,7 +236,7 @@ function drawAlternativeMealColumns(
 
   for (let i = 0; i < meals.length; i += columns) {
     const cards = meals.slice(i, i + columns);
-    const rowColumns = cards.length === 1 ? columns : cards.length;
+    const rowColumns = cards.length;
     const rowCardW = (contentW - gap * (rowColumns - 1)) / rowColumns;
     const rowH = Math.max(...cards.map((meal) => alternativeMealHeight(doc, meal, rowCardW)));
 
