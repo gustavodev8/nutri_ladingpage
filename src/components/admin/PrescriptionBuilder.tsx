@@ -116,11 +116,11 @@ async function printPrescription(blocks: PrescriptionBlock[], patientName: strin
   .item-name { flex: 1; }
   .item-dose { font-weight: bold; color: #2c6e4e; white-space: nowrap; margin-left: 16px; }
   .posology { padding: 5px 12px 7px; background: #f5fbf7; font-size: 9.5pt; color: #444; border-top: 1px solid #e0ede8; }
-  .footer { margin-top: 32px; border-top: 1px solid #ddd; padding-top: 16px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
-  .signature-block { flex: 1; text-align: center; }
-  .signature-line { border-top: 1px solid #333; margin-bottom: 10px; margin-top: 34px; width: 100%; }
-  .signature-image-wrap { display: flex; justify-content: center; margin-bottom: 8px; min-height: 28px; }
-  .signature-image { max-width: 78px; max-height: 28px; object-fit: contain; display: block; }
+  .footer { margin-top: auto; border-top: 1px solid #ddd; padding-top: 18px; display: flex; justify-content: center; align-items: flex-end; }
+  .signature-block { width: 78mm; text-align: center; }
+  .signature-image-wrap { display: flex; justify-content: center; align-items: flex-end; height: 24mm; margin-bottom: 2px; }
+  .signature-image { max-width: 54mm; max-height: 22mm; object-fit: contain; display: block; }
+  .signature-line { border-top: 1px solid #333; margin: 0 auto 5px; width: 100%; }
   .signature-name { font-size: 10pt; font-weight: bold; }
   .signature-sub { font-size: 8.5pt; color: #555; }
   @media print { body { padding: 0; } .page { padding: 14mm 18mm 18mm; } }
@@ -143,8 +143,8 @@ async function printPrescription(blocks: PrescriptionBlock[], patientName: strin
   <div class="formulas">${blockRows}</div>
   <div class="footer">
     <div class="signature-block">
-      <div class="signature-line"></div>
       ${signatureDataUrl ? `<div class="signature-image-wrap"><img class="signature-image" src="${signatureDataUrl}" alt="Assinatura"></div>` : ""}
+      <div class="signature-line"></div>
       <div class="signature-name">Dr. Fillipe David</div>
       <div class="signature-sub">Nutricionista · CRN-5</div>
     </div>
