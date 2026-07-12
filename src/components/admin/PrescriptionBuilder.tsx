@@ -346,6 +346,18 @@ export function PrescriptionBuilder({ patientId }: Props) {
     setProtocolSubSearch("");
   };
 
+  const saveBlockAsProtocol = (block: PrescriptionBlock) => {
+    setCreatingProtocol(true);
+    setView("builder");
+    setProtocolDraft(block.items.map((item) => ({ ...item })));
+    setProtocolName(block.label.trim() || "Novo protocolo");
+    setProtocolObjective("Geral");
+    setProtocolPharmaForm(block.pharmaceuticalForm);
+    setProtocolPosology(block.posology);
+    setProtocolSubSearch("");
+    toast.success("Fórmula enviada para o modo protocolo.");
+  };
+
   const handleSaveProtocol = async () => {
     if (!protocolName.trim()) {
       toast.error("Digite o nome do protocolo.");
@@ -1337,6 +1349,16 @@ export function PrescriptionBuilder({ patientId }: Props) {
                       >
                         <Trash2 size={13} />
                       </button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => saveBlockAsProtocol(block)}
+                        className="h-7 gap-1.5 text-[11px] border-primary/20 text-primary hover:bg-primary/5 hover:text-primary shrink-0"
+                      >
+                        <Save size={11} />
+                        Salvar protocolo
+                      </Button>
                     </div>
 
                     {/* Items */}
