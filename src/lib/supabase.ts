@@ -206,18 +206,60 @@ export async function uploadVideo(file: File): Promise<string | null> {
 
 const FOOD_TABLE = "master_foods";
 
+const MOJIBAKE_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/Ã¡/g, "á"],
+  [/Ã¢/g, "â"],
+  [/Ã£/g, "ã"],
+  [/Ã¤/g, "ä"],
+  [/Ã¥/g, "å"],
+  [/Ã§/g, "ç"],
+  [/Ã©/g, "é"],
+  [/Ãª/g, "ê"],
+  [/Ã¨/g, "è"],
+  [/Ã­/g, "í"],
+  [/Ã¬/g, "ì"],
+  [/Ã³/g, "ó"],
+  [/Ã´/g, "ô"],
+  [/Ãµ/g, "õ"],
+  [/Ã¶/g, "ö"],
+  [/Ãº/g, "ú"],
+  [/Ã¹/g, "ù"],
+  [/Ã¼/g, "ü"],
+  [/Ã/g, "Á"],
+  [/Ã‚/g, "Â"],
+  [/Ãƒ/g, "Ã"],
+  [/Ã„/g, "Ä"],
+  [/Ã‡/g, "Ç"],
+  [/Ã‰/g, "É"],
+  [/ÃŠ/g, "Ê"],
+  [/Ã/g, "Í"],
+  [/Ã“/g, "Ó"],
+  [/Ã”/g, "Ô"],
+  [/Ã•/g, "Õ"],
+  [/Ãš/g, "Ú"],
+  [/Ãœ/g, "Ü"],
+  [/Ã±/g, "ñ"],
+  [/Â·/g, "·"],
+  [/Â°/g, "°"],
+  [/Âª/g, "ª"],
+  [/Âº/g, "º"],
+  [/â€“/g, "–"],
+  [/â€”/g, "—"],
+  [/â€˜/g, "‘"],
+  [/â€™/g, "’"],
+  [/â€œ/g, "“"],
+  [/â€/g, "”"],
+  [/â€¦/g, "…"],
+  [/�/g, ""],
+];
+
 function repairMojibake(value: string | null | undefined): string {
   if (!value) return "";
-  if (!/[ÃÂâ�]/.test(value)) return value;
-
-  try {
-    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
-    const repaired = new TextDecoder("utf-8").decode(bytes);
-    if (!repaired || repaired.includes("�")) return value;
-    return repaired;
-  } catch {
-    return value;
+  let next = value;
+  for (const [pattern, replacement] of MOJIBAKE_REPLACEMENTS) {
+    next = next.replace(pattern, replacement);
   }
+  return next;
 }
 
 export async function fetchFoodsFromSupabase(query?: string, category?: string): Promise<import("./foodDatabase").FoodItem[]> {
