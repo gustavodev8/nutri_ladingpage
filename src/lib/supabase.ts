@@ -1784,6 +1784,49 @@ export async function insertReadyFormula(input: ReadyFormulaCreateInput): Promis
     return false;
   }
 
+  const resolveSubstrateId = async (item: ReadyFormulaCreateInput["items"][number], index: number): Promise<number | null> => {
+    if (item.substrateId != null) return item.substrateId;
+
+    const normalizedName = item.name.trim();
+    if (!normalizedName) {
+      console.error(`[Supabase] insertReadyFormula item ${index}: missing substrate name`);
+      return null;
+    }
+
+    const { data: existingSubstrate, error: findError } = await supabaseAdmin
+      .from("substrates")
+      .select("id")
+      .eq("name", normalizedName)
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (findError) {
+      console.error(`[Supabase] insertReadyFormula resolve substrate ${index}:`, findError.message);
+      return null;
+    }
+
+    if (existingSubstrate?.id) return existingSubstrate.id as number;
+
+    const { data: createdSubstrate, error: createSubstrateError } = await supabaseAdmin
+      .from("substrates")
+      .insert({
+        name: normalizedName,
+        category: "Outros",
+        ideal_dose: item.appliedDose,
+        unit: item.unit,
+      })
+      .select("id")
+      .single();
+
+    if (createSubstrateError || !createdSubstrate?.id) {
+      console.error(`[Supabase] insertReadyFormula create substrate ${index}:`, createSubstrateError?.message);
+      return null;
+    }
+
+    return createdSubstrate.id as number;
+  };
+
   const createFormulaRow = async () => supabaseAdmin
     .from("ready_formulas")
     .insert({
@@ -1796,14 +1839,14 @@ export async function insertReadyFormula(input: ReadyFormulaCreateInput): Promis
     .single();
 
   const createItems = async (formulaId: number, includeName: boolean) => {
-    const rows = input.items.map((item, index) => ({
+    const rows = await Promise.all(input.items.map(async (item, index) => ({
       formula_id: formulaId,
-      substrate_id: item.substrateId ?? null,
+      substrate_id: await resolveSubstrateId(item, index),
       ...(includeName ? { name: item.name } : {}),
       applied_dose: item.appliedDose,
       unit: item.unit,
       sort_order: index,
-    }));
+    })));
     return supabaseAdmin.from("formula_items").insert(rows);
   };
 
