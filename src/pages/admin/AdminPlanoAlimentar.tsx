@@ -34,7 +34,7 @@ import { DietaryPlanningPanel } from "@/components/admin/DietaryPlanningPanel";
 import { MealPlanPdfOptionsDialog } from "@/components/admin/MealPlanPdfOptionsDialog";
 import { MonthlyShoppingListDialog } from "@/components/admin/MonthlyShoppingListDialog";
 import { TemplateImportModal } from "@/components/admin/TemplateImportModal";
-import { MealPresetImportModal } from "@/components/admin/MealPresetImportModal";
+import { MealPresetImportModal, type MealPresetImportTarget } from "@/components/admin/MealPresetImportModal";
 import { useConsultation } from "@/contexts/ConsultationContext";
 import { generateClinicalAlerts } from "@/lib/clinicalAlertsUtils";
 import { generateMealPlanPdf } from "@/lib/generateMealPlanPdf";
@@ -85,6 +85,29 @@ const editorToMeal = (m: EditorMeal, planId: number): Meal => ({
   alternative_meals:  (m.alternative_meals ?? []) as AlternativeMeal[],
 });
 
+type ParsedMealPresetTarget =
+  | { kind: "meal"; mealIndex: number }
+  | { kind: "alternative"; mealIndex: number; alternativeIndex: number };
+
+const parsePresetTargetKey = (key: string): ParsedMealPresetTarget | null => {
+  const parts = key.split(":");
+  if (parts[0] === "meal" && parts.length === 2) {
+    const mealIndex = Number(parts[1]);
+    return Number.isInteger(mealIndex) ? { kind: "meal", mealIndex } : null;
+  }
+  if (parts[0] === "alternative" && parts.length === 3) {
+    const mealIndex = Number(parts[1]);
+    const alternativeIndex = Number(parts[2]);
+    return Number.isInteger(mealIndex) && Number.isInteger(alternativeIndex)
+      ? { kind: "alternative", mealIndex, alternativeIndex }
+      : null;
+  }
+  return null;
+};
+
+const hasFilledFoods = (foods: MealFood[] | undefined) =>
+  (foods ?? []).some((food) => food.food_name.trim() !== "");
+
 
 // â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -116,7 +139,7 @@ export default function AdminPlanoAlimentar() {
   const [templateScope, setTemplateScope] = useState<"plan" | "meal">("plan");
   const [templateTargetMealIndex, setTemplateTargetMealIndex] = useState<number | null>(null);
   const [showMealPresetImport, setShowMealPresetImport] = useState(false);
-  const [presetTargetMealIndex, setPresetTargetMealIndex] = useState(0);
+  const [presetTargetKey, setPresetTargetKey] = useState("meal:0");
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const [showSaveMealPresetDialog, setShowSaveMealPresetDialog] = useState(false);
   const [showShoppingList, setShowShoppingList] = useState(false);
@@ -157,12 +180,6 @@ export default function AdminPlanoAlimentar() {
   }, [isNew, patientId, resolvedPlanId]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
-
-  useEffect(() => {
-    if (presetTargetMealIndex >= meals.length) {
-      setPresetTargetMealIndex(0);
-    }
-  }, [meals.length, presetTargetMealIndex]);
 
   const handleClonePreviousPlan = () => {
     if (!previousPlan?.id) {
@@ -404,18 +421,55 @@ export default function AdminPlanoAlimentar() {
   };
 
   const handleMealPresetImport = (importedMeal: Meal, mode: "replace" | "append") => {
-    if (presetTargetMealIndex == null) return;
+    const target = parsePresetTargetKey(presetTargetKey);
+    if (!target) return;
+
     setMeals((prev) => {
       const next = [...prev];
-      const current = next[presetTargetMealIndex];
+      const current = next[target.mealIndex];
       if (!current) return prev;
+      const imported = mealToEditor(importedMeal);
 
-      if (mode === "replace") {
-        next[presetTargetMealIndex] = mealToEditor(importedMeal);
+      if (target.kind === "alternative") {
+        const alternatives = [...(current.alternative_meals ?? [])];
+        const currentAlternative = alternatives[target.alternativeIndex];
+        if (!currentAlternative) return prev;
+
+        alternatives[target.alternativeIndex] = mode === "replace"
+          ? {
+              ...currentAlternative,
+              meal_name: imported.meal_name,
+              time_suggestion: imported.time_suggestion,
+              notes: imported.notes,
+              foods: imported.foods,
+            }
+          : {
+              ...currentAlternative,
+              meal_name: currentAlternative.meal_name.trim() ? currentAlternative.meal_name : imported.meal_name,
+              time_suggestion: currentAlternative.time_suggestion || imported.time_suggestion,
+              notes: currentAlternative.notes ?? imported.notes,
+              foods: [...(currentAlternative.foods ?? []), ...imported.foods],
+            };
+
+        next[target.mealIndex] = {
+          ...current,
+          alternative_meals: alternatives,
+        };
         return next;
       }
 
-      next[presetTargetMealIndex] = {
+      if (mode === "replace") {
+        next[target.mealIndex] = {
+          ...current,
+          meal_name: imported.meal_name,
+          time_suggestion: imported.time_suggestion,
+          notes: imported.notes,
+          foods: imported.foods,
+        };
+        return next;
+      }
+
+      next[target.mealIndex] = {
         ...current,
         meal_name: current.meal_name.trim() ? current.meal_name : importedMeal.meal_name,
         time_suggestion: current.time_suggestion || importedMeal.time_suggestion,
@@ -437,8 +491,31 @@ export default function AdminPlanoAlimentar() {
     [meals, plan.daily_calories]
   );
 
-  const presetTargetCalories = mealTargets[presetTargetMealIndex]?.targetCalories;
-  const presetMealNames = meals.map((meal) => meal.meal_name || "Refeição");
+  const presetImportTargets = useMemo<MealPresetImportTarget[]>(() => meals.flatMap((meal, mealIndex) => {
+    const mealLabel = meal.meal_name.trim() || `Refeição ${mealIndex + 1}`;
+    const targetCalories = mealTargets[mealIndex]?.targetCalories;
+    const mainTarget: MealPresetImportTarget = {
+      key: `meal:${mealIndex}`,
+      label: mealLabel,
+      kind: "meal",
+      hasFoods: hasFilledFoods(meal.foods),
+      targetCalories,
+    };
+    const alternativeTargets = (meal.alternative_meals ?? []).map((alternative, alternativeIndex): MealPresetImportTarget => ({
+      key: `alternative:${mealIndex}:${alternativeIndex}`,
+      label: `${mealLabel} - Opção ${alternativeIndex + 2}`,
+      kind: "alternative",
+      hasFoods: hasFilledFoods(alternative.foods),
+      targetCalories,
+    }));
+    return [mainTarget, ...alternativeTargets];
+  }), [mealTargets, meals]);
+
+  useEffect(() => {
+    if (presetImportTargets.length > 0 && !presetImportTargets.some((target) => target.key === presetTargetKey)) {
+      setPresetTargetKey(presetImportTargets[0].key);
+    }
+  }, [presetImportTargets, presetTargetKey]);
 
   const mealNutritionTargets = useMemo(
     () => (macroGoals ? getMealNutritionTargets(meals, macroGoals) : []),
@@ -1161,11 +1238,9 @@ export default function AdminPlanoAlimentar() {
 
       <MealPresetImportModal
         open={showMealPresetImport}
-        hasMeals={!!(meals[presetTargetMealIndex]?.foods?.some((food) => food.food_name.trim() !== ""))}
-        mealNames={presetMealNames}
-        targetMealIndex={presetTargetMealIndex}
-        targetCalories={presetTargetCalories}
-        onTargetMealIndexChange={setPresetTargetMealIndex}
+        targets={presetImportTargets}
+        targetKey={presetTargetKey}
+        onTargetKeyChange={setPresetTargetKey}
         onClose={() => setShowMealPresetImport(false)}
         onImport={handleMealPresetImport}
       />

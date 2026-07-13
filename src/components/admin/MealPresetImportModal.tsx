@@ -124,24 +124,28 @@ function MealPreview({ meal }: { meal: Meal }) {
   );
 }
 
+export interface MealPresetImportTarget {
+  key: string;
+  label: string;
+  kind: "meal" | "alternative";
+  hasFoods: boolean;
+  targetCalories?: number;
+}
+
 interface Props {
   open: boolean;
-  hasMeals: boolean;
-  mealNames: string[];
-  targetMealIndex: number;
-  targetCalories?: number;
-  onTargetMealIndexChange: (index: number) => void;
+  targets: MealPresetImportTarget[];
+  targetKey: string;
+  onTargetKeyChange: (key: string) => void;
   onClose: () => void;
   onImport: (meal: Meal, mode: "replace" | "append") => void;
 }
 
 export function MealPresetImportModal({
   open,
-  hasMeals,
-  mealNames,
-  targetMealIndex,
-  targetCalories,
-  onTargetMealIndexChange,
+  targets,
+  targetKey,
+  onTargetKeyChange,
   onClose,
   onImport,
 }: Props) {
@@ -167,10 +171,14 @@ export function MealPresetImportModal({
   }, [open]);
 
   useEffect(() => {
-    if (targetMealIndex >= mealNames.length) {
-      onTargetMealIndexChange(0);
+    if (targets.length > 0 && !targets.some((target) => target.key === targetKey)) {
+      onTargetKeyChange(targets[0].key);
     }
-  }, [mealNames.length, onTargetMealIndexChange, targetMealIndex]);
+  }, [onTargetKeyChange, targetKey, targets]);
+
+  const selectedTarget = targets.find((target) => target.key === targetKey) ?? targets[0];
+  const hasMeals = selectedTarget?.hasFoods ?? false;
+  const targetCalories = selectedTarget?.targetCalories;
 
   const filteredPresets = useMemo(() => {
     const term = normalizeText(search);
@@ -223,7 +231,7 @@ export function MealPresetImportModal({
     });
   }, [presets, search, kcalFilter, targetCalories]);
 
-  const selectedMealName = mealNames[targetMealIndex] ?? "Refeição";
+  const selectedMealName = selectedTarget?.label ?? "Refeição";
 
   const handleImport = () => {
     if (!selected) return;
@@ -257,19 +265,19 @@ export function MealPresetImportModal({
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {mealNames.map((name, index) => (
+                {targets.map((target) => (
                   <button
-                    key={`${name}-${index}`}
+                    key={target.key}
                     type="button"
-                    onClick={() => onTargetMealIndexChange(index)}
+                    onClick={() => onTargetKeyChange(target.key)}
                     className={cn(
                       "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                      targetMealIndex === index
+                      targetKey === target.key
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
                     )}
                   >
-                    {name}
+                    {target.label}
                   </button>
                 ))}
               </div>
