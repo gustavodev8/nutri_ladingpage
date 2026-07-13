@@ -206,36 +206,61 @@ export async function uploadVideo(file: File): Promise<string | null> {
 
 const FOOD_TABLE = "master_foods";
 
+function repairMojibake(value: string | null | undefined): string {
+  if (!value) return "";
+  if (!/[ÃÂâ�]/.test(value)) return value;
+
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
+    const repaired = new TextDecoder("utf-8").decode(bytes);
+    if (!repaired || repaired.includes("�")) return value;
+    return repaired;
+  } catch {
+    return value;
+  }
+}
+
 export async function fetchFoodsFromSupabase(query?: string, category?: string): Promise<import("./foodDatabase").FoodItem[]> {
-  let q = supabase.from(FOOD_TABLE).select("*");
-  
-  if (query) {
-    q = q.ilike("name", `%${query}%`);
+  const pageSize = 1000;
+  const rows: Array<Record<string, unknown>> = [];
+
+  for (let from = 0; ; from += pageSize) {
+    let q = supabase.from(FOOD_TABLE).select("*");
+
+    if (query) {
+      q = q.ilike("name", `%${query}%`);
+    }
+
+    if (category && category !== "Todos") {
+      q = q.eq("category", category);
+    }
+
+    const { data, error } = await q.order("name").range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("[Supabase] fetchFoodsFromSupabase error:", error.message);
+      return [];
+    }
+
+    rows.push(...(data ?? []));
+
+    if (!data || data.length < pageSize) {
+      break;
+    }
   }
-  
-  if (category && category !== "Todos") {
-    q = q.eq("category", category);
-  }
-  
-  const { data, error } = await q.order("name");
-  
-  if (error) {
-    console.error("[Supabase] fetchFoodsFromSupabase error:", error.message);
-    return [];
-  }
-  
-  return (data ?? []).map(f => ({
-    id: f.id.toString(),
-    name: f.name,
-    category: f.category || "Personalizado",
+
+  return rows.map((f) => ({
+    id: String(f.id ?? ""),
+    name: repairMojibake(String(f.name ?? "")),
+    category: repairMojibake(String(f.category ?? "Personalizado")) || "Personalizado",
     kcal: Number(f.kcal_per_100g) || 0,
     protein: Number(f.protein_per_100g) || 0,
     carbs: Number(f.carbs_per_100g) || 0,
     fat: Number(f.fat_per_100g) || 0,
     fiber: Number(f.fiber_per_100g) || undefined,
-    source: f.source || "custom",
-    source_ref: f.source_ref || undefined,
-    source_code: f.source_code || undefined,
+    source: repairMojibake(String(f.source ?? "custom")) || "custom",
+    source_ref: f.source_ref ? repairMojibake(String(f.source_ref)) : undefined,
+    source_code: f.source_code ? String(f.source_code) : undefined,
   }));
 }
 
