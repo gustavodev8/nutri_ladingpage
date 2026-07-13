@@ -1082,6 +1082,10 @@ export default function AdminPlanoAlimentar() {
                   onUpdate={(m) => updateMeal(i, m)}
                   onRemove={() => removeMeal(i)}
                   targetCalories={mealTargets[i]?.targetCalories}
+                  onImportPreset={(targetKey) => {
+                    setPresetTargetKey(targetKey);
+                    setShowMealPresetImport(true);
+                  }}
                 />
               </div>
             ))}

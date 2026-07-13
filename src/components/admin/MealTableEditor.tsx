@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X, NotebookPen, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ArrowLeftRight, Sparkles, X, NotebookPen, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, LayoutList } from "lucide-react";
 import { FoodSearchInput } from "@/components/admin/FoodSearchInput";
 import { SmartSubstituteModal } from "@/components/admin/SmartSubstituteModal";
 import { cn } from "@/lib/utils";
@@ -409,13 +409,14 @@ async function getRules(): Promise<SubstitutionRule[]> {
 }
 
 export function MealSection({
-  meal, idx, onUpdate, onRemove, targetCalories, resetKey,
+  meal, idx, onUpdate, onRemove, targetCalories, resetKey, onImportPreset,
 }: {
   meal: EditorMeal; idx: number;
   onUpdate: (m: EditorMeal) => void;
   onRemove: () => void;
   targetCalories?: number;
   resetKey?: string | number;
+  onImportPreset?: (targetKey: string) => void;
 }) {
   const alternatives  = meal.alternative_meals ?? [];
   const totalOptions  = alternatives.length + 1; // principal + substitutas
@@ -540,6 +541,7 @@ export function MealSection({
   const addFood    = () => updateCurrentOption({ foods: [...foods, emptyFood()] });
 
   const optionLabel = isMain ? "Principal" : `Opção ${clampedIdx + 1}`;
+  const presetImportTargetKey = isMain ? `meal:${idx}` : `alternative:${idx}:${clampedIdx - 1}`;
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border border-border/60 border-l-[5px] bg-card shadow-sm transition-shadow hover:shadow-md ${borderCls}`}>
@@ -733,6 +735,13 @@ export function MealSection({
             <Plus size={12} />
             Adicionar alimento
           </button>
+          {onImportPreset && (
+            <button type="button" onClick={() => onImportPreset(presetImportTargetKey)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-semibold text-muted-foreground/80 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary">
+              <LayoutList size={12} />
+              Importar refeição
+            </button>
+          )}
           <button type="button"
             onClick={() => {
               const next = !showNotes;
