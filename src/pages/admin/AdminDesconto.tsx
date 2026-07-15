@@ -29,22 +29,7 @@ const AdminDesconto = () => {
     }));
   };
 
-  const hasInvalidScopedSelection =
-    (form.ebookScope === "some" && ebookItems.length > 0 && form.selectedEbookNames.length === 0) ||
-    (form.serviceScope === "some" && serviceItems.length > 0 && form.selectedServiceNames.length === 0);
-
-  const validateScopedSelection = () => {
-    if (!hasInvalidScopedSelection) return true;
-    toast({
-      title: "Selecione ao menos um item",
-      description: "Quando o desconto estiver em 'alguns', é necessário marcar pelo menos um e-book e/ou atendimento.",
-      variant: "destructive",
-    });
-    return false;
-  };
-
   const activate = async () => {
-    if (!validateScopedSelection()) return;
     const expiresAt = new Date(
       Date.now() + form.durationHours * 60 * 60 * 1000
     ).toISOString();
@@ -62,8 +47,8 @@ const AdminDesconto = () => {
   };
 
   const handleSave = async () => {
-    if (!validateScopedSelection()) return;
     await updateContent((prev) => ({ ...prev, discount: form }));
+    toast({ title: "Configuração de desconto salva." });
   };
 
   const activeAndValid = form.active && !isExpired;
@@ -204,6 +189,9 @@ const AdminDesconto = () => {
 
             {form.ebookScope === "some" && (
               <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Se nenhum e-book for marcado, o desconto não será aplicado a nenhum e-book.
+                </p>
                 {ebookItems.map((item) => (
                   <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
                     <input
@@ -252,6 +240,9 @@ const AdminDesconto = () => {
 
             {form.serviceScope === "some" && (
               <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Se nenhum atendimento ou protocolo for marcado, o desconto não será aplicado nessa categoria.
+                </p>
                 {serviceItems.map((item) => (
                   <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
                     <input
