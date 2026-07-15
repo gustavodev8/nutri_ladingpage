@@ -113,68 +113,41 @@ const Navbar = () => {
       }`}
     >
       {bannerVisible && (
-        <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-r from-emerald-900 via-emerald-700 to-emerald-600 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] opacity-80" />
+        <div className="relative overflow-hidden border-b border-emerald-300/20 bg-gradient-to-r from-[#064e3b] via-[#047857] to-[#059669] text-white shadow-[0_3px_16px_rgba(6,78,59,0.18)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(255,255,255,0.16),transparent_30%),linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent)]" />
 
-          <div className="relative mx-auto max-w-7xl px-4 py-3 pr-14">
-            <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:text-left">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10">
-                  <Tag className="h-4 w-4 shrink-0" />
+          <div className="relative mx-auto flex min-h-[72px] max-w-6xl items-center justify-center px-12 py-2.5 sm:px-14 lg:min-h-[76px]">
+            <div className="flex w-full flex-col items-center justify-center gap-2.5 sm:flex-row sm:gap-4 lg:gap-5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 shadow-inner sm:h-9 sm:w-9">
+                  <Tag className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
                 </span>
-                <p className="text-sm font-semibold leading-tight sm:text-base">{message}</p>
+                <p className="truncate text-center text-[13px] font-semibold tracking-[-0.01em] sm:text-left sm:text-sm lg:text-[15px]">
+                  {message}
+                </p>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 shadow-sm">
-                  {percentage}% off
+              <div className="flex shrink-0 items-center gap-2.5">
+                <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-800 shadow-[0_3px_10px_rgba(0,0,0,0.12)] sm:text-[11px]">
+                  {percentage}% <span className="text-emerald-600">off</span>
                 </span>
 
                 {countdownView && (
-                  <div
-                    className={`rounded-2xl border px-2.5 py-2 shadow-sm ${
-                      countdownView.urgent
-                        ? "border-amber-200/60 bg-amber-50 text-slate-900"
-                        : "border-white/20 bg-white/12 text-white backdrop-blur-sm"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                          countdownView.urgent ? "bg-amber-100 text-amber-700" : "bg-white/16 text-white"
-                        }`}
-                      >
-                        <TimerReset className="h-3.5 w-3.5" />
-                      </span>
-
-                      <div className="text-left">
-                        <p
-                          className={`text-[10px] font-bold uppercase tracking-[0.2em] ${
-                            countdownView.urgent ? "text-amber-700" : "text-white/70"
-                          }`}
-                        >
-                          {countdownView.headline}
-                        </p>
-
-                        <div className="mt-1 flex items-center gap-1.5">
-                          {countdownView.segments.map((segment) => (
-                            <div
-                              key={`${segment.label}-${segment.value}`}
-                              className={`min-w-[50px] rounded-xl px-2 py-1 text-center ${
-                                countdownView.urgent ? "bg-white shadow-sm" : "bg-white/10"
-                              }`}
-                            >
-                              <p className="text-sm font-black tabular-nums leading-none">{segment.value}</p>
-                              <p
-                                className={`mt-1 text-[9px] font-bold uppercase tracking-[0.18em] ${
-                                  countdownView.urgent ? "text-slate-500" : "text-white/65"
-                                }`}
-                              >
-                                {segment.label}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/10 px-2.5 py-1.5 backdrop-blur-sm">
+                    <TimerReset className="hidden h-4 w-4 text-emerald-100 sm:block" />
+                    <div>
+                      <p className="text-[9px] font-bold uppercase leading-none tracking-[0.2em] text-emerald-100/80">
+                        {countdownView.headline}
+                      </p>
+                      <div className="mt-1 flex items-center gap-1">
+                        {countdownView.segments.map((segment) => (
+                          <div key={`${segment.label}-${segment.value}`} className="min-w-[35px] rounded-md bg-white/10 px-1.5 py-1 text-center sm:min-w-[40px]">
+                            <p className="text-xs font-extrabold tabular-nums leading-none sm:text-sm">{segment.value}</p>
+                            <p className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-emerald-100/65">
+                              {segment.label}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -185,8 +158,8 @@ const Navbar = () => {
 
           <button
             onClick={() => setBannerDismissed(true)}
-            className="absolute right-3 top-3 rounded-full border border-white/15 bg-white/8 p-1.5 opacity-80 transition-opacity hover:opacity-100"
-            aria-label="Fechar"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 p-1.5 text-white/70 transition-all hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            aria-label="Fechar promoção"
           >
             <X className="h-3.5 w-3.5" />
           </button>
