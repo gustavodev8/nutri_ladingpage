@@ -9,9 +9,29 @@ import { toast } from "@/hooks/use-toast";
 
 type DiscountConfig = SiteContent["discount"];
 
+function normalizeDiscountConfig(discount: DiscountConfig): DiscountConfig {
+  return {
+    ...discount,
+    durationValue: discount.durationValue ?? discount.durationHours ?? 8,
+    durationUnit: discount.durationUnit ?? "hours",
+  };
+}
+
+function getDurationHours(config: DiscountConfig) {
+  return config.durationUnit === "days"
+    ? config.durationValue * 24
+    : config.durationValue;
+}
+
+function formatDurationLabel(config: DiscountConfig) {
+  return config.durationUnit === "days"
+    ? `${config.durationValue} dia${config.durationValue > 1 ? "s" : ""}`
+    : `${config.durationValue}h`;
+}
+
 const AdminDesconto = () => {
   const { content, updateContent } = useContent();
-  const [form, setForm] = useState<DiscountConfig>(content.discount);
+  const [form, setForm] = useState<DiscountConfig>(() => normalizeDiscountConfig(content.discount));
   const ebookItems = content.produtosDigitais.items;
   const serviceItems = content.loja.plans;
 
@@ -30,13 +50,14 @@ const AdminDesconto = () => {
   };
 
   const activate = async () => {
+    const durationHours = getDurationHours(form);
     const expiresAt = new Date(
-      Date.now() + form.durationHours * 60 * 60 * 1000
+      Date.now() + durationHours * 60 * 60 * 1000
     ).toISOString();
-    const updated: DiscountConfig = { ...form, active: true, expiresAt };
+    const updated: DiscountConfig = { ...form, active: true, durationHours, expiresAt };
     setForm(updated);
     await updateContent((prev) => ({ ...prev, discount: updated }));
-    toast({ title: "Desconto ativado!", description: `Expira em ${form.durationHours}h.` });
+    toast({ title: "Desconto ativado!", description: `Expira em ${formatDurationLabel(form)}.` });
   };
 
   const deactivate = async () => {
@@ -131,15 +152,25 @@ const AdminDesconto = () => {
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-primary" />
-            Duração (horas)
+            Duração
           </Label>
-          <Input
-            type="number"
-            min="1"
-            max="72"
-            value={form.durationHours}
-            onChange={(e) => setForm((p) => ({ ...p, durationHours: Number(e.target.value) }))}
-          />
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min="1"
+              max={form.durationUnit === "days" ? "30" : "72"}
+              value={form.durationValue}
+              onChange={(e) => setForm((p) => ({ ...p, durationValue: Number(e.target.value) }))}
+            />
+            <select
+              value={form.durationUnit}
+              onChange={(e) => setForm((p) => ({ ...p, durationUnit: e.target.value as "hours" | "days" }))}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="hours">Horas</option>
+              <option value="days">Dias</option>
+            </select>
+          </div>
           <p className="text-xs text-muted-foreground">Quanto tempo o banner fica no ar ao ativar.</p>
         </div>
 
@@ -268,7 +299,7 @@ const AdminDesconto = () => {
           <span className="font-medium">{form.message || "Mensagem do banner"}</span>
           <span className="font-bold text-green-100">{form.percentage}% OFF</span>
           <span className="bg-white/20 rounded-full px-3 py-0.5 font-mono font-semibold text-xs">
-            ⏱ {form.durationHours}h 00m 00s
+            ⏱ {formatDurationLabel(form)}
           </span>
         </div>
       </div>
