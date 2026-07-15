@@ -9,18 +9,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/PageLayout";
 import { useContent } from "@/contexts/ContentContext";
 import { cn } from "@/lib/utils";
+import { doesDiscountApply, formatCurrency } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
-  const { active, percentage, expiresAt } = content.discount;
-  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
-  const isActive = active && !expired;
-  const formatDiscounted = (amount: number) => {
-    if (!isActive) return null;
-    const val = amount * (1 - percentage / 100);
-    return `R$ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(".", ",")}`;
+  const discount = content.discount;
+  const formatDiscounted = (name: string, amount: number) => {
+    if (!doesDiscountApply(discount, "ebook", name)) return null;
+    return formatCurrency(amount * (1 - discount.percentage / 100));
   };
-  return { isActive, percentage, formatDiscounted };
+  return { percentage: discount.percentage, doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), formatDiscounted };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,8 +39,8 @@ interface ProdutoCardProps {
 }
 
 const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
-  const { isActive, percentage, formatDiscounted } = useDiscount();
-  const discountedPrice = formatDiscounted(item.priceAmount);
+  const { doesApply, percentage, formatDiscounted } = useDiscount();
+  const discountedPrice = formatDiscounted(item.name, item.priceAmount);
   return (
   <Card
     className={cn(
@@ -77,7 +75,7 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
 
         <div>
           <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Preço</p>
-          {isActive && discountedPrice ? (
+          {doesApply(item.name) && discountedPrice ? (
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-2xl font-extrabold text-primary leading-none">{discountedPrice}</p>
               <p className="text-sm text-muted-foreground line-through">{item.price}</p>

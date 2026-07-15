@@ -154,6 +154,10 @@ export interface SiteContent {
     durationHours: number;
     expiresAt: string | null;
     message: string;
+    ebookScope: "all" | "some";
+    selectedEbookNames: string[];
+    serviceScope: "all" | "some";
+    selectedServiceNames: string[];
   };
 }
 
@@ -492,6 +496,10 @@ export const DEFAULT_CONTENT: SiteContent = {
     durationHours: 8,
     expiresAt: null,
     message: "Aproveite! Desconto especial por tempo limitado.",
+    ebookScope: "all",
+    selectedEbookNames: [],
+    serviceScope: "all",
+    selectedServiceNames: [],
   },
 };
 

@@ -10,6 +10,7 @@ import CTASection from "@/components/CTASection";
 import { useContent } from "@/contexts/ContentContext";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import type { SiteContent } from "@/contexts/ContentContext";
+import { doesDiscountApply, formatCurrency } from "@/lib/discountUtils";
 
 // ─── Dados estáticos ──────────────────────────────────────────────────────────
 
@@ -58,11 +59,16 @@ interface PlanCardProps {
   plan: Plan;
   planIndex: number;
   whatsappUrl: (msg: string) => string;
+  discount: SiteContent["discount"];
 }
 
-const PlanCard = ({ plan, planIndex, whatsappUrl }: PlanCardProps) => {
+const PlanCard = ({ plan, planIndex, whatsappUrl, discount }: PlanCardProps) => {
   const isDark = plan.popular;
   const isAvulsa = plan.sessionCount === 1;
+  const hasDiscount = doesDiscountApply(discount, "service", plan.name);
+  const discountedPrice = hasDiscount
+    ? formatCurrency(plan.priceAmount * (1 - discount.percentage / 100))
+    : plan.price;
 
   // Para avulsas: só os itens incluídos (lista positiva, sem ruído visual)
   // Para pacotes: matrix completa com ✓ e ✗ (permite comparação entre pacotes)
@@ -111,8 +117,20 @@ const PlanCard = ({ plan, planIndex, whatsappUrl }: PlanCardProps) => {
             </p>
           )}
           <p className={`text-4xl font-extrabold leading-none ${isDark ? "text-white" : "text-foreground"}`}>
-            {plan.price}
+            {discountedPrice}
           </p>
+          {hasDiscount && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className={`text-sm line-through ${isDark ? "text-white/45" : "text-muted-foreground"}`}>
+                {plan.price}
+              </span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                isDark ? "bg-primary/20 text-primary" : "bg-destructive text-destructive-foreground"
+              }`}>
+                -{discount.percentage}%
+              </span>
+            </div>
+          )}
           <p className={`text-xs mt-1.5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
             {isAvulsa ? "consulta avulsa" : `${plan.sessionCount} encontros`}
           </p>
@@ -303,6 +321,7 @@ const ConsultasPage = () => {
                 plan={plan}
                 planIndex={i}
                 whatsappUrl={whatsappUrl}
+                discount={content.discount}
               />
             ))}
           </div>
@@ -316,6 +335,7 @@ const ConsultasPage = () => {
                 plan={plan}
                 planIndex={j + 2}
                 whatsappUrl={whatsappUrl}
+                discount={content.discount}
               />
             ))}
           </div>

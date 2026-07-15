@@ -5,24 +5,21 @@ import { BookOpen, ArrowRight, Gift, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useContent } from "@/contexts/ContentContext";
+import { doesDiscountApply, formatCurrency } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
-  const { active, percentage, expiresAt } = content.discount;
-  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
-  const isActive = active && !expired;
-  const apply = (amount: number) => isActive ? amount * (1 - percentage / 100) : amount;
-  const formatDiscounted = (price: string, amount: number) => {
-    if (!isActive) return price;
-    const val = apply(amount);
-    return `R$ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(2).replace(".", ",")}`;
+  const discount = content.discount;
+  const formatDiscounted = (name: string, price: string, amount: number) => {
+    if (!doesDiscountApply(discount, "ebook", name)) return price;
+    return formatCurrency(amount * (1 - discount.percentage / 100));
   };
-  return { isActive, percentage, apply, formatDiscounted };
+  return { percentage: discount.percentage, doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), formatDiscounted };
 }
 
 const DigitalProductsSection = () => {
   const { content } = useContent();
-  const { isActive, percentage, formatDiscounted } = useDiscount();
+  const { doesApply, percentage, formatDiscounted } = useDiscount();
   const { produtosDigitais } = content;
   const { ref, isVisible, hiddenClass } = useScrollAnimation();
 
@@ -73,10 +70,10 @@ const DigitalProductsSection = () => {
                 </div>
                 <h3 className="font-bold text-base text-foreground">{item.name}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.desc}</p>
-                {isActive ? (
+                {doesApply(item.name) ? (
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <p className="text-2xl font-extrabold text-primary">
-                      {formatDiscounted(item.price, item.priceAmount)}
+                      {formatDiscounted(item.name, item.price, item.priceAmount)}
                     </p>
                     <p className="text-sm text-muted-foreground line-through">{item.price}</p>
                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0">-{percentage}%</Badge>

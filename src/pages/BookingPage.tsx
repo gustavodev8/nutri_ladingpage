@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
 import { fetchAvailabilitySlots, fetchBookingsForDate, insertBooking, confirmBookingsByGroupId, findPatientByCPF, type Booking } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { doesDiscountApply, formatCurrency, getDiscountedAmount } from "@/lib/discountUtils";
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -56,6 +57,9 @@ const BookingPage = () => {
     whatsappMessage: "",
   };
   if (!isFree && !loja.plans[idx]) return <Navigate to="/" replace />;
+  const hasPlanDiscount = !isFree && doesDiscountApply(content.discount, "service", plan.name);
+  const payableAmount = isFree ? 0 : getDiscountedAmount(content.discount, "service", plan.name, plan.priceAmount ?? 0);
+  const displayPrice = isFree ? "Gratuito" : hasPlanDiscount ? formatCurrency(payableAmount) : plan.price;
 
   // 1 consulta inicial + N retornos (sessionCount não entra na soma pois
   // representa o total de encontros do plano, não consultas adicionais)
@@ -196,7 +200,7 @@ const BookingPage = () => {
     if (step !== 4 || payTab !== "card" || stage !== "idle") return;
     if (brickRendered.current) return;
     if (!MP_PUBLIC_KEY) return;             // guard: MP not configured
-    if (!plan.priceAmount || plan.priceAmount <= 0) return; // guard: no amount
+    if (!payableAmount || payableAmount <= 0) return; // guard: no amount
 
     const tryRender = (attempts = 0) => {
       // Wait for both: MercadoPago SDK and the div in the DOM
@@ -211,7 +215,7 @@ const BookingPage = () => {
       const builder = (mp as unknown as Record<string, unknown>).bricks();
       (builder as unknown as Record<string, (type: string, id: string, config: object) => void>).create("payment", "mp-payment-brick", {
         initialization: {
-          amount: plan.priceAmount,
+          amount: payableAmount,
           payer: { email: clientEmail },
         },
         customization: {
@@ -242,7 +246,7 @@ const BookingPage = () => {
                 body: JSON.stringify({
                   paymentMethod: "card",
                   formData,
-                  amount: plan.priceAmount,
+                  amount: payableAmount,
                   customerEmail: clientEmail,
                   customerName: clientName,
                   planName: plan.name,
@@ -384,7 +388,7 @@ const BookingPage = () => {
   };
 
   const handlePixPayment = async () => {
-    if (!plan.priceAmount || plan.priceAmount <= 0) {
+    if (!payableAmount || payableAmount <= 0) {
       toast({ title: "Preço não configurado para este plano.", variant: "destructive" });
       return;
     }
@@ -407,7 +411,7 @@ const BookingPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentMethod: "pix",
-          amount: plan.priceAmount,
+          amount: payableAmount,
           customerEmail: clientEmail,
           customerName: clientName,
           planName: plan.name,
@@ -576,8 +580,13 @@ const BookingPage = () => {
             <p className="text-xs font-bold uppercase tracking-widest text-primary">Agendar consulta</p>
             <h1 className="font-display text-2xl font-bold text-foreground">{plan.name}</h1>
             <p className="text-sm text-muted-foreground">
-              {isFree ? "Online · Gratuita · 20 min" : `${totalSessions} sessão${totalSessions > 1 ? "ões" : ""} · ${plan.price}`}
+              {isFree ? "Online · Gratuita · 20 min" : `${totalSessions} sessão${totalSessions > 1 ? "ões" : ""} · ${displayPrice}`}
             </p>
+            {hasPlanDiscount && (
+              <p className="text-xs text-muted-foreground">
+                De <span className="line-through">{plan.price}</span> por <span className="font-semibold text-primary">{displayPrice}</span>
+              </p>
+            )}
             {totalReturns > 0 && (
               <p className="text-xs text-muted-foreground/70">
                 Os {totalReturns} retorno{totalReturns > 1 ? "s" : ""} serão agendados pelo nutricionista após cada consulta
@@ -1033,7 +1042,12 @@ const BookingPage = () => {
               {/* Summary */}
               <div className="bg-muted/40 rounded-2xl px-4 py-3 flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">{plan.name}</span>
-                <span className="font-bold text-primary">{plan.price}</span>
+                <div className="text-right">
+                  <span className="font-bold text-primary">{displayPrice}</span>
+                  {hasPlanDiscount && (
+                    <p className="text-[11px] text-muted-foreground line-through">{plan.price}</p>
+                  )}
+                </div>
               </div>
 
               {/* PIX QR stage */}
@@ -1106,7 +1120,7 @@ const BookingPage = () => {
                             </p>
                           </div>
                           <a
-                            href={whatsappUrl(`Olá Dr. Fillipe! Gostaria de pagar o ${plan.name} (${plan.price}) com cartão de crédito. Pode me enviar o link de pagamento?`)}
+                            href={whatsappUrl(`Olá Dr. Fillipe! Gostaria de pagar o ${plan.name} (${displayPrice}) com cartão de crédito. Pode me enviar o link de pagamento?`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-3 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all"
@@ -1115,7 +1129,7 @@ const BookingPage = () => {
                             Solicitar link de pagamento
                           </a>
                         </div>
-                      ) : (!plan.priceAmount || plan.priceAmount <= 0) ? (
+                      ) : (!payableAmount || payableAmount <= 0) ? (
                         <p className="text-sm text-muted-foreground bg-muted/50 rounded-xl px-4 py-3 text-center">
                           Pagamento por cartão não configurado para este plano. Use o Pix ou entre em contato.
                         </p>

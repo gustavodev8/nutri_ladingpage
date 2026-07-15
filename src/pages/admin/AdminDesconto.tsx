@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Power, Tag, Clock, Percent, MessageSquare } from "lucide-react";
+import { Power, Tag, Clock, Percent, MessageSquare, BookOpen, ClipboardList } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import AdminFormWrapper from "@/components/admin/AdminFormWrapper";
 import { useContent, type SiteContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
@@ -13,13 +12,39 @@ type DiscountConfig = SiteContent["discount"];
 const AdminDesconto = () => {
   const { content, updateContent } = useContent();
   const [form, setForm] = useState<DiscountConfig>(content.discount);
+  const ebookItems = content.produtosDigitais.items;
+  const serviceItems = content.loja.plans;
 
   const isExpired =
     form.active &&
     form.expiresAt !== null &&
     new Date(form.expiresAt).getTime() <= Date.now();
 
+  const toggleName = (field: "selectedEbookNames" | "selectedServiceNames", value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter((item) => item !== value)
+        : [...prev[field], value],
+    }));
+  };
+
+  const hasInvalidScopedSelection =
+    (form.ebookScope === "some" && ebookItems.length > 0 && form.selectedEbookNames.length === 0) ||
+    (form.serviceScope === "some" && serviceItems.length > 0 && form.selectedServiceNames.length === 0);
+
+  const validateScopedSelection = () => {
+    if (!hasInvalidScopedSelection) return true;
+    toast({
+      title: "Selecione ao menos um item",
+      description: "Quando o desconto estiver em 'alguns', é necessário marcar pelo menos um e-book e/ou atendimento.",
+      variant: "destructive",
+    });
+    return false;
+  };
+
   const activate = async () => {
+    if (!validateScopedSelection()) return;
     const expiresAt = new Date(
       Date.now() + form.durationHours * 60 * 60 * 1000
     ).toISOString();
@@ -37,6 +62,7 @@ const AdminDesconto = () => {
   };
 
   const handleSave = async () => {
+    if (!validateScopedSelection()) return;
     await updateContent((prev) => ({ ...prev, discount: form }));
   };
 
@@ -45,7 +71,7 @@ const AdminDesconto = () => {
   return (
     <AdminFormWrapper
       title="Desconto Global"
-      description="Ative um desconto temporário em todos os produtos digitais. Um banner aparece no topo do site com contagem regressiva."
+      description="Ative um desconto temporário e escolha se ele vale para todos ou apenas alguns e-books, atendimentos e protocolos. O banner aparece no topo do site com contagem regressiva."
       onSave={handleSave}
     >
       {/* Status card */}
@@ -114,7 +140,7 @@ const AdminDesconto = () => {
             value={form.percentage}
             onChange={(e) => setForm((p) => ({ ...p, percentage: Number(e.target.value) }))}
           />
-          <p className="text-xs text-muted-foreground">Ex: 15 → 15% de desconto em todos os produtos digitais.</p>
+          <p className="text-xs text-muted-foreground">Ex: 15 → 15% de desconto nos itens selecionados.</p>
         </div>
 
         <div className="space-y-2">
@@ -142,6 +168,104 @@ const AdminDesconto = () => {
             onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
             placeholder="Ex: Aproveite! Desconto especial por tempo limitado."
           />
+        </div>
+
+        <div className="sm:col-span-2 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
+                Aplicar em e-books
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Escolha se o desconto vale para todos os e-books ou apenas alguns.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["all", "Todos os e-books"],
+                ["some", "Só alguns"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, ebookScope: value }))}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    form.ebookScope === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {form.ebookScope === "some" && (
+              <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                {ebookItems.map((item) => (
+                  <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.selectedEbookNames.includes(item.name)}
+                      onChange={() => toggleName("selectedEbookNames", item.name)}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <span className="text-foreground">{item.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5 text-primary" />
+                Aplicar em atendimentos e protocolos
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Escolha se o desconto vale para todos os atendimentos/protocolos ou apenas alguns.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["all", "Todos os atendimentos e protocolos"],
+                ["some", "Só alguns"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, serviceScope: value }))}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    form.serviceScope === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {form.serviceScope === "some" && (
+              <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                {serviceItems.map((item) => (
+                  <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.selectedServiceNames.includes(item.name)}
+                      onChange={() => toggleName("selectedServiceNames", item.name)}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <span className="text-foreground">{item.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
