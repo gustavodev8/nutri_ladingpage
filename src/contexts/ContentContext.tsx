@@ -154,6 +154,7 @@ export interface SiteContent {
     durationHours: number;
     durationValue: number;
     durationUnit: "hours" | "days";
+    activatedAt: string | null;
     expiresAt: string | null;
     message: string;
     ebookScope: "all" | "some";
@@ -498,6 +499,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     durationHours: 8,
     durationValue: 8,
     durationUnit: "hours",
+    activatedAt: null,
     expiresAt: null,
     message: "Aproveite! Desconto especial por tempo limitado.",
     ebookScope: "all",

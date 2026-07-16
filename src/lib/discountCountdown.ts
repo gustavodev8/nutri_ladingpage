@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import type { SiteContent } from "@/contexts/ContentContext";
+import { getVisitorDiscountExpiresAt } from "@/lib/discountUtils";
+
+type DiscountConfig = SiteContent["discount"];
 
 export interface CountdownSegment {
   value: string;
@@ -11,8 +15,9 @@ export interface CountdownView {
   urgent: boolean;
 }
 
-export function useDiscountCountdown(expiresAt: string | null) {
+export function useDiscountCountdown(discount: DiscountConfig) {
   const getRemaining = () => {
+    const expiresAt = getVisitorDiscountExpiresAt(discount);
     if (!expiresAt) return null;
     const diff = new Date(expiresAt).getTime() - Date.now();
     return diff > 0 ? diff : 0;
@@ -21,14 +26,19 @@ export function useDiscountCountdown(expiresAt: string | null) {
   const [remaining, setRemaining] = useState<number | null>(getRemaining);
 
   useEffect(() => {
-    if (!expiresAt) return;
+    if (!discount.active) {
+      setRemaining(null);
+      return;
+    }
+
+    setRemaining(getRemaining());
     const id = setInterval(() => {
       const next = getRemaining();
       setRemaining(next);
       if (next === 0) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [discount]);
 
   return remaining;
 }

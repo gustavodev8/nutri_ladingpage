@@ -5,15 +5,12 @@ import { getCountdownView, useDiscountCountdown } from "@/lib/discountCountdown"
 
 export default function DiscountBanner() {
   const { content } = useContent();
-  const { active, percentage, expiresAt, message } = content.discount;
-  const remaining = useDiscountCountdown(expiresAt);
+  const { active, percentage, message } = content.discount;
+  const remaining = useDiscountCountdown(content.discount);
   const countdownView = remaining !== null && remaining > 0 ? getCountdownView(remaining) : null;
   const [dismissed, setDismissed] = useState(false);
 
-  const isVisible =
-    active &&
-    !dismissed &&
-    (expiresAt === null || (remaining !== null && remaining > 0));
+  const isVisible = active && !dismissed && remaining !== null && remaining > 0;
 
   if (!isVisible) return null;
 

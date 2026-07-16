@@ -29,13 +29,10 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const { active, percentage, expiresAt, message } = content.discount;
-  const remaining = useDiscountCountdown(expiresAt);
+  const { active, percentage, message } = content.discount;
+  const remaining = useDiscountCountdown(content.discount);
   const countdownView = remaining !== null && remaining > 0 ? getCountdownView(remaining) : null;
-  const bannerVisible =
-    active &&
-    !bannerDismissed &&
-    (expiresAt === null || (remaining !== null && remaining > 0));
+  const bannerVisible = active && !bannerDismissed && remaining !== null && remaining > 0;
 
   const navigate = useNavigate();
   const location = useLocation();

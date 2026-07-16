@@ -14,6 +14,7 @@ function normalizeDiscountConfig(discount: DiscountConfig): DiscountConfig {
     ...discount,
     durationValue: discount.durationValue ?? discount.durationHours ?? 8,
     durationUnit: discount.durationUnit ?? "hours",
+    activatedAt: discount.activatedAt ?? null,
   };
 }
 
@@ -35,11 +36,6 @@ const AdminDesconto = () => {
   const ebookItems = content.produtosDigitais.items;
   const serviceItems = content.loja.plans;
 
-  const isExpired =
-    form.active &&
-    form.expiresAt !== null &&
-    new Date(form.expiresAt).getTime() <= Date.now();
-
   const toggleName = (field: "selectedEbookNames" | "selectedServiceNames", value: string) => {
     setForm((prev) => ({
       ...prev,
@@ -51,56 +47,66 @@ const AdminDesconto = () => {
 
   const activate = async () => {
     const durationHours = getDurationHours(form);
-    const expiresAt = new Date(
-      Date.now() + durationHours * 60 * 60 * 1000
-    ).toISOString();
-    const updated: DiscountConfig = { ...form, active: true, durationHours, expiresAt };
+    const activatedAt = new Date().toISOString();
+    const updated: DiscountConfig = {
+      ...form,
+      active: true,
+      durationHours,
+      activatedAt,
+      expiresAt: null,
+    };
+
     setForm(updated);
     await updateContent((prev) => ({ ...prev, discount: updated }));
-    toast({ title: "Desconto ativado!", description: `Expira em ${formatDurationLabel(form)}.` });
+    toast({
+      title: "Desconto ativado!",
+      description: `Cada visitante terá ${formatDurationLabel(form)} a partir da primeira visita.`,
+    });
   };
 
   const deactivate = async () => {
-    const updated: DiscountConfig = { ...form, active: false, expiresAt: null };
+    const updated: DiscountConfig = { ...form, active: false, activatedAt: null, expiresAt: null };
     setForm(updated);
     await updateContent((prev) => ({ ...prev, discount: updated }));
     toast({ title: "Desconto desativado." });
   };
 
   const handleSave = async () => {
-    await updateContent((prev) => ({ ...prev, discount: form }));
+    const updated: DiscountConfig = { ...form, durationHours: getDurationHours(form) };
+    setForm(updated);
+    await updateContent((prev) => ({ ...prev, discount: updated }));
     toast({ title: "Configuração de desconto salva." });
   };
 
-  const activeAndValid = form.active && !isExpired;
+  const activeAndValid = form.active;
 
   return (
     <AdminFormWrapper
       title="Desconto Global"
-      description="Ative um desconto temporário e escolha se ele vale para todos ou apenas alguns e-books, atendimentos e protocolos. O banner aparece no topo do site com contagem regressiva."
+      description="Ative uma oferta temporária e escolha se ela vale para todos ou apenas alguns e-books, atendimentos e protocolos. Cada visitante vê a própria contagem regressiva iniciando na primeira visita."
       onSave={handleSave}
     >
-      {/* Status card */}
       <div
-        className={`rounded-2xl border p-5 flex items-center justify-between gap-4 ${
+        className={`flex items-center justify-between gap-4 rounded-2xl border p-5 ${
           activeAndValid
-            ? "bg-green-50 border-green-200"
-            : "bg-muted/40 border-border/50"
+            ? "border-green-200 bg-green-50"
+            : "border-border/50 bg-muted/40"
         }`}
       >
         <div className="flex items-center gap-3">
           <div
-            className={`w-3 h-3 rounded-full ${
+            className={`h-3 w-3 rounded-full ${
               activeAndValid ? "bg-green-500 animate-pulse" : "bg-muted-foreground/30"
             }`}
           />
           <div>
             <p className="text-sm font-semibold text-foreground">
-              {activeAndValid ? "Desconto ativo" : isExpired ? "Desconto expirado" : "Desconto inativo"}
+              {activeAndValid ? "Desconto ativo" : "Desconto inativo"}
             </p>
-            {activeAndValid && form.expiresAt && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Expira em {new Date(form.expiresAt).toLocaleString("pt-BR")}
+            {activeAndValid && form.activatedAt && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Janela individual de {formatDurationLabel(form)} por visitante. Campanha iniciada em{" "}
+                {new Date(form.activatedAt).toLocaleString("pt-BR")}
               </p>
             )}
           </div>
@@ -123,7 +129,7 @@ const AdminDesconto = () => {
               type="button"
               size="sm"
               onClick={activate}
-              className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+              className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
             >
               <Power className="h-4 w-4" />
               Ativar agora
@@ -132,8 +138,7 @@ const AdminDesconto = () => {
         </div>
       </div>
 
-      {/* Config */}
-      <div className="grid sm:grid-cols-2 gap-6">
+      <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <Percent className="h-3.5 w-3.5 text-primary" />
@@ -146,13 +151,13 @@ const AdminDesconto = () => {
             value={form.percentage}
             onChange={(e) => setForm((p) => ({ ...p, percentage: Number(e.target.value) }))}
           />
-          <p className="text-xs text-muted-foreground">Ex: 15 → 15% de desconto nos itens selecionados.</p>
+          <p className="text-xs text-muted-foreground">Ex: 15 -&gt; 15% de desconto nos itens selecionados.</p>
         </div>
 
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-primary" />
-            Duração
+            Duração por visitante
           </Label>
           <div className="flex gap-2">
             <Input
@@ -171,10 +176,10 @@ const AdminDesconto = () => {
               <option value="days">Dias</option>
             </select>
           </div>
-          <p className="text-xs text-muted-foreground">Quanto tempo o banner fica no ar ao ativar.</p>
+          <p className="text-xs text-muted-foreground">Quanto tempo cada pessoa terá de desconto a partir da primeira visita.</p>
         </div>
 
-        <div className="sm:col-span-2 space-y-2">
+        <div className="space-y-2 sm:col-span-2">
           <Label className="flex items-center gap-1.5">
             <MessageSquare className="h-3.5 w-3.5 text-primary" />
             Mensagem do banner
@@ -186,8 +191,8 @@ const AdminDesconto = () => {
           />
         </div>
 
-        <div className="sm:col-span-2 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+        <div className="grid gap-6 sm:col-span-2 lg:grid-cols-2">
+          <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4">
             <div className="space-y-1">
               <Label className="flex items-center gap-1.5">
                 <BookOpen className="h-3.5 w-3.5 text-primary" />
@@ -224,7 +229,7 @@ const AdminDesconto = () => {
                   Se nenhum e-book for marcado, o desconto não será aplicado a nenhum e-book.
                 </p>
                 {ebookItems.map((item) => (
-                  <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
+                  <label key={item.name} className="flex cursor-pointer items-start gap-3 text-sm">
                     <input
                       type="checkbox"
                       checked={form.selectedEbookNames.includes(item.name)}
@@ -238,7 +243,7 @@ const AdminDesconto = () => {
             )}
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-4">
+          <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4">
             <div className="space-y-1">
               <Label className="flex items-center gap-1.5">
                 <ClipboardList className="h-3.5 w-3.5 text-primary" />
@@ -275,7 +280,7 @@ const AdminDesconto = () => {
                   Se nenhum atendimento ou protocolo for marcado, o desconto não será aplicado nessa categoria.
                 </p>
                 {serviceItems.map((item) => (
-                  <label key={item.name} className="flex items-start gap-3 text-sm cursor-pointer">
+                  <label key={item.name} className="flex cursor-pointer items-start gap-3 text-sm">
                     <input
                       type="checkbox"
                       checked={form.selectedServiceNames.includes(item.name)}
@@ -291,15 +296,14 @@ const AdminDesconto = () => {
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preview do banner</p>
-        <div className="rounded-lg bg-gradient-to-r from-green-700 via-green-600 to-green-700 text-white text-sm px-4 py-2.5 flex items-center justify-center gap-3 flex-wrap">
+      <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview do banner</p>
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-gradient-to-r from-green-700 via-green-600 to-green-700 px-4 py-2.5 text-sm text-white">
           <Tag className="h-4 w-4" />
           <span className="font-medium">{form.message || "Mensagem do banner"}</span>
           <span className="font-bold text-green-100">{form.percentage}% OFF</span>
-          <span className="bg-white/20 rounded-full px-3 py-0.5 font-mono font-semibold text-xs">
-            ⏱ {formatDurationLabel(form)}
+          <span className="rounded-full bg-white/20 px-3 py-0.5 font-mono text-xs font-semibold">
+            {formatDurationLabel(form)} por visitante
           </span>
         </div>
       </div>
