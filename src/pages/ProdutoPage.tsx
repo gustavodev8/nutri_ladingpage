@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
-import { doesDiscountApply, formatCurrency, getDiscountedAmount, getDiscountPercentage } from "@/lib/discountUtils";
+import { doesDiscountApply, formatCurrency, getDiscountedAmount, getDiscountPercentageForTarget } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
@@ -20,7 +20,12 @@ function useDiscount() {
     if (!doesDiscountApply(discount, "ebook", name)) return original;
     return formatCurrency(applyAmount(name, amount));
   };
-  return { percentage: getDiscountPercentage(discount, "ebook"), doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), applyAmount, formatPrice };
+  return {
+    percentageFor: (name: string) => getDiscountPercentageForTarget(discount, "ebook", name),
+    doesApply: (name: string) => doesDiscountApply(discount, "ebook", name),
+    applyAmount,
+    formatPrice,
+  };
 }
 
 // ── CPF helpers ───────────────────────────────────────────────────────────────
@@ -173,7 +178,7 @@ const ProdutoPage = () => {
   const { id } = useParams<{ id: string }>();
   const { content } = useContent();
   const { produtosDigitais, identity } = content;
-  const { doesApply, percentage, applyAmount, formatPrice } = useDiscount();
+  const { doesApply, percentageFor, applyAmount, formatPrice } = useDiscount();
 
   const index = Number(id);
   const produto = produtosDigitais.items[index];
@@ -505,7 +510,7 @@ const ProdutoPage = () => {
                     )}
                     <span className="text-sm text-muted-foreground">pagamento único</span>
                     {doesApply(produto.name) && (
-                      <Badge variant="destructive" className="text-xs px-2">-{percentage}%</Badge>
+                        <Badge variant="destructive" className="text-xs px-2">-{percentageFor(produto.name)}%</Badge>
                     )}
                   </div>
 

@@ -161,8 +161,10 @@ export interface SiteContent {
     message: string;
     ebookScope: "all" | "some";
     selectedEbookNames: string[];
+    ebookItemPercentages: Record<string, number>;
     serviceScope: "all" | "some";
     selectedServiceNames: string[];
+    serviceItemPercentages: Record<string, number>;
   };
 }
 
@@ -508,8 +510,10 @@ export const DEFAULT_CONTENT: SiteContent = {
     message: "Aproveite! Desconto especial por tempo limitado.",
     ebookScope: "all",
     selectedEbookNames: [],
+    ebookItemPercentages: {},
     serviceScope: "all",
     selectedServiceNames: [],
+    serviceItemPercentages: {},
   },
 };
 
@@ -635,6 +639,8 @@ function mergeContent(overrides: Partial<SiteContent>): SiteContent {
       ...merged.discount,
       ebookPercentage: rawDiscount?.ebookPercentage ?? merged.discount.percentage,
       servicePercentage: rawDiscount?.servicePercentage ?? merged.discount.percentage,
+      ebookItemPercentages: rawDiscount?.ebookItemPercentages ?? {},
+      serviceItemPercentages: rawDiscount?.serviceItemPercentages ?? {},
     },
   };
 }

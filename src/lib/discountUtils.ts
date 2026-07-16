@@ -26,8 +26,10 @@ function getCampaignKey(discount: DiscountConfig) {
     message: discount.message,
     ebookScope: discount.ebookScope,
     selectedEbookNames: discount.selectedEbookNames,
+    ebookItemPercentages: discount.ebookItemPercentages,
     serviceScope: discount.serviceScope,
     selectedServiceNames: discount.selectedServiceNames,
+    serviceItemPercentages: discount.serviceItemPercentages,
   });
 }
 
@@ -71,33 +73,77 @@ function matchesSelection(scope: "all" | "some", selectedNames: string[], target
   return selectedNames.includes(targetName);
 }
 
+function getItemPercentages(discount: DiscountConfig, area: DiscountArea) {
+  return area === "ebook"
+    ? discount.ebookItemPercentages ?? {}
+    : discount.serviceItemPercentages ?? {};
+}
+
+function getScope(discount: DiscountConfig, area: DiscountArea) {
+  return area === "ebook" ? discount.ebookScope : discount.serviceScope;
+}
+
+function getSelectedNames(discount: DiscountConfig, area: DiscountArea) {
+  return area === "ebook" ? discount.selectedEbookNames : discount.selectedServiceNames;
+}
+
+function getMaxItemPercentage(discount: DiscountConfig, area: DiscountArea) {
+  return Math.max(0, ...Object.values(getItemPercentages(discount, area)).filter(Number.isFinite));
+}
+
 export function getDiscountPercentage(discount: DiscountConfig, area: DiscountArea) {
   return area === "ebook"
     ? discount.ebookPercentage ?? discount.percentage
     : discount.servicePercentage ?? discount.percentage;
 }
 
+export function getDiscountPercentageForTarget(
+  discount: DiscountConfig,
+  area: DiscountArea,
+  targetName: string,
+) {
+  const scope = getScope(discount, area);
+  const selectedNames = getSelectedNames(discount, area);
+  if (scope === "some" && !selectedNames.includes(targetName)) return 0;
+
+  const itemPercentage = getItemPercentages(discount, area)[targetName];
+  if (Number.isFinite(itemPercentage)) return itemPercentage;
+
+  return getDiscountPercentage(discount, area);
+}
+
+export function getMaxDiscountPercentage(discount: DiscountConfig, area: DiscountArea) {
+  if (getScope(discount, area) === "some") {
+    const selectedPercentages = getSelectedNames(discount, area).map((targetName) =>
+      getDiscountPercentageForTarget(discount, area, targetName),
+    );
+    return Math.max(0, ...selectedPercentages);
+  }
+
+  return Math.max(getDiscountPercentage(discount, area), getMaxItemPercentage(discount, area));
+}
+
 export function hasDiscountConfigured(discount: DiscountConfig) {
-  return getDiscountPercentage(discount, "ebook") > 0 || getDiscountPercentage(discount, "service") > 0;
+  return getMaxDiscountPercentage(discount, "ebook") > 0 || getMaxDiscountPercentage(discount, "service") > 0;
 }
 
 export function getDiscountSummary(discount: DiscountConfig) {
-  const ebookPercentage = getDiscountPercentage(discount, "ebook");
-  const servicePercentage = getDiscountPercentage(discount, "service");
+  const ebookPercentage = getMaxDiscountPercentage(discount, "ebook");
+  const servicePercentage = getMaxDiscountPercentage(discount, "service");
 
   if (ebookPercentage > 0 && servicePercentage <= 0) {
-    return `E-books ${ebookPercentage}% off`;
+    return `E-books até ${ebookPercentage}% off`;
   }
 
   if (servicePercentage > 0 && ebookPercentage <= 0) {
-    return `Consultas ${servicePercentage}% off`;
+    return `Consultas até ${servicePercentage}% off`;
   }
 
   if (ebookPercentage === servicePercentage) {
-    return `${ebookPercentage}% off`;
+    return `Até ${ebookPercentage}% off`;
   }
 
-  return `E-books ${ebookPercentage}% | Consultas ${servicePercentage}%`;
+  return `E-books até ${ebookPercentage}% | Consultas até ${servicePercentage}%`;
 }
 
 export function doesDiscountApply(
@@ -106,13 +152,8 @@ export function doesDiscountApply(
   targetName: string,
 ) {
   if (!isDiscountActive(discount)) return false;
-  if (getDiscountPercentage(discount, area) <= 0) return false;
-
-  if (area === "ebook") {
-    return matchesSelection(discount.ebookScope, discount.selectedEbookNames, targetName);
-  }
-
-  return matchesSelection(discount.serviceScope, discount.selectedServiceNames, targetName);
+  if (getDiscountPercentageForTarget(discount, area, targetName) <= 0) return false;
+  return matchesSelection(getScope(discount, area), getSelectedNames(discount, area), targetName);
 }
 
 export function getDiscountedAmount(
@@ -122,7 +163,7 @@ export function getDiscountedAmount(
   amount: number,
 ) {
   if (!doesDiscountApply(discount, area, targetName)) return amount;
-  return Math.round(amount * (1 - getDiscountPercentage(discount, area) / 100) * 100) / 100;
+  return Math.round(amount * (1 - getDiscountPercentageForTarget(discount, area, targetName) / 100) * 100) / 100;
 }
 
 export function formatCurrency(amount: number) {

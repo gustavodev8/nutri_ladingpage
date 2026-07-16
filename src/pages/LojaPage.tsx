@@ -9,16 +9,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/PageLayout";
 import { useContent } from "@/contexts/ContentContext";
 import { cn } from "@/lib/utils";
-import { doesDiscountApply, formatCurrency, getDiscountPercentage } from "@/lib/discountUtils";
+import { doesDiscountApply, formatCurrency, getDiscountPercentageForTarget } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
   const discount = content.discount;
   const formatDiscounted = (name: string, amount: number) => {
     if (!doesDiscountApply(discount, "ebook", name)) return null;
-    return formatCurrency(amount * (1 - getDiscountPercentage(discount, "ebook") / 100));
+    return formatCurrency(amount * (1 - getDiscountPercentageForTarget(discount, "ebook", name) / 100));
   };
-  return { percentage: getDiscountPercentage(discount, "ebook"), doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), formatDiscounted };
+  return {
+    percentageFor: (name: string) => getDiscountPercentageForTarget(discount, "ebook", name),
+    doesApply: (name: string) => doesDiscountApply(discount, "ebook", name),
+    formatDiscounted,
+  };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,7 +43,7 @@ interface ProdutoCardProps {
 }
 
 const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
-  const { doesApply, percentage, formatDiscounted } = useDiscount();
+  const { doesApply, percentageFor, formatDiscounted } = useDiscount();
   const discountedPrice = formatDiscounted(item.name, item.priceAmount);
   return (
   <Card
@@ -79,7 +83,7 @@ const ProdutoCard = ({ item, index }: ProdutoCardProps) => {
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-2xl font-extrabold text-primary leading-none">{discountedPrice}</p>
               <p className="text-sm text-muted-foreground line-through">{item.price}</p>
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">-{percentage}%</Badge>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">-{percentageFor(item.name)}%</Badge>
             </div>
           ) : (
             <p className="text-2xl font-extrabold text-primary leading-none">{item.price}</p>
