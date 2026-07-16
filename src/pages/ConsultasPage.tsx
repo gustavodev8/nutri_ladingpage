@@ -10,7 +10,7 @@ import CTASection from "@/components/CTASection";
 import { useContent } from "@/contexts/ContentContext";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import type { SiteContent } from "@/contexts/ContentContext";
-import { doesDiscountApply, formatCurrency } from "@/lib/discountUtils";
+import { doesDiscountApply, formatCurrency, getDiscountPercentage } from "@/lib/discountUtils";
 
 // ─── Dados estáticos ──────────────────────────────────────────────────────────
 
@@ -66,8 +66,9 @@ const PlanCard = ({ plan, planIndex, whatsappUrl, discount }: PlanCardProps) => 
   const isDark = plan.popular;
   const isAvulsa = plan.sessionCount === 1;
   const hasDiscount = doesDiscountApply(discount, "service", plan.name);
+  const discountPercentage = getDiscountPercentage(discount, "service");
   const discountedPrice = hasDiscount
-    ? formatCurrency(plan.priceAmount * (1 - discount.percentage / 100))
+    ? formatCurrency(plan.priceAmount * (1 - discountPercentage / 100))
     : plan.price;
 
   // Para avulsas: só os itens incluídos (lista positiva, sem ruído visual)
@@ -127,7 +128,7 @@ const PlanCard = ({ plan, planIndex, whatsappUrl, discount }: PlanCardProps) => 
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                 isDark ? "bg-primary/20 text-primary" : "bg-destructive text-destructive-foreground"
               }`}>
-                -{discount.percentage}%
+                -{discountPercentage}%
               </span>
             </div>
           )}

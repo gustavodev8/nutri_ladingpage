@@ -19,6 +19,8 @@ function getCampaignKey(discount: DiscountConfig) {
   return JSON.stringify({
     activatedAt: discount.activatedAt ?? discount.expiresAt ?? null,
     percentage: discount.percentage,
+    ebookPercentage: discount.ebookPercentage,
+    servicePercentage: discount.servicePercentage,
     durationValue: discount.durationValue ?? discount.durationHours ?? 0,
     durationUnit: discount.durationUnit ?? "hours",
     message: discount.message,
@@ -57,6 +59,7 @@ export function getVisitorDiscountExpiresAt(discount: DiscountConfig) {
 
 export function isDiscountActive(discount: DiscountConfig) {
   if (!discount.active) return false;
+  if (!hasDiscountConfigured(discount)) return false;
 
   const expiresAt = getVisitorDiscountExpiresAt(discount);
   if (!expiresAt) return false;
@@ -68,12 +71,42 @@ function matchesSelection(scope: "all" | "some", selectedNames: string[], target
   return selectedNames.includes(targetName);
 }
 
+export function getDiscountPercentage(discount: DiscountConfig, area: DiscountArea) {
+  return area === "ebook"
+    ? discount.ebookPercentage ?? discount.percentage
+    : discount.servicePercentage ?? discount.percentage;
+}
+
+export function hasDiscountConfigured(discount: DiscountConfig) {
+  return getDiscountPercentage(discount, "ebook") > 0 || getDiscountPercentage(discount, "service") > 0;
+}
+
+export function getDiscountSummary(discount: DiscountConfig) {
+  const ebookPercentage = getDiscountPercentage(discount, "ebook");
+  const servicePercentage = getDiscountPercentage(discount, "service");
+
+  if (ebookPercentage > 0 && servicePercentage <= 0) {
+    return `E-books ${ebookPercentage}% off`;
+  }
+
+  if (servicePercentage > 0 && ebookPercentage <= 0) {
+    return `Consultas ${servicePercentage}% off`;
+  }
+
+  if (ebookPercentage === servicePercentage) {
+    return `${ebookPercentage}% off`;
+  }
+
+  return `E-books ${ebookPercentage}% | Consultas ${servicePercentage}%`;
+}
+
 export function doesDiscountApply(
   discount: DiscountConfig,
   area: DiscountArea,
   targetName: string,
 ) {
   if (!isDiscountActive(discount)) return false;
+  if (getDiscountPercentage(discount, area) <= 0) return false;
 
   if (area === "ebook") {
     return matchesSelection(discount.ebookScope, discount.selectedEbookNames, targetName);
@@ -89,7 +122,7 @@ export function getDiscountedAmount(
   amount: number,
 ) {
   if (!doesDiscountApply(discount, area, targetName)) return amount;
-  return Math.round(amount * (1 - discount.percentage / 100) * 100) / 100;
+  return Math.round(amount * (1 - getDiscountPercentage(discount, area) / 100) * 100) / 100;
 }
 
 export function formatCurrency(amount: number) {

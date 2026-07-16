@@ -9,16 +9,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/PageLayout";
 import { useContent } from "@/contexts/ContentContext";
 import { cn } from "@/lib/utils";
-import { doesDiscountApply, formatCurrency } from "@/lib/discountUtils";
+import { doesDiscountApply, formatCurrency, getDiscountPercentage } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
   const discount = content.discount;
   const formatDiscounted = (name: string, amount: number) => {
     if (!doesDiscountApply(discount, "ebook", name)) return null;
-    return formatCurrency(amount * (1 - discount.percentage / 100));
+    return formatCurrency(amount * (1 - getDiscountPercentage(discount, "ebook") / 100));
   };
-  return { percentage: discount.percentage, doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), formatDiscounted };
+  return { percentage: getDiscountPercentage(discount, "ebook"), doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), formatDiscounted };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

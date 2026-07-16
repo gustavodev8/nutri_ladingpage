@@ -151,6 +151,8 @@ export interface SiteContent {
   discount: {
     active: boolean;
     percentage: number;
+    ebookPercentage: number;
+    servicePercentage: number;
     durationHours: number;
     durationValue: number;
     durationUnit: "hours" | "days";
@@ -496,6 +498,8 @@ export const DEFAULT_CONTENT: SiteContent = {
   discount: {
     active: false,
     percentage: 15,
+    ebookPercentage: 15,
+    servicePercentage: 15,
     durationHours: 8,
     durationValue: 8,
     durationUnit: "hours",
@@ -539,7 +543,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       try {
         const parsed: StoredContent = JSON.parse(cached);
         localTs = parsed._ts ?? 0;
-        setContent(deepMerge(DEFAULT_CONTENT, parsed));
+        setContent(mergeContent(parsed));
       } catch { /* ignore malformed cache */ }
     }
 
@@ -550,7 +554,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       if (remote && remoteTs > localTs) {
         // Supabase has a more recent save (e.g. edited on another device)
         const { _ts, ...data } = remote;
-        const merged = deepMerge(DEFAULT_CONTENT, data as SiteContent);
+        const merged = mergeContent(data as Partial<SiteContent>);
         setContent(merged);
         localStorage.setItem(CACHE_KEY, JSON.stringify({ ...merged, _ts: remoteTs }));
       }
@@ -619,4 +623,18 @@ function deepMerge<T extends object>(defaults: T, overrides: Partial<T>): T {
     }
   }
   return result;
+}
+
+function mergeContent(overrides: Partial<SiteContent>): SiteContent {
+  const merged = deepMerge(DEFAULT_CONTENT, overrides);
+  const rawDiscount = overrides.discount as Partial<SiteContent["discount"]> | undefined;
+
+  return {
+    ...merged,
+    discount: {
+      ...merged.discount,
+      ebookPercentage: rawDiscount?.ebookPercentage ?? merged.discount.percentage,
+      servicePercentage: rawDiscount?.servicePercentage ?? merged.discount.percentage,
+    },
+  };
 }

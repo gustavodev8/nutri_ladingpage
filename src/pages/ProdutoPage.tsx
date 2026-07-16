@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
-import { doesDiscountApply, formatCurrency, getDiscountedAmount } from "@/lib/discountUtils";
+import { doesDiscountApply, formatCurrency, getDiscountedAmount, getDiscountPercentage } from "@/lib/discountUtils";
 
 function useDiscount() {
   const { content } = useContent();
@@ -20,7 +20,7 @@ function useDiscount() {
     if (!doesDiscountApply(discount, "ebook", name)) return original;
     return formatCurrency(applyAmount(name, amount));
   };
-  return { percentage: discount.percentage, doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), applyAmount, formatPrice };
+  return { percentage: getDiscountPercentage(discount, "ebook"), doesApply: (name: string) => doesDiscountApply(discount, "ebook", name), applyAmount, formatPrice };
 }
 
 // ── CPF helpers ───────────────────────────────────────────────────────────────

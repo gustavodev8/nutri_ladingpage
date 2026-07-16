@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
 import { getCountdownView, useDiscountCountdown } from "@/lib/discountCountdown";
+import { getDiscountSummary, hasDiscountConfigured } from "@/lib/discountUtils";
 
 interface NavLink {
   href: string;
@@ -29,10 +30,11 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const { active, percentage, message } = content.discount;
+  const { active, message } = content.discount;
+  const discountSummary = getDiscountSummary(content.discount);
   const remaining = useDiscountCountdown(content.discount);
   const countdownView = remaining !== null && remaining > 0 ? getCountdownView(remaining) : null;
-  const bannerVisible = active && !bannerDismissed && remaining !== null && remaining > 0;
+  const bannerVisible = active && hasDiscountConfigured(content.discount) && !bannerDismissed && remaining !== null && remaining > 0;
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,8 +127,8 @@ const Navbar = () => {
               </div>
 
               <div className="flex shrink-0 items-center gap-2.5">
-                <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-800 shadow-[0_3px_10px_rgba(0,0,0,0.12)] sm:text-[11px]">
-                  {percentage}% <span className="text-emerald-600">off</span>
+                <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase text-emerald-800 shadow-[0_3px_10px_rgba(0,0,0,0.12)] sm:text-[11px]">
+                  {discountSummary}
                 </span>
 
                 {countdownView && (

@@ -2,15 +2,17 @@ import { useState } from "react";
 import { Tag, TimerReset, X } from "lucide-react";
 import { useContent } from "@/contexts/ContentContext";
 import { getCountdownView, useDiscountCountdown } from "@/lib/discountCountdown";
+import { getDiscountSummary, hasDiscountConfigured } from "@/lib/discountUtils";
 
 export default function DiscountBanner() {
   const { content } = useContent();
-  const { active, percentage, message } = content.discount;
+  const { active, message } = content.discount;
+  const discountSummary = getDiscountSummary(content.discount);
   const remaining = useDiscountCountdown(content.discount);
   const countdownView = remaining !== null && remaining > 0 ? getCountdownView(remaining) : null;
   const [dismissed, setDismissed] = useState(false);
 
-  const isVisible = active && !dismissed && remaining !== null && remaining > 0;
+  const isVisible = active && hasDiscountConfigured(content.discount) && !dismissed && remaining !== null && remaining > 0;
 
   if (!isVisible) return null;
 
@@ -29,7 +31,7 @@ export default function DiscountBanner() {
 
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 shadow-sm">
-              {percentage}% off
+              {discountSummary}
             </span>
 
             {countdownView && (
