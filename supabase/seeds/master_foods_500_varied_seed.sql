@@ -1,12 +1,12 @@
 -- Seed complementar com 500 alimentos variados adicionais
--- Itens gerados de forma deduplicada em rela??o ao cat?logo atual
+-- Itens gerados de forma deduplicada em relação ao catálogo atual
 -- Total de novos itens: 500
 
 BEGIN;
 
 INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, source, source_ref, source_code) VALUES
 (
-  'Quinoa em gr?os',
+  'Quinoa em grãos',
   'quinoaemgros',
   'Cereais e derivados',
   108.48,
@@ -19,7 +19,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-0'
 ),
 (
-  'Quinoa em gr?os - cozido',
+  'Quinoa em grãos - cozido',
   'quinoaemgroscozido',
   'Cereais e derivados',
   99.80,
@@ -32,7 +32,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v1'
 ),
 (
-  'Quinoa em gr?os - integral',
+  'Quinoa em grãos - integral',
   'quinoaemgrosintegral',
   'Cereais e derivados',
   111.73,
@@ -45,7 +45,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v2'
 ),
 (
-  'Quinoa em gr?os - torrado',
+  'Quinoa em grãos - torrado',
   'quinoaemgrostorrado',
   'Cereais e derivados',
   114.99,
@@ -58,7 +58,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v3'
 ),
 (
-  'Quinoa em gr?os - em flocos',
+  'Quinoa em grãos - em flocos',
   'quinoaemgrosemflocos',
   'Cereais e derivados',
   108.48,
@@ -500,7 +500,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v4'
 ),
 (
-  'Granola sem a??car',
+  'Granola sem açúcar',
   'granolasemacar',
   'Cereais e derivados',
   122.71,
@@ -513,7 +513,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-0'
 ),
 (
-  'Granola sem a??car - cozido',
+  'Granola sem açúcar - cozido',
   'granolasemacarcozido',
   'Cereais e derivados',
   112.89,
@@ -526,7 +526,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Granola sem a??car - integral',
+  'Granola sem açúcar - integral',
   'granolasemacarintegral',
   'Cereais e derivados',
   126.39,
@@ -539,7 +539,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v2'
 ),
 (
-  'Granola sem a??car - torrado',
+  'Granola sem açúcar - torrado',
   'granolasemacartorrado',
   'Cereais e derivados',
   130.07,
@@ -552,7 +552,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v3'
 ),
 (
-  'Granola sem a??car - em flocos',
+  'Granola sem açúcar - em flocos',
   'granolasemacaremflocos',
   'Cereais e derivados',
   122.71,
@@ -630,7 +630,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v4'
 ),
 (
-  'Ora-pro-n?bis',
+  'Ora-pro-nóbis',
   'orapronbis',
   'Vegetal',
   29.28,
@@ -643,7 +643,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Ora-pro-n?bis - cru',
+  'Ora-pro-nóbis - cru',
   'orapronbiscru',
   'Vegetal',
   28.11,
@@ -656,7 +656,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Ora-pro-n?bis - cozido',
+  'Ora-pro-nóbis - cozido',
   'orapronbiscozido',
   'Vegetal',
   26.35,
@@ -669,7 +669,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Ora-pro-n?bis - refogado',
+  'Ora-pro-nóbis - refogado',
   'orapronbisrefogado',
   'Vegetal',
   31.62,
@@ -682,7 +682,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Ora-pro-n?bis - salteado',
+  'Ora-pro-nóbis - salteado',
   'orapronbissalteado',
   'Vegetal',
   30.45,
@@ -760,7 +760,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v4'
 ),
 (
-  'Nir?',
+  'Nirá',
   'nir',
   'Vegetal',
   35.50,
@@ -773,7 +773,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Nir? - cru',
+  'Nirá - cru',
   'nircru',
   'Vegetal',
   34.08,
@@ -786,7 +786,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Nir? - cozido',
+  'Nirá - cozido',
   'nircozido',
   'Vegetal',
   31.95,
@@ -799,7 +799,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Nir? - refogado',
+  'Nirá - refogado',
   'nirrefogado',
   'Vegetal',
   38.35,
@@ -812,7 +812,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Nir? - salteado',
+  'Nirá - salteado',
   'nirsalteado',
   'Vegetal',
   36.93,
@@ -825,7 +825,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  'Jil?',
+  'Jiló',
   'jil',
   'Vegetal',
   30.13,
@@ -838,7 +838,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-0'
 ),
 (
-  'Jil? - cru',
+  'Jiló - cru',
   'jilcru',
   'Vegetal',
   28.92,
@@ -851,7 +851,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Jil? - cozido',
+  'Jiló - cozido',
   'jilcozido',
   'Vegetal',
   27.11,
@@ -864,7 +864,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  'Jil? - refogado',
+  'Jiló - refogado',
   'jilrefogado',
   'Vegetal',
   32.54,
@@ -877,7 +877,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Jil? - salteado',
+  'Jiló - salteado',
   'jilsalteado',
   'Vegetal',
   31.33,
@@ -942,7 +942,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v4'
 ),
 (
-  'Ab?bora caboti?',
+  'Abóbora cabotiá',
   'abboracaboti',
   'Vegetal',
   34.52,
@@ -955,7 +955,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Ab?bora caboti? - cru',
+  'Abóbora cabotiá - cru',
   'abboracaboticru',
   'Vegetal',
   33.14,
@@ -968,7 +968,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Ab?bora caboti? - cozido',
+  'Abóbora cabotiá - cozido',
   'abboracaboticozido',
   'Vegetal',
   31.07,
@@ -981,7 +981,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Ab?bora caboti? - refogado',
+  'Abóbora cabotiá - refogado',
   'abboracabotirefogado',
   'Vegetal',
   37.28,
@@ -994,7 +994,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Ab?bora caboti? - salteado',
+  'Abóbora cabotiá - salteado',
   'abboracabotisalteado',
   'Vegetal',
   35.90,
@@ -1189,7 +1189,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v4'
 ),
 (
-  'Caj?',
+  'Cajá',
   'caj',
   'Fruta',
   58.29,
@@ -1202,7 +1202,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Caj? - com casca',
+  'Cajá - com casca',
   'cajcomcasca',
   'Fruta',
   58.29,
@@ -1215,7 +1215,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Caj? - sem casca',
+  'Cajá - sem casca',
   'cajsemcasca',
   'Fruta',
   57.13,
@@ -1228,7 +1228,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Caj? - em polpa',
+  'Cajá - em polpa',
   'cajempolpa',
   'Fruta',
   61.21,
@@ -1241,7 +1241,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Caj? - fatiada',
+  'Cajá - fatiada',
   'cajfatiada',
   'Fruta',
   58.29,
@@ -1514,7 +1514,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v4'
 ),
 (
-  'Ara??',
+  'Araçá',
   'ara',
   'Fruta',
   62.18,
@@ -1527,7 +1527,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-0'
 ),
 (
-  'Ara?? - com casca',
+  'Araçá - com casca',
   'aracomcasca',
   'Fruta',
   62.18,
@@ -1540,7 +1540,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v1'
 ),
 (
-  'Ara?? - sem casca',
+  'Araçá - sem casca',
   'arasemcasca',
   'Fruta',
   60.94,
@@ -1553,7 +1553,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v2'
 ),
 (
-  'Ara?? - em polpa',
+  'Araçá - em polpa',
   'araempolpa',
   'Fruta',
   65.29,
@@ -1566,7 +1566,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v3'
 ),
 (
-  'Ara?? - fatiada',
+  'Araçá - fatiada',
   'arafatiada',
   'Fruta',
   62.18,
@@ -1579,7 +1579,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v4'
 ),
 (
-  'Cupua?u',
+  'Cupuaçu',
   'cupuau',
   'Fruta',
   54.59,
@@ -1592,7 +1592,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Cupua?u - com casca',
+  'Cupuaçu - com casca',
   'cupuaucomcasca',
   'Fruta',
   54.59,
@@ -1605,7 +1605,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Cupua?u - sem casca',
+  'Cupuaçu - sem casca',
   'cupuausemcasca',
   'Fruta',
   53.49,
@@ -1618,7 +1618,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Cupua?u - em polpa',
+  'Cupuaçu - em polpa',
   'cupuauempolpa',
   'Fruta',
   57.32,
@@ -1631,7 +1631,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Cupua?u - fatiada',
+  'Cupuaçu - fatiada',
   'cupuaufatiada',
   'Fruta',
   54.59,
@@ -1774,9 +1774,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Prote?na de ervilha',
+  'Proteína de ervilha',
   'protenadeervilha',
-  'Prote?na',
+  'Proteína',
   102.89,
   16.85,
   1.94,
@@ -1787,9 +1787,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Prote?na de ervilha - grelhado',
+  'Proteína de ervilha - grelhado',
   'protenadeervilhagrelhado',
-  'Prote?na',
+  'Proteína',
   97.75,
   17.18,
   1.94,
@@ -1800,9 +1800,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Prote?na de ervilha - assado',
+  'Proteína de ervilha - assado',
   'protenadeervilhaassado',
-  'Prote?na',
+  'Proteína',
   100.83,
   17.18,
   1.94,
@@ -1813,9 +1813,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Prote?na de ervilha - cozido',
+  'Proteína de ervilha - cozido',
   'protenadeervilhacozido',
-  'Prote?na',
+  'Proteína',
   94.66,
   16.85,
   1.94,
@@ -1826,9 +1826,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Prote?na de ervilha - desfiado',
+  'Proteína de ervilha - desfiado',
   'protenadeervilhadesfiado',
-  'Prote?na',
+  'Proteína',
   96.72,
   17.01,
   1.94,
@@ -1839,9 +1839,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  'Prote?na de soja texturizada',
+  'Proteína de soja texturizada',
   'protenadesojatexturizada',
-  'Prote?na',
+  'Proteína',
   118.68,
   18.84,
   1.99,
@@ -1852,9 +1852,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-0'
 ),
 (
-  'Prote?na de soja texturizada - grelhado',
+  'Proteína de soja texturizada - grelhado',
   'protenadesojatexturizadagrelhado',
-  'Prote?na',
+  'Proteína',
   112.75,
   19.22,
   1.99,
@@ -1865,9 +1865,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Prote?na de soja texturizada - assado',
+  'Proteína de soja texturizada - assado',
   'protenadesojatexturizadaassado',
-  'Prote?na',
+  'Proteína',
   116.31,
   19.22,
   1.99,
@@ -1878,9 +1878,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  'Prote?na de soja texturizada - cozido',
+  'Proteína de soja texturizada - cozido',
   'protenadesojatexturizadacozido',
-  'Prote?na',
+  'Proteína',
   109.19,
   18.84,
   1.99,
@@ -1891,9 +1891,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Prote?na de soja texturizada - desfiado',
+  'Proteína de soja texturizada - desfiado',
   'protenadesojatexturizadadesfiado',
-  'Prote?na',
+  'Proteína',
   111.56,
   19.03,
   1.99,
@@ -1906,7 +1906,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna',
   'ovodecodorna',
-  'Prote?na',
+  'Proteína',
   103.70,
   17.12,
   1.86,
@@ -1919,7 +1919,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna - grelhado',
   'ovodecodornagrelhado',
-  'Prote?na',
+  'Proteína',
   98.52,
   17.46,
   1.86,
@@ -1932,7 +1932,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna - assado',
   'ovodecodornaassado',
-  'Prote?na',
+  'Proteína',
   101.63,
   17.46,
   1.86,
@@ -1945,7 +1945,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna - cozido',
   'ovodecodornacozido',
-  'Prote?na',
+  'Proteína',
   95.41,
   17.12,
   1.86,
@@ -1958,7 +1958,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna - desfiado',
   'ovodecodornadesfiado',
-  'Prote?na',
+  'Proteína',
   97.48,
   17.29,
   1.86,
@@ -1971,7 +1971,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada',
   'clarapasteurizada',
-  'Prote?na',
+  'Proteína',
   99.31,
   17.62,
   1.97,
@@ -1984,7 +1984,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada - grelhado',
   'clarapasteurizadagrelhado',
-  'Prote?na',
+  'Proteína',
   94.34,
   17.98,
   1.97,
@@ -1997,7 +1997,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada - assado',
   'clarapasteurizadaassado',
-  'Prote?na',
+  'Proteína',
   97.32,
   17.98,
   1.97,
@@ -2010,7 +2010,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada - cozido',
   'clarapasteurizadacozido',
-  'Prote?na',
+  'Proteína',
   91.36,
   17.62,
   1.97,
@@ -2023,7 +2023,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada - desfiado',
   'clarapasteurizadadesfiado',
-  'Prote?na',
+  'Proteína',
   93.35,
   17.80,
   1.97,
@@ -2036,7 +2036,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico',
   'skyrproteico',
-  'Prote?na',
+  'Proteína',
   103.60,
   16.24,
   2.08,
@@ -2049,7 +2049,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico - grelhado',
   'skyrproteicogrelhado',
-  'Prote?na',
+  'Proteína',
   98.42,
   16.56,
   2.08,
@@ -2062,7 +2062,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico - assado',
   'skyrproteicoassado',
-  'Prote?na',
+  'Proteína',
   101.52,
   16.56,
   2.08,
@@ -2075,7 +2075,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico - cozido',
   'skyrproteicocozido',
-  'Prote?na',
+  'Proteína',
   95.31,
   16.24,
   2.08,
@@ -2088,7 +2088,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico - desfiado',
   'skyrproteicodesfiado',
-  'Prote?na',
+  'Proteína',
   97.38,
   16.40,
   2.08,
@@ -2101,7 +2101,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark',
   'queijoquark',
-  'Prote?na',
+  'Proteína',
   99.04,
   18.31,
   2.12,
@@ -2114,7 +2114,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark - grelhado',
   'queijoquarkgrelhado',
-  'Prote?na',
+  'Proteína',
   94.09,
   18.67,
   2.12,
@@ -2127,7 +2127,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark - assado',
   'queijoquarkassado',
-  'Prote?na',
+  'Proteína',
   97.06,
   18.67,
   2.12,
@@ -2140,7 +2140,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark - cozido',
   'queijoquarkcozido',
-  'Prote?na',
+  'Proteína',
   91.12,
   18.31,
   2.12,
@@ -2153,7 +2153,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark - desfiado',
   'queijoquarkdesfiado',
-  'Prote?na',
+  'Proteína',
   93.10,
   18.49,
   2.12,
@@ -2229,7 +2229,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v4'
 ),
 (
-  'Patinho mo?do',
+  'Patinho moído',
   'patinhomodo',
   'Carnes e aves',
   191.08,
@@ -2242,7 +2242,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Patinho mo?do - grelhado',
+  'Patinho moído - grelhado',
   'patinhomodogrelhado',
   'Carnes e aves',
   181.52,
@@ -2255,7 +2255,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Patinho mo?do - assado',
+  'Patinho moído - assado',
   'patinhomodoassado',
   'Carnes e aves',
   187.26,
@@ -2268,7 +2268,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Patinho mo?do - desfiado',
+  'Patinho moído - desfiado',
   'patinhomododesfiado',
   'Carnes e aves',
   179.61,
@@ -2281,7 +2281,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Patinho mo?do - em cubos',
+  'Patinho moído - em cubos',
   'patinhomodoemcubos',
   'Carnes e aves',
   183.43,
@@ -2294,7 +2294,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  'Ac?m em cubos',
+  'Acém em cubos',
   'acmemcubos',
   'Carnes e aves',
   174.36,
@@ -2307,7 +2307,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-0'
 ),
 (
-  'Ac?m em cubos - grelhado',
+  'Acém em cubos - grelhado',
   'acmemcubosgrelhado',
   'Carnes e aves',
   165.64,
@@ -2320,7 +2320,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v1'
 ),
 (
-  'Ac?m em cubos - assado',
+  'Acém em cubos - assado',
   'acmemcubosassado',
   'Carnes e aves',
   170.87,
@@ -2333,7 +2333,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v2'
 ),
 (
-  'Ac?m em cubos - desfiado',
+  'Acém em cubos - desfiado',
   'acmemcubosdesfiado',
   'Carnes e aves',
   163.90,
@@ -2346,7 +2346,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  'Ac?m em cubos - em cubos',
+  'Acém em cubos - em cubos',
   'acmemcubosemcubos',
   'Carnes e aves',
   167.39,
@@ -2359,7 +2359,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v4'
 ),
 (
-  'Lombo su?no magro',
+  'Lombo suíno magro',
   'lombosunomagro',
   'Carnes e aves',
   166.36,
@@ -2372,7 +2372,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Lombo su?no magro - grelhado',
+  'Lombo suíno magro - grelhado',
   'lombosunomagrogrelhado',
   'Carnes e aves',
   158.04,
@@ -2385,7 +2385,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Lombo su?no magro - assado',
+  'Lombo suíno magro - assado',
   'lombosunomagroassado',
   'Carnes e aves',
   163.03,
@@ -2398,7 +2398,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Lombo su?no magro - desfiado',
+  'Lombo suíno magro - desfiado',
   'lombosunomagrodesfiado',
   'Carnes e aves',
   156.38,
@@ -2411,7 +2411,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Lombo su?no magro - em cubos',
+  'Lombo suíno magro - em cubos',
   'lombosunomagroemcubos',
   'Carnes e aves',
   159.70,
@@ -2476,7 +2476,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v4'
 ),
 (
-  'Pernil su?no magro',
+  'Pernil suíno magro',
   'pernilsunomagro',
   'Carnes e aves',
   191.24,
@@ -2489,7 +2489,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Pernil su?no magro - grelhado',
+  'Pernil suíno magro - grelhado',
   'pernilsunomagrogrelhado',
   'Carnes e aves',
   181.68,
@@ -2502,7 +2502,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Pernil su?no magro - assado',
+  'Pernil suíno magro - assado',
   'pernilsunomagroassado',
   'Carnes e aves',
   187.42,
@@ -2515,7 +2515,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Pernil su?no magro - desfiado',
+  'Pernil suíno magro - desfiado',
   'pernilsunomagrodesfiado',
   'Carnes e aves',
   179.77,
@@ -2528,7 +2528,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Pernil su?no magro - em cubos',
+  'Pernil suíno magro - em cubos',
   'pernilsunomagroemcubos',
   'Carnes e aves',
   183.59,
@@ -2671,9 +2671,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Kefir l?quido',
+  'Kefir líquido',
   'kefirlquido',
-  'Latic?nio',
+  'Laticínio',
   98.08,
   6.68,
   4.42,
@@ -2684,9 +2684,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-0'
 ),
 (
-  'Kefir l?quido - integral',
+  'Kefir líquido - integral',
   'kefirlquidointegral',
-  'Latic?nio',
+  'Laticínio',
   105.92,
   6.68,
   4.42,
@@ -2697,9 +2697,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Kefir l?quido - desnatado',
+  'Kefir líquido - desnatado',
   'kefirlquidodesnatado',
-  'Latic?nio',
+  'Laticínio',
   76.50,
   6.81,
   4.42,
@@ -2710,9 +2710,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  'Kefir l?quido - zero lactose',
+  'Kefir líquido - zero lactose',
   'kefirlquidozerolactose',
-  'Latic?nio',
+  'Laticínio',
   96.12,
   6.68,
   4.42,
@@ -2723,9 +2723,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Kefir l?quido - fermentado',
+  'Kefir líquido - fermentado',
   'kefirlquidofermentado',
-  'Latic?nio',
+  'Laticínio',
   100.04,
   6.68,
   4.42,
@@ -2736,9 +2736,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v4'
 ),
 (
-  'Requeij?o light',
+  'Requeijão light',
   'requeijolight',
-  'Latic?nio',
+  'Laticínio',
   95.83,
   7.01,
   4.94,
@@ -2749,9 +2749,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-0'
 ),
 (
-  'Requeij?o light - integral',
+  'Requeijão light - integral',
   'requeijolightintegral',
-  'Latic?nio',
+  'Laticínio',
   103.50,
   7.01,
   4.94,
@@ -2762,9 +2762,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v1'
 ),
 (
-  'Requeij?o light - desnatado',
+  'Requeijão light - desnatado',
   'requeijolightdesnatado',
-  'Latic?nio',
+  'Laticínio',
   74.75,
   7.15,
   4.94,
@@ -2775,9 +2775,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v2'
 ),
 (
-  'Requeij?o light - zero lactose',
+  'Requeijão light - zero lactose',
   'requeijolightzerolactose',
-  'Latic?nio',
+  'Laticínio',
   93.91,
   7.01,
   4.94,
@@ -2788,9 +2788,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v3'
 ),
 (
-  'Requeij?o light - fermentado',
+  'Requeijão light - fermentado',
   'requeijolightfermentado',
-  'Latic?nio',
+  'Laticínio',
   97.75,
   7.01,
   4.94,
@@ -2803,7 +2803,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Coalhada seca',
   'coalhadaseca',
-  'Latic?nio',
+  'Laticínio',
   81.54,
   7.00,
   4.56,
@@ -2816,7 +2816,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Coalhada seca - integral',
   'coalhadasecaintegral',
-  'Latic?nio',
+  'Laticínio',
   88.07,
   7.00,
   4.56,
@@ -2829,7 +2829,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Coalhada seca - desnatado',
   'coalhadasecadesnatado',
-  'Latic?nio',
+  'Laticínio',
   63.60,
   7.14,
   4.56,
@@ -2842,7 +2842,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Coalhada seca - zero lactose',
   'coalhadasecazerolactose',
-  'Latic?nio',
+  'Laticínio',
   79.91,
   7.00,
   4.56,
@@ -2855,7 +2855,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Coalhada seca - fermentado',
   'coalhadasecafermentado',
-  'Latic?nio',
+  'Laticínio',
   83.17,
   7.00,
   4.56,
@@ -2866,7 +2866,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Feij?o carioca',
+  'Feijão carioca',
   'feijocarioca',
   'Leguminosa',
   131.63,
@@ -2879,7 +2879,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-0'
 ),
 (
-  'Feij?o carioca - cozido',
+  'Feijão carioca - cozido',
   'feijocariocacozido',
   'Leguminosa',
   123.73,
@@ -2892,7 +2892,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v1'
 ),
 (
-  'Feij?o carioca - em pur?',
+  'Feijão carioca - em purê',
   'feijocariocaempur',
   'Leguminosa',
   128.99,
@@ -2905,7 +2905,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v2'
 ),
 (
-  'Feij?o carioca - em pasta',
+  'Feijão carioca - em pasta',
   'feijocariocaempasta',
   'Leguminosa',
   131.63,
@@ -2918,7 +2918,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v3'
 ),
 (
-  'Feij?o carioca - em conserva',
+  'Feijão carioca - em conserva',
   'feijocariocaemconserva',
   'Leguminosa',
   135.57,
@@ -2931,7 +2931,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v4'
 ),
 (
-  'Feij?o preto',
+  'Feijão preto',
   'feijopreto',
   'Leguminosa',
   145.51,
@@ -2944,7 +2944,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Feij?o preto - cozido',
+  'Feijão preto - cozido',
   'feijopretocozido',
   'Leguminosa',
   136.78,
@@ -2957,7 +2957,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Feij?o preto - em pur?',
+  'Feijão preto - em purê',
   'feijopretoempur',
   'Leguminosa',
   142.60,
@@ -2970,7 +2970,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Feij?o preto - em pasta',
+  'Feijão preto - em pasta',
   'feijopretoempasta',
   'Leguminosa',
   145.51,
@@ -2983,7 +2983,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Feij?o preto - em conserva',
+  'Feijão preto - em conserva',
   'feijopretoemconserva',
   'Leguminosa',
   149.87,
@@ -2996,7 +2996,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  'Feij?o branco',
+  'Feijão branco',
   'feijobranco',
   'Leguminosa',
   145.66,
@@ -3009,7 +3009,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-0'
 ),
 (
-  'Feij?o branco - cozido',
+  'Feijão branco - cozido',
   'feijobrancocozido',
   'Leguminosa',
   136.92,
@@ -3022,7 +3022,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v1'
 ),
 (
-  'Feij?o branco - em pur?',
+  'Feijão branco - em purê',
   'feijobrancoempur',
   'Leguminosa',
   142.75,
@@ -3035,7 +3035,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v2'
 ),
 (
-  'Feij?o branco - em pasta',
+  'Feijão branco - em pasta',
   'feijobrancoempasta',
   'Leguminosa',
   145.66,
@@ -3048,7 +3048,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  'Feij?o branco - em conserva',
+  'Feijão branco - em conserva',
   'feijobrancoemconserva',
   'Leguminosa',
   150.03,
@@ -3061,7 +3061,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v4'
 ),
 (
-  'Feij?o fradinho',
+  'Feijão fradinho',
   'feijofradinho',
   'Leguminosa',
   117.57,
@@ -3074,7 +3074,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Feij?o fradinho - cozido',
+  'Feijão fradinho - cozido',
   'feijofradinhocozido',
   'Leguminosa',
   110.52,
@@ -3087,7 +3087,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Feij?o fradinho - em pur?',
+  'Feijão fradinho - em purê',
   'feijofradinhoempur',
   'Leguminosa',
   115.22,
@@ -3100,7 +3100,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Feij?o fradinho - em pasta',
+  'Feijão fradinho - em pasta',
   'feijofradinhoempasta',
   'Leguminosa',
   117.57,
@@ -3113,7 +3113,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Feij?o fradinho - em conserva',
+  'Feijão fradinho - em conserva',
   'feijofradinhoemconserva',
   'Leguminosa',
   121.10,
@@ -3126,7 +3126,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  'Feij?o manteiguinha',
+  'Feijão manteiguinha',
   'feijomanteiguinha',
   'Leguminosa',
   131.96,
@@ -3139,7 +3139,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-0'
 ),
 (
-  'Feij?o manteiguinha - cozido',
+  'Feijão manteiguinha - cozido',
   'feijomanteiguinhacozido',
   'Leguminosa',
   124.04,
@@ -3152,7 +3152,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Feij?o manteiguinha - em pur?',
+  'Feijão manteiguinha - em purê',
   'feijomanteiguinhaempur',
   'Leguminosa',
   129.32,
@@ -3165,7 +3165,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  'Feij?o manteiguinha - em pasta',
+  'Feijão manteiguinha - em pasta',
   'feijomanteiguinhaempasta',
   'Leguminosa',
   131.96,
@@ -3178,7 +3178,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Feij?o manteiguinha - em conserva',
+  'Feijão manteiguinha - em conserva',
   'feijomanteiguinhaemconserva',
   'Leguminosa',
   135.92,
@@ -3191,7 +3191,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v4'
 ),
 (
-  'Lentilha - em pur?',
+  'Lentilha - em purê',
   'lentilhaempur',
   'Leguminosa',
   131.15,
@@ -3230,7 +3230,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v1'
 ),
 (
-  'Lentilha vermelha - em pur?',
+  'Lentilha vermelha - em purê',
   'lentilhavermelhaempur',
   'Leguminosa',
   129.75,
@@ -3269,7 +3269,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v4'
 ),
 (
-  'Gr?o-de-bico',
+  'Grão-de-bico',
   'grodebico',
   'Leguminosa',
   138.84,
@@ -3282,7 +3282,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Gr?o-de-bico - cozido',
+  'Grão-de-bico - cozido',
   'grodebicocozido',
   'Leguminosa',
   130.51,
@@ -3295,7 +3295,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Gr?o-de-bico - em pur?',
+  'Grão-de-bico - em purê',
   'grodebicoempur',
   'Leguminosa',
   136.06,
@@ -3308,7 +3308,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Gr?o-de-bico - em pasta',
+  'Grão-de-bico - em pasta',
   'grodebicoempasta',
   'Leguminosa',
   138.84,
@@ -3321,7 +3321,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Gr?o-de-bico - em conserva',
+  'Grão-de-bico - em conserva',
   'grodebicoemconserva',
   'Leguminosa',
   143.00,
@@ -3360,7 +3360,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v1'
 ),
 (
-  'Ervilha partida - em pur?',
+  'Ervilha partida - em purê',
   'ervilhapartidaempur',
   'Leguminosa',
   141.86,
@@ -3425,7 +3425,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Fava cozida - em pur?',
+  'Fava cozida - em purê',
   'favacozidaempur',
   'Leguminosa',
   129.52,
@@ -3464,7 +3464,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Chia - mo?do',
+  'Chia - moído',
   'chiamodo',
   'Oleaginosas e sementes',
   536.20,
@@ -3477,7 +3477,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v3'
 ),
 (
-  'Linha?a dourada',
+  'Linhaça dourada',
   'linhaadourada',
   'Oleaginosas e sementes',
   528.63,
@@ -3490,7 +3490,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Linha?a dourada - torrado',
+  'Linhaça dourada - torrado',
   'linhaadouradatorrado',
   'Oleaginosas e sementes',
   544.49,
@@ -3503,7 +3503,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Linha?a dourada - sem sal',
+  'Linhaça dourada - sem sal',
   'linhaadouradasemsal',
   'Oleaginosas e sementes',
   518.06,
@@ -3516,7 +3516,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Linha?a dourada - mo?do',
+  'Linhaça dourada - moído',
   'linhaadouradamodo',
   'Oleaginosas e sementes',
   528.63,
@@ -3529,7 +3529,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Linha?a dourada - triturado',
+  'Linhaça dourada - triturado',
   'linhaadouradatriturado',
   'Oleaginosas e sementes',
   528.63,
@@ -3542,7 +3542,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  'Gergelim - mo?do',
+  'Gergelim - moído',
   'gergelimmodo',
   'Oleaginosas e sementes',
   510.63,
@@ -3555,7 +3555,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  'Semente de ab?bora',
+  'Semente de abóbora',
   'sementedeabbora',
   'Oleaginosas e sementes',
   530.92,
@@ -3568,7 +3568,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Semente de ab?bora - torrado',
+  'Semente de abóbora - torrado',
   'sementedeabboratorrado',
   'Oleaginosas e sementes',
   546.85,
@@ -3581,7 +3581,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Semente de ab?bora - sem sal',
+  'Semente de abóbora - sem sal',
   'sementedeabborasemsal',
   'Oleaginosas e sementes',
   520.31,
@@ -3594,7 +3594,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Semente de ab?bora - mo?do',
+  'Semente de abóbora - moído',
   'sementedeabboramodo',
   'Oleaginosas e sementes',
   530.92,
@@ -3607,7 +3607,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Semente de ab?bora - triturado',
+  'Semente de abóbora - triturado',
   'sementedeabboratriturado',
   'Oleaginosas e sementes',
   530.92,
@@ -3620,7 +3620,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  'Semente de girassol - mo?do',
+  'Semente de girassol - moído',
   'sementedegirassolmodo',
   'Oleaginosas e sementes',
   555.37,
@@ -3633,7 +3633,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Am?ndoa',
+  'Amêndoa',
   'amndoa',
   'Oleaginosas e sementes',
   523.40,
@@ -3646,7 +3646,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-0'
 ),
 (
-  'Am?ndoa - torrado',
+  'Amêndoa - torrado',
   'amndoatorrado',
   'Oleaginosas e sementes',
   539.10,
@@ -3659,7 +3659,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v1'
 ),
 (
-  'Am?ndoa - sem sal',
+  'Amêndoa - sem sal',
   'amndoasemsal',
   'Oleaginosas e sementes',
   512.93,
@@ -3672,7 +3672,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v2'
 ),
 (
-  'Am?ndoa - mo?do',
+  'Amêndoa - moído',
   'amndoamodo',
   'Oleaginosas e sementes',
   523.40,
@@ -3685,7 +3685,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v3'
 ),
 (
-  'Am?ndoa - triturado',
+  'Amêndoa - triturado',
   'amndoatriturado',
   'Oleaginosas e sementes',
   523.40,
@@ -3698,7 +3698,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v4'
 ),
 (
-  'Castanha de caju - mo?do',
+  'Castanha de caju - moído',
   'castanhadecajumodo',
   'Oleaginosas e sementes',
   598.10,
@@ -3711,7 +3711,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v3'
 ),
 (
-  'Castanha-do-par?',
+  'Castanha-do-pará',
   'castanhadopar',
   'Oleaginosas e sementes',
   619.06,
@@ -3724,7 +3724,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Castanha-do-par? - torrado',
+  'Castanha-do-pará - torrado',
   'castanhadopartorrado',
   'Oleaginosas e sementes',
   637.63,
@@ -3737,7 +3737,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Castanha-do-par? - sem sal',
+  'Castanha-do-pará - sem sal',
   'castanhadoparsemsal',
   'Oleaginosas e sementes',
   606.68,
@@ -3750,7 +3750,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Castanha-do-par? - mo?do',
+  'Castanha-do-pará - moído',
   'castanhadoparmodo',
   'Oleaginosas e sementes',
   619.06,
@@ -3763,7 +3763,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Castanha-do-par? - triturado',
+  'Castanha-do-pará - triturado',
   'castanhadopartriturado',
   'Oleaginosas e sementes',
   619.06,
@@ -3776,7 +3776,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v4'
 ),
 (
-  'Pistache - mo?do',
+  'Pistache - moído',
   'pistachemodo',
   'Oleaginosas e sementes',
   523.15,
@@ -3789,7 +3789,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v3'
 ),
 (
-  'Macad?mia',
+  'Macadâmia',
   'macadmia',
   'Oleaginosas e sementes',
   558.88,
@@ -3802,7 +3802,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-0'
 ),
 (
-  'Macad?mia - torrado',
+  'Macadâmia - torrado',
   'macadmiatorrado',
   'Oleaginosas e sementes',
   575.65,
@@ -3815,7 +3815,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Macad?mia - sem sal',
+  'Macadâmia - sem sal',
   'macadmiasemsal',
   'Oleaginosas e sementes',
   547.71,
@@ -3828,7 +3828,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v2'
 ),
 (
-  'Macad?mia - mo?do',
+  'Macadâmia - moído',
   'macadmiamodo',
   'Oleaginosas e sementes',
   558.88,
@@ -3841,7 +3841,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v3'
 ),
 (
-  'Macad?mia - triturado',
+  'Macadâmia - triturado',
   'macadmiatriturado',
   'Oleaginosas e sementes',
   558.88,
@@ -3854,7 +3854,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Caf? coado',
+  'Café coado',
   'cafcoado',
   'Bebida',
   44.16,
@@ -3867,7 +3867,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-0'
 ),
 (
-  'Caf? coado - sem a??car',
+  'Café coado - sem açúcar',
   'cafcoadosemacar',
   'Bebida',
   30.03,
@@ -3880,7 +3880,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v1'
 ),
 (
-  'Caf? coado - light',
+  'Café coado - light',
   'cafcoadolight',
   'Bebida',
   35.33,
@@ -3893,7 +3893,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v2'
 ),
 (
-  'Caf? coado - zero',
+  'Café coado - zero',
   'cafcoadozero',
   'Bebida',
   24.29,
@@ -3906,7 +3906,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v3'
 ),
 (
-  'Caf? coado - com gelo',
+  'Café coado - com gelo',
   'cafcoadocomgelo',
   'Bebida',
   41.95,
@@ -3919,7 +3919,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v4'
 ),
 (
-  'Ch? verde',
+  'Chá verde',
   'chverde',
   'Bebida',
   38.62,
@@ -3932,7 +3932,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  'Ch? verde - sem a??car',
+  'Chá verde - sem açúcar',
   'chverdesemacar',
   'Bebida',
   26.26,
@@ -3945,7 +3945,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Ch? verde - light',
+  'Chá verde - light',
   'chverdelight',
   'Bebida',
   30.89,
@@ -3958,7 +3958,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Ch? verde - zero',
+  'Chá verde - zero',
   'chverdezero',
   'Bebida',
   21.24,
@@ -3971,7 +3971,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  'Ch? verde - com gelo',
+  'Chá verde - com gelo',
   'chverdecomgelo',
   'Bebida',
   36.69,
@@ -3984,7 +3984,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  'Ch? de camomila',
+  'Chá de camomila',
   'chdecamomila',
   'Bebida',
   40.22,
@@ -3997,7 +3997,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-0'
 ),
 (
-  'Ch? de camomila - sem a??car',
+  'Chá de camomila - sem açúcar',
   'chdecamomilasemacar',
   'Bebida',
   27.35,
@@ -4010,7 +4010,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v1'
 ),
 (
-  'Ch? de camomila - light',
+  'Chá de camomila - light',
   'chdecamomilalight',
   'Bebida',
   32.18,
@@ -4023,7 +4023,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v2'
 ),
 (
-  'Ch? de camomila - zero',
+  'Chá de camomila - zero',
   'chdecamomilazero',
   'Bebida',
   22.12,
@@ -4036,7 +4036,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  'Ch? de camomila - com gelo',
+  'Chá de camomila - com gelo',
   'chdecamomilacomgelo',
   'Bebida',
   38.21,
@@ -4049,7 +4049,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v4'
 ),
 (
-  'Ch? de hibisco',
+  'Chá de hibisco',
   'chdehibisco',
   'Bebida',
   37.25,
@@ -4062,7 +4062,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Ch? de hibisco - sem a??car',
+  'Chá de hibisco - sem açúcar',
   'chdehibiscosemacar',
   'Bebida',
   25.33,
@@ -4075,7 +4075,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Ch? de hibisco - light',
+  'Chá de hibisco - light',
   'chdehibiscolight',
   'Bebida',
   29.80,
@@ -4088,7 +4088,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Ch? de hibisco - zero',
+  'Chá de hibisco - zero',
   'chdehibiscozero',
   'Bebida',
   20.49,
@@ -4101,7 +4101,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Ch? de hibisco - com gelo',
+  'Chá de hibisco - com gelo',
   'chdehibiscocomgelo',
   'Bebida',
   35.39,
@@ -4114,7 +4114,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  '?gua de coco',
+  'Água de coco',
   'guadecoco',
   'Bebida',
   41.53,
@@ -4127,7 +4127,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-0'
 ),
 (
-  '?gua de coco - sem a??car',
+  'Água de coco - sem açúcar',
   'guadecocosemacar',
   'Bebida',
   28.24,
@@ -4140,7 +4140,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  '?gua de coco - light',
+  'Água de coco - light',
   'guadecocolight',
   'Bebida',
   33.22,
@@ -4153,7 +4153,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  '?gua de coco - zero',
+  'Água de coco - zero',
   'guadecocozero',
   'Bebida',
   22.84,
@@ -4166,7 +4166,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  '?gua de coco - com gelo',
+  'Água de coco - com gelo',
   'guadecococomgelo',
   'Bebida',
   39.45,
@@ -4179,7 +4179,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v4'
 ),
 (
-  'Kombucha - sem a??car',
+  'Kombucha - sem açúcar',
   'kombuchasemacar',
   'Bebida',
   28.47,
@@ -4205,7 +4205,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-0'
 ),
 (
-  'Suco de acerola - sem a??car',
+  'Suco de acerola - sem açúcar',
   'sucodeacerolasemacar',
   'Bebida',
   28.36,
@@ -4257,7 +4257,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v4'
 ),
 (
-  'Suco de maracuj?',
+  'Suco de maracujá',
   'sucodemaracuj',
   'Bebida',
   38.48,
@@ -4270,7 +4270,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-0'
 ),
 (
-  'Suco de maracuj? - sem a??car',
+  'Suco de maracujá - sem açúcar',
   'sucodemaracujsemacar',
   'Bebida',
   26.17,
@@ -4283,7 +4283,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Suco de maracuj? - light',
+  'Suco de maracujá - light',
   'sucodemaracujlight',
   'Bebida',
   30.78,
@@ -4296,7 +4296,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Suco de maracuj? - zero',
+  'Suco de maracujá - zero',
   'sucodemaracujzero',
   'Bebida',
   21.16,
@@ -4309,7 +4309,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Suco de maracuj? - com gelo',
+  'Suco de maracujá - com gelo',
   'sucodemaracujcomgelo',
   'Bebida',
   36.56,
@@ -4322,7 +4322,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v4'
 ),
 (
-  'Leite de aveia - sem a??car',
+  'Leite de aveia - sem açúcar',
   'leitedeaveiasemacar',
   'Bebida',
   29.79,
@@ -4335,7 +4335,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v1'
 ),
 (
-  'Leite de am?ndoas',
+  'Leite de amêndoas',
   'leitedeamndoas',
   'Bebida',
   41.78,
@@ -4348,7 +4348,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-0'
 ),
 (
-  'Leite de am?ndoas - sem a??car',
+  'Leite de amêndoas - sem açúcar',
   'leitedeamndoassemacar',
   'Bebida',
   28.41,
@@ -4361,7 +4361,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Leite de am?ndoas - light',
+  'Leite de amêndoas - light',
   'leitedeamndoaslight',
   'Bebida',
   33.42,
@@ -4374,7 +4374,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v2'
 ),
 (
-  'Leite de am?ndoas - zero',
+  'Leite de amêndoas - zero',
   'leitedeamndoaszero',
   'Bebida',
   22.98,
@@ -4387,7 +4387,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v3'
 ),
 (
-  'Leite de am?ndoas - com gelo',
+  'Leite de amêndoas - com gelo',
   'leitedeamndoascomgelo',
   'Bebida',
   39.69,
@@ -4400,7 +4400,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Pudim de chia - sem a??car',
+  'Pudim de chia - sem açúcar',
   'pudimdechiasemacar',
   'Doces e sobremesas',
   170.94,
@@ -4413,7 +4413,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v2'
 ),
 (
-  'Pudim de chia - por??o pequena',
+  'Pudim de chia - porção pequena',
   'pudimdechiaporopequena',
   'Doces e sobremesas',
   220.56,
@@ -4452,7 +4452,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Bolo integral de banana - sem a??car',
+  'Bolo integral de banana - sem açúcar',
   'bolointegraldebananasemacar',
   'Doces e sobremesas',
   165.00,
@@ -4465,7 +4465,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  'Bolo integral de banana - por??o pequena',
+  'Bolo integral de banana - porção pequena',
   'bolointegraldebananaporopequena',
   'Doces e sobremesas',
   212.90,
@@ -4491,7 +4491,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  'Brownie fit - sem a??car',
+  'Brownie fit - sem açúcar',
   'browniefitsemacar',
   'Doces e sobremesas',
   162.15,
@@ -4504,7 +4504,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v2'
 ),
 (
-  'Brownie fit - por??o pequena',
+  'Brownie fit - porção pequena',
   'browniefitporopequena',
   'Doces e sobremesas',
   209.23,
@@ -4517,7 +4517,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  'Cookie integral - sem a??car',
+  'Cookie integral - sem açúcar',
   'cookieintegralsemacar',
   'Doces e sobremesas',
   169.61,
@@ -4530,7 +4530,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Cookie integral - por??o pequena',
+  'Cookie integral - porção pequena',
   'cookieintegralporopequena',
   'Doces e sobremesas',
   218.86,
@@ -4543,7 +4543,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Gelatina zero - sem a??car',
+  'Gelatina zero - sem açúcar',
   'gelatinazerosemacar',
   'Doces e sobremesas',
   158.32,
@@ -4556,7 +4556,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v2'
 ),
 (
-  'Gelatina zero - por??o pequena',
+  'Gelatina zero - porção pequena',
   'gelatinazeroporopequena',
   'Doces e sobremesas',
   204.28,
@@ -4569,7 +4569,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v3'
 ),
 (
-  'Mousse de maracuj? fit',
+  'Mousse de maracujá fit',
   'moussedemaracujfit',
   'Doces e sobremesas',
   273.03,
@@ -4582,7 +4582,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-0'
 ),
 (
-  'Mousse de maracuj? fit - light',
+  'Mousse de maracujá fit - light',
   'moussedemaracujfitlight',
   'Doces e sobremesas',
   196.58,
@@ -4595,7 +4595,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v1'
 ),
 (
-  'Mousse de maracuj? fit - sem a??car',
+  'Mousse de maracujá fit - sem açúcar',
   'moussedemaracujfitsemacar',
   'Doces e sobremesas',
   169.28,
@@ -4608,7 +4608,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v2'
 ),
 (
-  'Mousse de maracuj? fit - por??o pequena',
+  'Mousse de maracujá fit - porção pequena',
   'moussedemaracujfitporopequena',
   'Doces e sobremesas',
   218.42,
@@ -4621,7 +4621,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v3'
 ),
 (
-  'Mousse de maracuj? fit - tradicional',
+  'Mousse de maracujá fit - tradicional',
   'moussedemaracujfittradicional',
   'Doces e sobremesas',
   273.03,
@@ -4660,7 +4660,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v1'
 ),
 (
-  'Panqueca de aveia doce - sem a??car',
+  'Panqueca de aveia doce - sem açúcar',
   'panquecadeaveiadocesemacar',
   'Doces e sobremesas',
   158.95,
@@ -4673,7 +4673,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v2'
 ),
 (
-  'Panqueca de aveia doce - por??o pequena',
+  'Panqueca de aveia doce - porção pequena',
   'panquecadeaveiadoceporopequena',
   'Doces e sobremesas',
   205.09,
@@ -4699,7 +4699,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v4'
 ),
 (
-  'Overnight oats - sem a??car',
+  'Overnight oats - sem açúcar',
   'overnightoatssemacar',
   'Doces e sobremesas',
   150.51,
@@ -4712,7 +4712,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v2'
 ),
 (
-  'Overnight oats - por??o pequena',
+  'Overnight oats - porção pequena',
   'overnightoatsporopequena',
   'Doces e sobremesas',
   194.20,
@@ -4725,7 +4725,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v3'
 ),
 (
-  'Compota de ma??',
+  'Compota de maçã',
   'compotadema',
   'Doces e sobremesas',
   223.62,
@@ -4738,7 +4738,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-0'
 ),
 (
-  'Compota de ma?? - light',
+  'Compota de maçã - light',
   'compotademalight',
   'Doces e sobremesas',
   161.00,
@@ -4751,7 +4751,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v1'
 ),
 (
-  'Compota de ma?? - sem a??car',
+  'Compota de maçã - sem açúcar',
   'compotademasemacar',
   'Doces e sobremesas',
   138.64,
@@ -4764,7 +4764,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v2'
 ),
 (
-  'Compota de ma?? - por??o pequena',
+  'Compota de maçã - porção pequena',
   'compotademaporopequena',
   'Doces e sobremesas',
   178.89,
@@ -4777,7 +4777,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v3'
 ),
 (
-  'Compota de ma?? - tradicional',
+  'Compota de maçã - tradicional',
   'compotadematradicional',
   'Doces e sobremesas',
   223.62,
@@ -4816,7 +4816,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Brigadeiro fit - sem a??car',
+  'Brigadeiro fit - sem açúcar',
   'brigadeirofitsemacar',
   'Doces e sobremesas',
   143.37,
@@ -4829,7 +4829,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v2'
 ),
 (
-  'Brigadeiro fit - por??o pequena',
+  'Brigadeiro fit - porção pequena',
   'brigadeirofitporopequena',
   'Doces e sobremesas',
   184.99,
@@ -4855,9 +4855,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Azeite de oliva - culin?rio',
+  'Azeite de oliva - culinário',
   'azeitedeolivaculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   770.98,
   0.00,
   0.00,
@@ -4868,9 +4868,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v1'
 ),
 (
-  '?leo de coco',
+  'Óleo de coco',
   'leodecoco',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   663.63,
   0.00,
   0.00,
@@ -4881,9 +4881,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-0'
 ),
 (
-  '?leo de coco - culin?rio',
+  'Óleo de coco - culinário',
   'leodecococulinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   663.63,
   0.00,
   0.00,
@@ -4894,9 +4894,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  '?leo de coco - para tempero',
+  'Óleo de coco - para tempero',
   'leodecocoparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   650.36,
   0.00,
   0.00,
@@ -4907,9 +4907,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v2'
 ),
 (
-  '?leo de coco - em spray',
+  'Óleo de coco - em spray',
   'leodecocoemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   530.91,
   0.00,
   0.00,
@@ -4920,9 +4920,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v3'
 ),
 (
-  '?leo de coco - sem sal',
+  'Óleo de coco - sem sal',
   'leodecocosemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   650.36,
   0.00,
   0.00,
@@ -4933,9 +4933,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v4'
 ),
 (
-  '?leo de abacate',
+  'Óleo de abacate',
   'leodeabacate',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   763.09,
   0.00,
   0.00,
@@ -4946,9 +4946,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-0'
 ),
 (
-  '?leo de abacate - culin?rio',
+  'Óleo de abacate - culinário',
   'leodeabacateculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   763.09,
   0.00,
   0.00,
@@ -4959,9 +4959,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v1'
 ),
 (
-  '?leo de abacate - para tempero',
+  'Óleo de abacate - para tempero',
   'leodeabacateparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   747.83,
   0.00,
   0.00,
@@ -4972,9 +4972,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v2'
 ),
 (
-  '?leo de abacate - em spray',
+  'Óleo de abacate - em spray',
   'leodeabacateemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   610.47,
   0.00,
   0.00,
@@ -4985,9 +4985,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v3'
 ),
 (
-  '?leo de abacate - sem sal',
+  'Óleo de abacate - sem sal',
   'leodeabacatesemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   747.83,
   0.00,
   0.00,
@@ -5000,7 +5000,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ghee',
   'ghee',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   743.86,
   0.00,
   0.00,
@@ -5011,9 +5011,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Ghee - culin?rio',
+  'Ghee - culinário',
   'gheeculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   743.86,
   0.00,
   0.00,
@@ -5026,7 +5026,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ghee - para tempero',
   'gheeparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   728.99,
   0.00,
   0.00,
@@ -5039,7 +5039,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ghee - em spray',
   'gheeemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   595.09,
   0.00,
   0.00,
@@ -5052,7 +5052,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ghee - sem sal',
   'gheesemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   728.99,
   0.00,
   0.00,
@@ -5063,9 +5063,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v4'
 ),
 (
-  'Manteiga sem sal - culin?rio',
+  'Manteiga sem sal - culinário',
   'manteigasemsalculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   754.15,
   0.00,
   0.00,
@@ -5076,9 +5076,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Margarina light - culin?rio',
+  'Margarina light - culinário',
   'margarinalightculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   618.35,
   0.00,
   0.00,
@@ -5089,9 +5089,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v1'
 ),
 (
-  'Tahine - culin?rio',
+  'Tahine - culinário',
   'tahineculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   759.60,
   0.00,
   0.00,
@@ -5104,7 +5104,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Tahine - para tempero',
   'tahineparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   744.41,
   0.00,
   0.00,
@@ -5117,7 +5117,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Tahine - em spray',
   'tahineemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   607.68,
   0.00,
   0.00,
@@ -5130,7 +5130,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Tahine - sem sal',
   'tahinesemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   744.41,
   0.00,
   0.00,
@@ -5141,9 +5141,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v4'
 ),
 (
-  'Pasta de amendoim - culin?rio',
+  'Pasta de amendoim - culinário',
   'pastadeamendoimculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   763.89,
   0.00,
   0.00,
@@ -5156,7 +5156,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Pasta de amendoim - para tempero',
   'pastadeamendoimparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   748.61,
   0.00,
   0.00,
@@ -5169,7 +5169,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Pasta de amendoim - em spray',
   'pastadeamendoimemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   611.11,
   0.00,
   0.00,
@@ -5182,7 +5182,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Pasta de amendoim - sem sal',
   'pastadeamendoimsemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   748.61,
   0.00,
   0.00,
@@ -5195,7 +5195,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Creme de castanha',
   'cremedecastanha',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   758.37,
   0.00,
   0.00,
@@ -5206,9 +5206,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-0'
 ),
 (
-  'Creme de castanha - culin?rio',
+  'Creme de castanha - culinário',
   'cremedecastanhaculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   758.37,
   0.00,
   0.00,
@@ -5221,7 +5221,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Creme de castanha - para tempero',
   'cremedecastanhaparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   743.20,
   0.00,
   0.00,
@@ -5234,7 +5234,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Creme de castanha - em spray',
   'cremedecastanhaemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   606.70,
   0.00,
   0.00,
@@ -5247,7 +5247,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Creme de castanha - sem sal',
   'cremedecastanhasemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   743.20,
   0.00,
   0.00,
@@ -5258,9 +5258,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v4'
 ),
 (
-  '?leo de linha?a',
+  'Óleo de linhaça',
   'leodelinhaa',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   622.59,
   0.00,
   0.00,
@@ -5271,9 +5271,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-0'
 ),
 (
-  '?leo de linha?a - culin?rio',
+  'Óleo de linhaça - culinário',
   'leodelinhaaculinrio',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   622.59,
   0.00,
   0.00,
@@ -5284,9 +5284,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  '?leo de linha?a - para tempero',
+  'Óleo de linhaça - para tempero',
   'leodelinhaaparatempero',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   610.14,
   0.00,
   0.00,
@@ -5297,9 +5297,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v2'
 ),
 (
-  '?leo de linha?a - em spray',
+  'Óleo de linhaça - em spray',
   'leodelinhaaemspray',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   498.07,
   0.00,
   0.00,
@@ -5310,9 +5310,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v3'
 ),
 (
-  '?leo de linha?a - sem sal',
+  'Óleo de linhaça - sem sal',
   'leodelinhaasemsal',
-  '?leos e gorduras',
+  'Óleos e gorduras',
   610.14,
   0.00,
   0.00,
@@ -5349,7 +5349,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '01-v1'
 ),
 (
-  'Sopa de legumes - por??o padr?o',
+  'Sopa de legumes - porção padrão',
   'sopadelegumesporopadro',
   'Outro',
   124.06,
@@ -5414,7 +5414,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '02-v1'
 ),
 (
-  'Bowl proteico - por??o padr?o',
+  'Bowl proteico - porção padrão',
   'bowlproteicoporopadro',
   'Outro',
   131.26,
@@ -5479,7 +5479,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v1'
 ),
 (
-  'Wrap integral - por??o padr?o',
+  'Wrap integral - porção padrão',
   'wrapintegralporopadro',
   'Outro',
   131.41,
@@ -5518,7 +5518,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '03-v4'
 ),
 (
-  'Sandu?che natural',
+  'Sanduíche natural',
   'sanduchenatural',
   'Outro',
   134.54,
@@ -5531,7 +5531,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-0'
 ),
 (
-  'Sandu?che natural - caseiro',
+  'Sanduíche natural - caseiro',
   'sanduchenaturalcaseiro',
   'Outro',
   131.85,
@@ -5544,7 +5544,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v1'
 ),
 (
-  'Sandu?che natural - por??o padr?o',
+  'Sanduíche natural - porção padrão',
   'sanduchenaturalporopadro',
   'Outro',
   134.54,
@@ -5557,7 +5557,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v2'
 ),
 (
-  'Sandu?che natural - pronto para consumo',
+  'Sanduíche natural - pronto para consumo',
   'sanduchenaturalprontoparaconsumo',
   'Outro',
   141.27,
@@ -5570,7 +5570,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '04-v3'
 ),
 (
-  'Sandu?che natural - tradicional',
+  'Sanduíche natural - tradicional',
   'sanduchenaturaltradicional',
   'Outro',
   137.23,
@@ -5609,7 +5609,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '05-v1'
 ),
 (
-  'Risoto de quinoa - por??o padr?o',
+  'Risoto de quinoa - porção padrão',
   'risotodequinoaporopadro',
   'Outro',
   135.97,
@@ -5674,7 +5674,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '06-v1'
 ),
 (
-  'Omelete de forno - por??o padr?o',
+  'Omelete de forno - porção padrão',
   'omeletedefornoporopadro',
   'Outro',
   148.58,
@@ -5726,7 +5726,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '07-v1'
 ),
 (
-  'Tabule - por??o padr?o',
+  'Tabule - porção padrão',
   'tabuleporopadro',
   'Outro',
   137.55,
@@ -5791,7 +5791,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v1'
 ),
 (
-  'Farofa funcional - por??o padr?o',
+  'Farofa funcional - porção padrão',
   'farofafuncionalporopadro',
   'Outro',
   128.15,
@@ -5830,7 +5830,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '08-v4'
 ),
 (
-  'Creme de ab?bora',
+  'Creme de abóbora',
   'cremedeabbora',
   'Outro',
   152.93,
@@ -5843,7 +5843,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-0'
 ),
 (
-  'Creme de ab?bora - caseiro',
+  'Creme de abóbora - caseiro',
   'cremedeabboracaseiro',
   'Outro',
   149.87,
@@ -5856,7 +5856,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v1'
 ),
 (
-  'Creme de ab?bora - por??o padr?o',
+  'Creme de abóbora - porção padrão',
   'cremedeabboraporopadro',
   'Outro',
   152.93,
@@ -5869,7 +5869,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v2'
 ),
 (
-  'Creme de ab?bora - pronto para consumo',
+  'Creme de abóbora - pronto para consumo',
   'cremedeabboraprontoparaconsumo',
   'Outro',
   160.57,
@@ -5882,7 +5882,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '09-v3'
 ),
 (
-  'Creme de ab?bora - tradicional',
+  'Creme de abóbora - tradicional',
   'cremedeabboratradicional',
   'Outro',
   155.98,
@@ -5921,7 +5921,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v1'
 ),
 (
-  'Salada completa - por??o padr?o',
+  'Salada completa - porção padrão',
   'saladacompletaporopadro',
   'Outro',
   148.79,
@@ -5960,7 +5960,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   '10-v4'
 ),
 (
-  'Quinoa em gr?os - especial 1',
+  'Quinoa em grãos - especial 1',
   'quinoaemgrosespecial1',
   'Cereais e derivados',
   109.56,
@@ -6077,7 +6077,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Granola sem a??car - especial 1',
+  'Granola sem açúcar - especial 1',
   'granolasemacarespecial1',
   'Cereais e derivados',
   123.94,
@@ -6103,7 +6103,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Ora-pro-n?bis - especial 1',
+  'Ora-pro-nóbis - especial 1',
   'orapronbisespecial1',
   'Vegetal',
   29.57,
@@ -6129,7 +6129,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Nir? - especial 1',
+  'Nirá - especial 1',
   'nirespecial1',
   'Vegetal',
   35.86,
@@ -6142,7 +6142,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Jil? - especial 1',
+  'Jiló - especial 1',
   'jilespecial1',
   'Vegetal',
   30.43,
@@ -6181,7 +6181,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Ab?bora caboti? - especial 1',
+  'Abóbora cabotiá - especial 1',
   'abboracabotiespecial1',
   'Vegetal',
   34.86,
@@ -6233,7 +6233,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Caj? - especial 1',
+  'Cajá - especial 1',
   'cajespecial1',
   'Fruta',
   58.88,
@@ -6298,7 +6298,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Ara?? - especial 1',
+  'Araçá - especial 1',
   'araespecial1',
   'Fruta',
   62.81,
@@ -6311,7 +6311,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Cupua?u - especial 1',
+  'Cupuaçu - especial 1',
   'cupuauespecial1',
   'Fruta',
   55.13,
@@ -6352,7 +6352,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Tofu firme - especial 1',
   'tofufirmeespecial1',
-  'Prote?na',
+  'Proteína',
   119.04,
   16.78,
   1.80,
@@ -6365,7 +6365,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Tempeh - especial 1',
   'tempehespecial1',
-  'Prote?na',
+  'Proteína',
   113.52,
   17.97,
   1.90,
@@ -6378,7 +6378,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Seitan - especial 1',
   'seitanespecial1',
-  'Prote?na',
+  'Proteína',
   112.29,
   18.35,
   2.15,
@@ -6389,9 +6389,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Prote?na de ervilha - especial 1',
+  'Proteína de ervilha - especial 1',
   'protenadeervilhaespecial1',
-  'Prote?na',
+  'Proteína',
   103.92,
   16.85,
   1.94,
@@ -6402,9 +6402,9 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Prote?na de soja texturizada - especial 1',
+  'Proteína de soja texturizada - especial 1',
   'protenadesojatexturizadaespecial1',
-  'Prote?na',
+  'Proteína',
   119.87,
   18.84,
   1.99,
@@ -6417,7 +6417,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Ovo de codorna - especial 1',
   'ovodecodornaespecial1',
-  'Prote?na',
+  'Proteína',
   104.74,
   17.12,
   1.86,
@@ -6430,7 +6430,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Clara pasteurizada - especial 1',
   'clarapasteurizadaespecial1',
-  'Prote?na',
+  'Proteína',
   100.30,
   17.62,
   1.97,
@@ -6443,7 +6443,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Skyr proteico - especial 1',
   'skyrproteicoespecial1',
-  'Prote?na',
+  'Proteína',
   104.63,
   16.24,
   2.08,
@@ -6456,7 +6456,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Queijo quark - especial 1',
   'queijoquarkespecial1',
-  'Prote?na',
+  'Proteína',
   100.03,
   18.31,
   2.12,
@@ -6469,7 +6469,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
 (
   'Iogurte proteico - especial 1',
   'iogurteproteicoespecial1',
-  'Prote?na',
+  'Proteína',
   103.82,
   18.72,
   1.96,
@@ -6493,7 +6493,7 @@ INSERT INTO master_foods (name, name_key, category, kcal_per_100g, protein_per_1
   'x1'
 ),
 (
-  'Patinho mo?do - especial 1',
+  'Patinho moído - especial 1',
   'patinhomodoespecial1',
   'Carnes e aves',
   192.99,
