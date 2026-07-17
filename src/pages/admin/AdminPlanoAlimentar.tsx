@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Plus, Save, Loader2, FileText, Mail, Zap, Soup, ChevronUp, ChevronDown,
@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchFullMealPlan, saveMeals, upsertMealPlan, fetchMealPlans,
-  upsertMealPreset, saveMealPresetFoods,
+  upsertMealPreset, saveMealPresetFoods, upsertDietTemplate, saveDietTemplateMeals,
   type Meal, type MealFood, type MealPlan, type MealPresetFood, type AlternativeMeal
 } from "@/lib/supabase";
 import {
@@ -108,6 +108,119 @@ const parsePresetTargetKey = (key: string): ParsedMealPresetTarget | null => {
 const hasFilledFoods = (foods: MealFood[] | undefined) =>
   (foods ?? []).some((food) => food.food_name.trim() !== "");
 
+const AUTOSAVE_DEBOUNCE_MS = 1200;
+
+const mealHasEditableContent = (meal: EditorMeal | undefined) =>
+  !!meal && (
+    hasFilledFoods(meal.foods) ||
+    (meal.alternative_meals ?? []).some((alternative) => hasFilledFoods(alternative.foods)) ||
+    (meal.substitutions ?? []).some((substitution) => hasFilledFoods(substitution.foods))
+  );
+
+const mapFoodsToTemplatePayload = (foods: MealFood[]) =>
+  foods
+    .filter((food) => food.food_name.trim() !== "")
+    .map((food, order_index) => ({
+      food_name: food.food_name,
+      quantity: food.quantity,
+      unit: food.unit,
+      kcal_per_100g: food.kcal_per_100g,
+      protein_per_100g: food.protein_per_100g,
+      carbs_per_100g: food.carbs_per_100g,
+      fat_per_100g: food.fat_per_100g,
+      household_measure: food.household_measure,
+      measure_amount: food.measure_amount,
+      food_group: food.food_group,
+      notes: food.notes,
+      order_index,
+    }));
+
+const editorMealToTemplatePayload = (meal: EditorMeal, mealIndex: number) => {
+  const baseName = meal.meal_name.trim() || `Refeição ${mealIndex + 1}`;
+
+  return {
+    meal_name: baseName,
+    time_suggestion: meal.time_suggestion,
+    order_index: mealIndex,
+    notes: meal.notes,
+    foods: mapFoodsToTemplatePayload(meal.foods),
+    substitutions: (meal.alternative_meals ?? [])
+      .filter((alternative) => hasFilledFoods(alternative.foods))
+      .map((alternative, alternativeIndex) => ({
+        meal_name: alternative.meal_name.trim() || `${baseName} - opção ${alternativeIndex + 1}`,
+        time_suggestion: alternative.time_suggestion,
+        order_index: alternativeIndex,
+        notes: alternative.notes,
+        foods: mapFoodsToTemplatePayload(alternative.foods),
+      })),
+  };
+};
+
+const buildPlanSnapshot = (plan: MealPlan, meals: EditorMeal[]) =>
+  JSON.stringify({
+    title: plan.title ?? "",
+    start_date: plan.start_date ?? "",
+    end_date: plan.end_date ?? "",
+    daily_calories: plan.daily_calories ?? null,
+    notes: plan.notes ?? "",
+    strategy_type: plan.strategy_type ?? "",
+    target_calories: plan.target_calories ?? null,
+    target_protein_g: plan.target_protein_g ?? null,
+    target_carbs_g: plan.target_carbs_g ?? null,
+    target_fat_g: plan.target_fat_g ?? null,
+    meals: meals.map((meal) => ({
+      meal_name: meal.meal_name ?? "",
+      time_suggestion: meal.time_suggestion ?? "",
+      notes: meal.notes ?? "",
+      foods: (meal.foods ?? []).map((food) => ({
+        food_name: food.food_name ?? "",
+        quantity: food.quantity ?? null,
+        unit: food.unit ?? "",
+        calories: food.calories ?? null,
+        protein: food.protein ?? null,
+        carbs: food.carbs ?? null,
+        fat: food.fat ?? null,
+        notes: food.notes ?? "",
+        kcal_per_100g: food.kcal_per_100g ?? null,
+        protein_per_100g: food.protein_per_100g ?? null,
+        carbs_per_100g: food.carbs_per_100g ?? null,
+        fat_per_100g: food.fat_per_100g ?? null,
+        household_measure: food.household_measure ?? "",
+        measure_amount: food.measure_amount ?? null,
+        food_group: food.food_group ?? "",
+      })),
+      substitution_items: (meal.substitution_items ?? []).map((item) => ({
+        food_name: item.food_name ?? "",
+        quantity: item.quantity ?? null,
+        unit: item.unit ?? "",
+        notes: item.notes ?? "",
+        replaces_food: item.replaces_food ?? "",
+      })),
+      alternative_meals: (meal.alternative_meals ?? []).map((alternative) => ({
+        meal_name: alternative.meal_name ?? "",
+        time_suggestion: alternative.time_suggestion ?? "",
+        notes: alternative.notes ?? "",
+        foods: (alternative.foods ?? []).map((food) => ({
+          food_name: food.food_name ?? "",
+          quantity: food.quantity ?? null,
+          unit: food.unit ?? "",
+          calories: food.calories ?? null,
+          protein: food.protein ?? null,
+          carbs: food.carbs ?? null,
+          fat: food.fat ?? null,
+          notes: food.notes ?? "",
+          kcal_per_100g: food.kcal_per_100g ?? null,
+          protein_per_100g: food.protein_per_100g ?? null,
+          carbs_per_100g: food.carbs_per_100g ?? null,
+          fat_per_100g: food.fat_per_100g ?? null,
+          household_measure: food.household_measure ?? "",
+          measure_amount: food.measure_amount ?? null,
+          food_group: food.food_group ?? "",
+        })),
+      })),
+    })),
+  });
+
 
 // â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -142,20 +255,39 @@ export default function AdminPlanoAlimentar() {
   const [presetTargetKey, setPresetTargetKey] = useState("meal:0");
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
   const [showSaveMealPresetDialog, setShowSaveMealPresetDialog] = useState(false);
+  const [showSavePlanTemplateDialog, setShowSavePlanTemplateDialog] = useState(false);
   const [showShoppingList, setShowShoppingList] = useState(false);
   const [mealPresetSourceMealIndex, setMealPresetSourceMealIndex] = useState<number | null>(null);
   const [mealPresetDraftName, setMealPresetDraftName] = useState("");
   const [mealPresetDraftDescription, setMealPresetDraftDescription] = useState("");
   const [savingMealPreset, setSavingMealPreset] = useState(false);
+  const [planTemplateDraftName, setPlanTemplateDraftName] = useState("");
+  const [planTemplateDraftDescription, setPlanTemplateDraftDescription] = useState("");
+  const [savingPlanTemplate, setSavingPlanTemplate] = useState(false);
   const [showPdfOptions, setShowPdfOptions] = useState(false);
   const [macroGoals, setMacroGoals]     = useState<MacroGoals | null>(null);
   const [previousPlan, setPreviousPlan]  = useState<MealPlan | null>(null);
+  const [autosaveState, setAutosaveState] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const [energyFormula, setEnergyFormula] = useState<EnergyFormula>("mifflin");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
   const [adjustment, setAdjustment]       = useState(0);
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSnapshotRef = useRef("");
+  const hasInitializedAutosaveRef = useRef(false);
+  const saveInFlightRef = useRef(false);
 
   const loadPlan = useCallback(async () => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+    hasInitializedAutosaveRef.current = false;
+    lastSavedSnapshotRef.current = "";
+    setAutosaveState("idle");
+    setAutosaveError(null);
     setLoading(true);
     try {
       const plans = await fetchMealPlans(patientId);
@@ -221,7 +353,20 @@ export default function AdminPlanoAlimentar() {
     setShowCloneConfirm(false);
   };
 
-  const handleSave = async () => {
+  const openSavePlanTemplateDialog = () => {
+    if (!meals.some((meal) => mealHasEditableContent(meal))) {
+      toast.error("Adicione ao menos um alimento para salvar a dieta como modelo.");
+      return;
+    }
+
+    setPlanTemplateDraftName(plan.title?.trim() || "Novo modelo de dieta");
+    setPlanTemplateDraftDescription(
+      plan.notes?.trim() || `Modelo salvo a partir do plano ${plan.title || "Plano Alimentar"}.`,
+    );
+    setShowSavePlanTemplateDialog(true);
+  };
+
+  const legacyHandleSave = async () => {
     if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
     setSaving(true);
     const planWithLineage: MealPlan = {
@@ -239,6 +384,7 @@ export default function AdminPlanoAlimentar() {
     toast.success("Plano salvo com sucesso.");
     if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
   };
+  void legacyHandleSave;
 
   const normalizeFilePart = (value: string | undefined) =>
     (value ?? '')
@@ -558,6 +704,203 @@ export default function AdminPlanoAlimentar() {
 
   const clinicalAlerts = generateClinicalAlerts(anamnesis, latestMeasurement);
 
+  const autosaveSnapshot = useMemo(() => buildPlanSnapshot(plan, meals), [plan, meals]);
+
+  const saveCurrentPlan = useCallback(async ({
+    silent = false,
+    autosave = false,
+  }: {
+    silent?: boolean;
+    autosave?: boolean;
+  } = {}) => {
+    if (saveInFlightRef.current) return false;
+
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+
+    if (!plan.title.trim()) {
+      if (!silent) toast.error("Informe um título para o plano.");
+      if (autosave) {
+        setAutosaveState("error");
+        setAutosaveError("Defina um título para ativar o salvamento automático.");
+      }
+      return false;
+    }
+
+    saveInFlightRef.current = true;
+    setSaving(true);
+    if (autosave) {
+      setAutosaveState("saving");
+      setAutosaveError(null);
+    }
+
+    try {
+      const planWithLineage: MealPlan = {
+        ...plan,
+        measurement_id: latestMeasurement?.id ?? plan.measurement_id,
+        get_kcal: suggestedKcal ?? plan.get_kcal,
+      };
+
+      const savedPlan = await upsertMealPlan(planWithLineage);
+      if (!savedPlan?.id) {
+        if (!silent) toast.error("Erro ao salvar o plano.");
+        if (autosave) {
+          setAutosaveState("error");
+          setAutosaveError("Não foi possível salvar o plano automaticamente.");
+        }
+        return false;
+      }
+
+      setPlan((current) => ({ ...current, id: savedPlan.id }));
+
+      const dbMeals = meals.map((meal) => editorToMeal(meal, savedPlan.id));
+      const saveErr = await saveMeals(savedPlan.id, dbMeals);
+      if (saveErr) {
+        if (!silent) toast.error(`Erro ao salvar as refeições: ${saveErr}`);
+        if (autosave) {
+          setAutosaveState("error");
+          setAutosaveError("As alterações ficaram pendentes. Tente salvar novamente.");
+        }
+        return false;
+      }
+
+      lastSavedSnapshotRef.current = buildPlanSnapshot(
+        { ...planWithLineage, id: savedPlan.id },
+        meals,
+      );
+      setLastSavedAt(new Date());
+      setAutosaveState("saved");
+      setAutosaveError(null);
+
+      if (!silent) toast.success("Plano salvo com sucesso.");
+      if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
+      return true;
+    } catch (error) {
+      console.error("[AdminPlanoAlimentar] saveCurrentPlan:", error);
+      if (!silent) toast.error("Erro inesperado ao salvar o plano.");
+      if (autosave) {
+        setAutosaveState("error");
+        setAutosaveError("Falha no salvamento automático.");
+      }
+      return false;
+    } finally {
+      saveInFlightRef.current = false;
+      setSaving(false);
+    }
+  }, [id, isNew, latestMeasurement?.id, meals, navigate, plan, suggestedKcal]);
+
+  const handleSave = () => {
+    void saveCurrentPlan();
+  };
+
+  const confirmSavePlanAsTemplate = async () => {
+    const name = planTemplateDraftName.trim();
+    if (!name) {
+      toast.error("Informe um nome para o modelo.");
+      return;
+    }
+
+    const templateMeals = meals
+      .filter((meal) => mealHasEditableContent(meal))
+      .map((meal, index) => editorMealToTemplatePayload(meal, index));
+
+    if (templateMeals.length === 0) {
+      toast.error("Adicione ao menos uma refeição com alimentos para salvar o modelo.");
+      return;
+    }
+
+    setSavingPlanTemplate(true);
+    try {
+      const savedTemplate = await upsertDietTemplate({
+        name,
+        description: planTemplateDraftDescription.trim() || undefined,
+        strategy: plan.strategy_type || undefined,
+        total_kcal: grand.cal > 0 ? parseFloat(grand.cal.toFixed(1)) : undefined,
+        protein_g: grand.prot > 0 ? parseFloat(grand.prot.toFixed(1)) : undefined,
+        carbs_g: grand.carbs > 0 ? parseFloat(grand.carbs.toFixed(1)) : undefined,
+        fat_g: grand.fat > 0 ? parseFloat(grand.fat.toFixed(1)) : undefined,
+        is_active: true,
+      });
+
+      if (!savedTemplate?.id) {
+        toast.error("Erro ao salvar o modelo de dieta.");
+        return;
+      }
+
+      const ok = await saveDietTemplateMeals(savedTemplate.id, templateMeals);
+      if (!ok) {
+        toast.error("Modelo criado, mas houve erro ao salvar as refeições.");
+        return;
+      }
+
+      toast.success("Dieta salva como modelo para reutilização.");
+      setShowSavePlanTemplateDialog(false);
+    } finally {
+      setSavingPlanTemplate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (loading || ctxLoading) return;
+
+    if (!hasInitializedAutosaveRef.current) {
+      hasInitializedAutosaveRef.current = true;
+      lastSavedSnapshotRef.current = autosaveSnapshot;
+      setAutosaveState("idle");
+      setAutosaveError(null);
+      return;
+    }
+
+    if (autosaveSnapshot === lastSavedSnapshotRef.current) {
+      if (autosaveState === "pending") {
+        setAutosaveState(lastSavedAt ? "saved" : "idle");
+      }
+      return;
+    }
+
+    setAutosaveState("pending");
+    setAutosaveError(null);
+
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+    autosaveTimeoutRef.current = setTimeout(() => {
+      void saveCurrentPlan({ silent: true, autosave: true });
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
+    };
+  }, [autosaveSnapshot, autosaveState, ctxLoading, lastSavedAt, loading, saveCurrentPlan]);
+
+  useEffect(() => () => {
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+  }, []);
+
+  const autosaveLabel = useMemo(() => {
+    if (autosaveState === "saving") return "Salvando automaticamente...";
+    if (autosaveState === "pending") return "Alterações pendentes";
+    if (autosaveState === "error") return autosaveError ?? "Falha no salvamento automático";
+    if (lastSavedAt) {
+      return `Salvo automaticamente às ${lastSavedAt.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    }
+    return "Autosave ativo";
+  }, [autosaveError, autosaveState, lastSavedAt]);
+
+  const autosaveToneClass = autosaveState === "error"
+    ? "text-destructive"
+    : autosaveState === "pending"
+      ? "text-amber-600"
+      : autosaveState === "saving"
+        ? "text-primary"
+        : "text-muted-foreground";
+
   const audit = auditDiet({
     totalKcal:    grand.cal,
     totalProtein: grand.prot,
@@ -599,7 +942,8 @@ export default function AdminPlanoAlimentar() {
             {isNew && <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex-shrink-0">Novo</span>}
           </div>
 
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={openPdfOptions}
@@ -634,6 +978,10 @@ export default function AdminPlanoAlimentar() {
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               <span className="hidden xs:inline sm:inline">{saving ? "Salvando..." : "Salvar"}</span>
             </Button>
+            </div>
+            <span className={cn("text-[10px] font-medium", autosaveToneClass)}>
+              {autosaveLabel}
+            </span>
           </div>
         </div>
       </header>
@@ -1000,6 +1348,12 @@ export default function AdminPlanoAlimentar() {
                 <span className="hidden sm:inline">Importar dieta</span>
                 <span className="sm:hidden">Dieta</span>
               </button>
+              <button type="button" onClick={openSavePlanTemplateDialog}
+                className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
+                <Save size={13} />
+                <span className="hidden sm:inline">Salvar dieta como modelo</span>
+                <span className="sm:hidden">Salvar modelo</span>
+              </button>
               <button type="button" onClick={() => setShowMealPresetImport(true)}
                 className="flex items-center gap-1.5 text-xs font-medium border border-border rounded-lg px-3 py-1.5 text-foreground hover:bg-muted/60 transition-colors">
                 <Soup size={13} />
@@ -1093,7 +1447,10 @@ export default function AdminPlanoAlimentar() {
         </div>
 
         {/* â”€â”€ Salvar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div className="flex justify-end pb-8">
+        <div className="flex flex-col items-end gap-2 pb-8">
+          <span className={cn("text-xs font-medium", autosaveToneClass)}>
+            {autosaveLabel}
+          </span>
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-6">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? "Salvando..." : "Salvar plano alimentar"}
@@ -1147,6 +1504,59 @@ export default function AdminPlanoAlimentar() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showSavePlanTemplateDialog} onOpenChange={setShowSavePlanTemplateDialog}>
+        <DialogContent className="max-w-xl rounded-3xl border-border/60">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">Salvar dieta inteira como modelo</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              Guarde este plano completo para reutilizar em outros pacientes, já com refeições e opções substitutas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Resumo do modelo que será salvo</p>
+              <p className="mt-1">
+                {meals.filter((meal) => mealHasEditableContent(meal)).length} refeições com alimentos • {Math.round(grand.cal || 0)} kcal totais
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="plan_template_name" className="text-sm font-medium">Nome do modelo</Label>
+              <Input
+                id="plan_template_name"
+                value={planTemplateDraftName}
+                onChange={(e) => setPlanTemplateDraftName(e.target.value)}
+                className="h-11 rounded-2xl"
+                placeholder="Ex.: Plano base para emagrecimento"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="plan_template_description" className="text-sm font-medium">Descrição</Label>
+              <textarea
+                id="plan_template_description"
+                value={planTemplateDraftDescription}
+                onChange={(e) => setPlanTemplateDraftDescription(e.target.value)}
+                rows={4}
+                className="w-full rounded-2xl border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+                placeholder="Ex.: plano com boa adesão para rotina corrida, foco em saciedade e praticidade."
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowSavePlanTemplateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={confirmSavePlanAsTemplate} disabled={savingPlanTemplate} className="gap-2">
+              {savingPlanTemplate ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Salvar modelo completo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showSaveMealPresetDialog} onOpenChange={setShowSaveMealPresetDialog}>
         <DialogContent className="max-w-xl rounded-3xl border-border/60">
