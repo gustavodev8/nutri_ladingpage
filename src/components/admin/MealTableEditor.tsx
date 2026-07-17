@@ -233,6 +233,13 @@ export function FoodRow({
     }));
   };
 
+  const handleUnitChange = (unit: string) => {
+    onChange(calcFoodMacros({
+      ...food,
+      unit,
+    }));
+  };
+
   const numCell = (v?: number) => (
     <td className="hidden sm:table-cell py-2 pr-3 text-right tabular-nums text-sm text-foreground/80 w-16 align-middle">
       {v !== undefined && v > 0 ? v.toFixed(1) : <span className="text-muted-foreground/30">—</span>}
@@ -269,7 +276,7 @@ export function FoodRow({
             />
             <select
               value={food.unit ?? "g"}
-              onChange={(e) => onChange({ ...food, unit: e.target.value })}
+              onChange={(e) => handleUnitChange(e.target.value)}
               className="h-8 flex-1 min-w-0 bg-background border border-border/60 rounded-r px-1.5 text-sm focus:outline-none focus:z-10 focus:ring-1 focus:ring-ring focus:border-primary text-foreground cursor-pointer"
             >
               {UNIT_OPTIONS.map((o) => (
