@@ -108,7 +108,7 @@ const parsePresetTargetKey = (key: string): ParsedMealPresetTarget | null => {
 const hasFilledFoods = (foods: MealFood[] | undefined) =>
   (foods ?? []).some((food) => food.food_name.trim() !== "");
 
-const AUTOSAVE_DEBOUNCE_MS = 1200;
+const AUTOSAVE_DEBOUNCE_MS = 450;
 
 const mealHasEditableContent = (meal: EditorMeal | undefined) =>
   !!meal && (
