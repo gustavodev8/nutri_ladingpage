@@ -38,7 +38,11 @@ const ImageSlot = ({ id, value, aspectClass, label, hint, icon: Icon, onUpload, 
     setUploading(true);
     const url = await uploadImage(file);
     setUploading(false);
-    url ? onUpload(url) : setError("Erro ao enviar. Verifique o bucket 'images'.");
+    if (url) {
+      onUpload(url);
+    } else {
+      setError("Erro ao enviar. Verifique o bucket 'images'.");
+    }
   };
 
   return (

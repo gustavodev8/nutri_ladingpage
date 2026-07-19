@@ -366,26 +366,6 @@ export default function AdminPlanoAlimentar() {
     setShowSavePlanTemplateDialog(true);
   };
 
-  const legacyHandleSave = async () => {
-    if (!plan.title.trim()) { toast.error("Informe um título para o plano."); return; }
-    setSaving(true);
-    const planWithLineage: MealPlan = {
-      ...plan,
-      measurement_id: latestMeasurement?.id  ?? plan.measurement_id,
-      get_kcal:       suggestedKcal           ?? plan.get_kcal,
-    };
-    const savedPlan = await upsertMealPlan(planWithLineage);
-    if (!savedPlan?.id) { toast.error("Erro ao salvar o plano."); setSaving(false); return; }
-    setPlan((p) => ({ ...p, id: savedPlan.id }));
-    const dbMeals = meals.map((m) => editorToMeal(m, savedPlan.id!));
-    const saveErr = await saveMeals(savedPlan.id, dbMeals);
-    setSaving(false);
-    if (saveErr) { toast.error(`Erro ao salvar as refeições: ${saveErr}`); return; }
-    toast.success("Plano salvo com sucesso.");
-    if (isNew) navigate(`/admin/pacientes/${id}/plano/${savedPlan.id}`, { replace: true });
-  };
-  void legacyHandleSave;
-
   const normalizeFilePart = (value: string | undefined) =>
     (value ?? '')
       .toLowerCase()

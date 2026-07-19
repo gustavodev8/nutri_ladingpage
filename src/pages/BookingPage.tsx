@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Globe, MapPin, Mail, Phone, User, CreditCard,
@@ -56,7 +56,7 @@ const BookingPage = () => {
     popular: false,
     whatsappMessage: "",
   };
-  if (!isFree && !loja.plans[idx]) return <Navigate to="/" replace />;
+  const invalidPlan = !isFree && !loja.plans[idx];
   const hasPlanDiscount = !isFree && doesDiscountApply(content.discount, "service", plan.name);
   const payableAmount = isFree ? 0 : getDiscountedAmount(content.discount, "service", plan.name, plan.priceAmount ?? 0);
   const displayPrice = isFree ? "Gratuito" : hasPlanDiscount ? formatCurrency(payableAmount) : plan.price;
@@ -286,7 +286,7 @@ const BookingPage = () => {
       });
     };
     setTimeout(() => tryRender(0), 300);
-  }, [step, payTab, stage]);
+  }, [step, payTab, stage, payableAmount, clientEmail, clientName, plan.name, bookingGroupId, saveBookings]);
 
   // When switching tab, reset brick rendered flag
   const handlePayTabChange = (tab: PayTab) => {
@@ -331,11 +331,11 @@ const BookingPage = () => {
     return availSlots.filter(s => s.date === toLocalISO(date) && s.type === sessionType).map(s => s.start_time.substring(0, 5)).sort();
   };
 
-  const hasSlotConflict = async (date: Date, time: string, type: "online" | "presencial") => {
+  const hasSlotConflict = useCallback(async (date: Date, time: string, type: "online" | "presencial") => {
     const dateISO = toLocalISO(date);
     const booked = await fetchBookingsForDate(dateISO, type, bookingGroupId);
     return booked.some(b => (b.appointment_time || "").substring(0, 5) === time);
-  };
+  }, [bookingGroupId]);
 
   const handleSessionTypeChange = (type: "online" | "presencial") => {
     const newSessions = [...sessions];
@@ -343,7 +343,7 @@ const BookingPage = () => {
     setSessions(newSessions);
   };
 
-  const saveBookings = async (status = "pending"): Promise<boolean> => {
+  const saveBookings = useCallback(async (status = "pending"): Promise<boolean> => {
     let allOk = true;
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i];
@@ -385,7 +385,30 @@ const BookingPage = () => {
       if (!ok) allOk = false;
     }
     return allOk;
-  };
+  }, [
+    sessions,
+    consultationType,
+    hasSlotConflict,
+    bookingGroupId,
+    totalSessions,
+    clientName,
+    clientEmail,
+    clientPhone,
+    clientCpf,
+    linkedPatientId,
+    plan.name,
+    idx,
+    birthDate,
+    sex,
+    goal,
+    allergies,
+    restrictions,
+    healthConditions,
+    medications,
+    hadNutritionist,
+    howFound,
+    selectedCity,
+  ]);
 
   const handlePixPayment = async () => {
     if (!payableAmount || payableAmount <= 0) {
@@ -460,7 +483,9 @@ const BookingPage = () => {
           await confirmBookingsByGroupId(bookingGroupId);
           if (isMounted) setStage("approved");
         }
-      } catch (_) {}
+      } catch {
+        // Ignore transient polling failures; the next interval will retry.
+      }
     }, 3000);
 
     // Cleanup ao desmontar
@@ -499,6 +524,8 @@ const BookingPage = () => {
 
     setStage("approved");
   };
+
+  if (invalidPlan) return <Navigate to="/" replace />;
 
   const handleCopy = () => {
     if (!pixData?.qr_code) return;
