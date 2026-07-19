@@ -116,6 +116,7 @@ const BookingPage = () => {
   // Payment
   const [payTab, setPayTab] = useState<PayTab>("pix");
   const [stage, setStage] = useState<Stage>("idle");
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [pixData, setPixData] = useState<{ payment_id: number; qr_code: string; qr_code_base64: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [bookingGroupId] = useState(generateGroupId);
@@ -543,6 +544,9 @@ const BookingPage = () => {
   const availTimes = getTimesForDate(currentSession?.date || null);
   const allPicked = sessions.every(s => s.date && s.time);
   const todayISO = toLocalISO(new Date());
+  const firstSessionSummary = sessions[0]?.date && sessions[0]?.time
+    ? `${sessions[0].date.toLocaleDateString("pt-BR")} - ${sessions[0].time} - ${sessions[0].type === "online" ? "Online" : `Presencial - ${selectedCity}`}`
+    : "Horario ainda nao selecionado";
 
   // ── SUCCESS ──
   if (stage === "approved") {
@@ -1055,7 +1059,7 @@ const BookingPage = () => {
                     {stage === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />Salvando...</> : <>Confirmar agendamento <CheckCircle2 className="h-4 w-4" /></>}
                   </Button>
                 ) : (
-                  <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => setStep(4)}>
+                  <Button className="flex-1 rounded-full gap-2" disabled={!goal} onClick={() => { setPaymentConfirmed(false); setStep(4); }}>
                     Continuar <ArrowRight className="h-4 w-4" />
                   </Button>
                 )}
@@ -1104,8 +1108,34 @@ const BookingPage = () => {
                 </div>
               )}
 
+              {!paymentConfirmed && stage === "idle" && (
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Confirme os dados antes do pagamento</p>
+                    <p className="text-xs text-muted-foreground">Depois de gerar o pagamento, seu horario fica reservado como pendente ate a confirmacao.</p>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {[
+                      ["Plano", plan.name],
+                      ["Consulta", firstSessionSummary],
+                      ["Nome", clientName],
+                      ["Email", clientEmail],
+                      ["Valor", displayPrice],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-start justify-between gap-4 border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                        <span className="text-muted-foreground">{label}</span>
+                        <span className="font-medium text-foreground text-right">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full rounded-full gap-2" onClick={() => setPaymentConfirmed(true)}>
+                    Confirmar dados <CheckCircle2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
               {/* Payment method tabs (idle/error/loading) */}
-              {(stage === "idle" || stage === "error" || stage === "loading") && (
+              {paymentConfirmed && (stage === "idle" || stage === "error" || stage === "loading") && (
                 <>
                   <div className="flex gap-2">
                     {([
@@ -1179,7 +1209,13 @@ const BookingPage = () => {
                 </>
               )}
 
-              <Button variant="outline" size="sm" className="rounded-full gap-2 w-full" onClick={() => setStep(3)}>
+              <Button variant="outline" size="sm" className="rounded-full gap-2 w-full" onClick={() => {
+                if (paymentConfirmed && stage === "idle") {
+                  setPaymentConfirmed(false);
+                  return;
+                }
+                setStep(3);
+              }}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Voltar
               </Button>
             </div>

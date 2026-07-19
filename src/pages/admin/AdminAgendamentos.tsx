@@ -114,7 +114,7 @@ const FOUND_LABELS: Record<string, string> = {
   instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
 };
 
-type FilterTab = "all" | "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
+type FilterTab = "all" | "today" | "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
 
 const BORDER_COLOR: Record<string, string> = {
   confirmed: "border-l-primary",
@@ -149,6 +149,7 @@ const AdminAgendamentos = () => {
   const [filter, setFilter]       = useState<FilterTab>("all");
   const [search, setSearch]       = useState("");
   const [detail, setDetail]       = useState<string | null>(null);
+  const [detailMoreOpen, setDetailMoreOpen] = useState(false);
   const [records, setRecords]     = useState<ConsultationRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
 
@@ -674,6 +675,7 @@ const AdminAgendamentos = () => {
   const openDetail = (groupId: string) => {
     setDetail(groupId);
     setDetailTab("sessions");
+    setDetailMoreOpen(false);
     setEditingDetail(false);
     loadRecords(groupId);
   };
@@ -873,6 +875,7 @@ const AdminAgendamentos = () => {
     if (!allGrouped[b.booking_group_id]) allGrouped[b.booking_group_id] = [];
     allGrouped[b.booking_group_id].push(b);
   });
+  const adminTodayISO = toLocalISO(new Date());
 
   // Status de um grupo: "group_completed" quando a última sessão criada
   // tem status "completed" E session_number >= total_sessions (plano encerrado)
@@ -892,6 +895,7 @@ const AdminAgendamentos = () => {
   // Counts por grupo (não por sessão individual)
   const counts: Record<FilterTab, number> = {
     all:       Object.values(allGrouped).length,
+    today:     Object.values(allGrouped).filter(s => s.some(b => b.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(b.status || ""))).length,
     confirmed: Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "confirmed")).length,
     pending:   Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "pending")).length,
     retornos:  Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed")).length,
@@ -902,6 +906,7 @@ const AdminAgendamentos = () => {
 
   const TABS: { id: FilterTab; label: string }[] = [
     { id: "all",       label: "Todos" },
+    { id: "today",     label: "Hoje" },
     { id: "confirmed", label: "Confirmados" },
     { id: "pending",   label: "Pendentes" },
     { id: "retornos",  label: "Retornos" },
@@ -914,6 +919,7 @@ const AdminAgendamentos = () => {
     .filter(([, sessions]) => {
       const complete = isGroupComplete(sessions);
       if (filter === "all")       return true;
+      if (filter === "today")     return sessions.some(b => b.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(b.status || ""));
       if (filter === "completed") return complete;
       if (complete) return false;
       if (filter === "cancelled") return sessions.every(b => b.status === "cancelled");
@@ -984,6 +990,15 @@ const AdminAgendamentos = () => {
       if (dateDiff !== 0) return dateDiff;
       return (a.session.appointment_time || "").localeCompare(b.session.appointment_time || "");
     });
+
+  const todaySessions = Object.entries(allGrouped)
+    .flatMap(([groupId, sessions]) => {
+      const first = sessions[0];
+      return sessions
+        .filter(session => session.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(session.status || ""))
+        .map(session => ({ groupId, first, session }));
+    })
+    .sort((a, b) => (a.session.appointment_time || "").localeCompare(b.session.appointment_time || ""));
 
   return (
     <div className="space-y-5">
@@ -1114,6 +1129,48 @@ const AdminAgendamentos = () => {
         </div>
       </div>
 
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Hoje</p>
+            <p className="text-sm text-muted-foreground">
+              {todaySessions.length === 0
+                ? "Nenhuma consulta ativa para hoje"
+                : `${todaySessions.length} consulta${todaySessions.length > 1 ? "s" : ""} ativa${todaySessions.length > 1 ? "s" : ""}`}
+            </p>
+          </div>
+          {todaySessions.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setFilter("today")} className="h-8 rounded-md">
+              Ver hoje
+            </Button>
+          )}
+        </div>
+
+        {todaySessions.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {todaySessions.slice(0, 6).map(({ groupId, first, session }) => (
+              <button
+                key={`${groupId}-${session.id}`}
+                onClick={() => openDetail(groupId)}
+                className="text-left rounded-lg border border-border bg-background/60 hover:bg-primary/5 hover:border-primary/30 transition-colors p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{first.plan_name}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-primary tabular-nums">{(session.appointment_time || "").substring(0, 5)}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusPill status={session.status || "pending"} />
+                  <PaymentPill status={PAYMENT_GROUP_STATUS(allGrouped[groupId] || [])} />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {upcomingReturnSessions.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -1177,11 +1234,12 @@ const AdminAgendamentos = () => {
       {!loading && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           {/* Table Header — hidden on mobile */}
-          <div className="hidden md:grid grid-cols-[1fr_180px_140px_110px] gap-4 px-4 py-2.5 border-b border-border bg-muted/30">
+          <div className="hidden md:grid grid-cols-[1fr_180px_130px_130px_110px] gap-4 px-4 py-2.5 border-b border-border bg-muted/30">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Paciente</span>
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Data / Hora</span>
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Progresso</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Status</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Consulta</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Pagamento</span>
           </div>
 
           {groupEntries.length === 0 && (
@@ -1264,7 +1322,7 @@ const AdminAgendamentos = () => {
                 </div>
 
                 {/* Desktop layout (≥ md) */}
-                <div className="hidden md:grid grid-cols-[1fr_180px_140px_110px] gap-4 items-center px-4 py-3.5">
+                <div className="hidden md:grid grid-cols-[1fr_180px_130px_130px_110px] gap-4 items-center px-4 py-3.5">
                   {/* Paciente */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -1315,8 +1373,10 @@ const AdminAgendamentos = () => {
                     </div>
                     <p className="text-[10px] text-muted-foreground font-medium">{completedCount}/{totalSess}</p>
                   </div>
-                  {/* Status */}
+                  {/* Consulta */}
                   <div><StatusPill status={overallStatus} /></div>
+                  {/* Pagamento */}
+                  <div><PaymentPill status={paymentStatus} /></div>
                 </div>
               </div>
             );
@@ -1357,13 +1417,39 @@ const AdminAgendamentos = () => {
                   <span className="shrink-0">{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <StatusPill status={groupStatus(detailGroup)} />
-                  <PaymentPill status={PAYMENT_GROUP_STATUS(detailGroup)} />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Consulta</span>
+                    <StatusPill status={groupStatus(detailGroup)} />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Pagamento</span>
+                    <PaymentPill status={PAYMENT_GROUP_STATUS(detailGroup)} />
+                  </div>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-1.5 shrink-0">
+                {detailFirst.patient_id ? (
+                  <button
+                    onClick={() => navigate(`/admin/pacientes/${detailFirst.patient_id}`)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all"
+                  >
+                    <LinkIcon className="h-3.5 w-3.5 shrink-0" />
+                    Prontuario
+                  </button>
+                ) : (
+                  <button
+                    disabled={creatingPatient === detailFirst.booking_group_id}
+                    onClick={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all disabled:opacity-50"
+                  >
+                    {creatingPatient === detailFirst.booking_group_id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <UserPlus className="h-3.5 w-3.5 shrink-0" />}
+                    Cadastrar
+                  </button>
+                )}
                 <button
                   onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
@@ -1371,7 +1457,7 @@ const AdminAgendamentos = () => {
                   <Send className="h-3.5 w-3.5 shrink-0" />
                   <span className="hidden sm:inline">Enviar material</span>
                 </button>
-                {confirmDeleteGroup === detail ? (
+                {detailMoreOpen && confirmDeleteGroup === detail ? (
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900">
                     <span className="text-xs text-red-600 dark:text-red-400 font-medium hidden sm:inline">Excluir?</span>
                     <button
@@ -1390,16 +1476,29 @@ const AdminAgendamentos = () => {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setConfirmDeleteGroup(detail)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
-                    title="Excluir agendamento"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setDetailMoreOpen(v => !v)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                      title="Mais ações"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${detailMoreOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  {detailMoreOpen && (
+                    <div className="absolute right-0 top-9 z-10 w-52 rounded-xl border border-border bg-background shadow-xl p-1">
+                      <button
+                        onClick={() => setConfirmDeleteGroup(detail)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir agendamento
+                      </button>
+                    </div>
+                  )}
+                  </div>
                 )}
                 <button
-                  onClick={() => { setDetail(null); setConfirmDeleteGroup(null); }}
+                  onClick={() => { setDetail(null); setConfirmDeleteGroup(null); setDetailMoreOpen(false); }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />

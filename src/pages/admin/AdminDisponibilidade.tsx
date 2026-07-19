@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Calendar, Loader2, Globe, MapPin, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchSlotsByMonth, fetchSlotsByDate, addAvailabilitySlot, deleteAvailabilitySlot, type AvailabilitySlot } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
@@ -41,19 +41,18 @@ const AdminDisponibilidade = () => {
   const [dateSlots,     setDateSlots]     = useState<AvailabilitySlot[]>([]);
   const [loadingDate,   setLoadingDate]   = useState(false);
   const [adding,        setAdding]        = useState(false);
+  const [addingBatch,   setAddingBatch]   = useState(false);
   const [deleting,      setDeleting]      = useState<number | null>(null);
+  const [repeatWeeks,   setRepeatWeeks]   = useState(4);
 
-  useEffect(() => { loadMonth(); }, [calYear, calMonth]);
-  useEffect(() => { if (selectedDate) loadDateSlots(); }, [selectedDate, activeType, selectedCity]);
-
-  const loadMonth = async () => {
+  const loadMonth = useCallback(async () => {
     setLoadingMonth(true);
     const data = await fetchSlotsByMonth(calYear, calMonth);
     setMonthSlots(data);
     setLoadingMonth(false);
-  };
+  }, [calYear, calMonth]);
 
-  const loadDateSlots = async () => {
+  const loadDateSlots = useCallback(async () => {
     if (!selectedDate) return;
     setLoadingDate(true);
     const data = await fetchSlotsByDate(
@@ -63,7 +62,10 @@ const AdminDisponibilidade = () => {
     );
     setDateSlots(data);
     setLoadingDate(false);
-  };
+  }, [selectedDate, activeType, selectedCity]);
+
+  useEffect(() => { loadMonth(); }, [loadMonth]);
+  useEffect(() => { if (selectedDate) loadDateSlots(); }, [selectedDate, loadDateSlots]);
 
   const handleAddSlot = async (time: string) => {
     if (!selectedDate) return;
@@ -84,6 +86,71 @@ const AdminDisponibilidade = () => {
       toast({ title: "Erro ao adicionar horário", variant: "destructive" });
     }
     setAdding(false);
+  };
+
+  const handleAddRemainingSlots = async () => {
+    if (!selectedDate) return;
+    const times = HOURS.filter((time) => !addedTimes.has(time));
+    if (times.length === 0) return;
+
+    setAddingBatch(true);
+    const results = await Promise.all(times.map((time) => addAvailabilitySlot({
+      date:       selectedDate,
+      start_time: time,
+      type:       activeType,
+      city:       activeType === "presencial" ? selectedCity : undefined,
+      active:     true,
+    })));
+    setAddingBatch(false);
+
+    const inserted = results.filter(Boolean).length;
+    if (inserted > 0) {
+      toast({ title: `${inserted} horario${inserted > 1 ? "s" : ""} adicionado${inserted > 1 ? "s" : ""}.` });
+      await loadDateSlots();
+      await loadMonth();
+    } else {
+      toast({ title: "Nenhum horario foi adicionado.", variant: "destructive" });
+    }
+  };
+
+  const handleRepeatWeekly = async () => {
+    if (!selectedDate || dateSlots.length === 0) return;
+    const baseDate = new Date(selectedDate + "T12:00:00");
+    const times = [...new Set(dateSlots.map((slot) => slot.start_time.substring(0, 5)))];
+
+    setAddingBatch(true);
+    let inserted = 0;
+    for (let week = 1; week <= repeatWeeks; week++) {
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(baseDate.getDate() + week * 7);
+      const dateISO = toLocalISO(nextDate);
+      const existing = await fetchSlotsByDate(
+        dateISO,
+        activeType,
+        activeType === "presencial" ? selectedCity : undefined,
+      );
+      const existingTimes = new Set(existing.map((slot) => slot.start_time.substring(0, 5)));
+
+      for (const time of times) {
+        if (existingTimes.has(time)) continue;
+        const ok = await addAvailabilitySlot({
+          date:       dateISO,
+          start_time: time,
+          type:       activeType,
+          city:       activeType === "presencial" ? selectedCity : undefined,
+          active:     true,
+        });
+        if (ok) inserted += 1;
+      }
+    }
+    setAddingBatch(false);
+
+    if (inserted > 0) {
+      toast({ title: `${inserted} horario${inserted > 1 ? "s" : ""} recorrente${inserted > 1 ? "s" : ""} criado${inserted > 1 ? "s" : ""}.` });
+      await loadMonth();
+    } else {
+      toast({ title: "Nao havia horarios novos para repetir." });
+    }
   };
 
   const handleDeleteSlot = async (id: number) => {
@@ -307,13 +374,22 @@ const AdminDisponibilidade = () => {
 
               {/* Add slots */}
               <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Adicionar horário</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Adicionar horario</p>
+                  <button
+                    onClick={handleAddRemainingSlots}
+                    disabled={addingBatch || HOURS.every(h => addedTimes.has(h))}
+                    className="text-xs font-medium text-primary hover:text-primary/80 disabled:text-muted-foreground/40"
+                  >
+                    {addingBatch ? "Adicionando..." : "Adicionar todos"}
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {HOURS.filter(h => !addedTimes.has(h)).map(time => (
                     <button
                       key={time}
                       onClick={() => handleAddSlot(time)}
-                      disabled={adding}
+                      disabled={adding || addingBatch}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:border-primary/40 hover:text-primary transition-all disabled:opacity-50"
                     >
                       <Plus className="h-3 w-3" />
@@ -325,6 +401,38 @@ const AdminDisponibilidade = () => {
                   )}
                 </div>
               </div>
+
+              {dateSlots.length > 0 && (
+                <div className="space-y-3 pt-3 border-t border-border">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recorrencia semanal</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Repete os horarios configurados neste dia nas proximas semanas.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                    <select
+                      value={repeatWeeks}
+                      onChange={(e) => setRepeatWeeks(Number(e.target.value))}
+                      className="h-9 rounded-xl border border-input bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    >
+                      {[1, 2, 3, 4, 6, 8].map((weeks) => (
+                        <option key={weeks} value={weeks}>
+                          {weeks} semana{weeks > 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleRepeatWeekly}
+                      disabled={addingBatch}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-xs font-medium border border-border bg-card hover:border-primary/40 hover:text-primary transition-all disabled:opacity-50"
+                    >
+                      {addingBatch ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                      Repetir horarios
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
