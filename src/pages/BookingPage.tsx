@@ -186,6 +186,79 @@ const BookingPage = () => {
     setCurrentSessionIdx(0);
   }, [consultationType, selectedCity]);
 
+  const hasSlotConflict = useCallback(async (date: Date, time: string, type: "online" | "presencial") => {
+    const dateISO = toLocalISO(date);
+    const booked = await fetchBookingsForDate(dateISO, type, bookingGroupId);
+    return booked.some(b => (b.appointment_time || "").substring(0, 5) === time);
+  }, [bookingGroupId]);
+
+  const saveBookings = useCallback(async (status = "pending"): Promise<boolean> => {
+    let allOk = true;
+    for (let i = 0; i < sessions.length; i++) {
+      const s = sessions[i];
+      if (!s.date || !s.time) continue;
+      const type = (s.type || consultationType)!;
+      const conflict = await hasSlotConflict(s.date, s.time, type);
+      if (conflict) {
+        toast({
+          title: "Conflito de agenda",
+          description: "Esse horário foi ocupado por outra pessoa enquanto você fazia o agendamento. Escolha outro horário.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      const notes = JSON.stringify({
+        birthDate, sex, goal, allergies, restrictions,
+        healthConditions, medications, hadNutritionist, howFound,
+        city: consultationType === "presencial" ? selectedCity : undefined,
+      });
+      const cpfDigits = clientCpf.replace(/\D/g, "");
+      const booking: Booking = {
+        booking_group_id: bookingGroupId,
+        session_number: i + 1,
+        total_sessions: totalSessions,
+        client_name: clientName,
+        client_email: clientEmail,
+        client_phone: clientPhone,
+        client_cpf: cpfDigits || undefined,
+        patient_id: linkedPatientId,
+        plan_name: plan.name,
+        plan_index: idx,
+        appointment_date: toLocalISO(s.date),
+        appointment_time: s.time,
+        type,
+        status,
+        notes,
+      };
+      const ok = await insertBooking(booking);
+      if (!ok) allOk = false;
+    }
+    return allOk;
+  }, [
+    sessions,
+    consultationType,
+    hasSlotConflict,
+    bookingGroupId,
+    totalSessions,
+    clientName,
+    clientEmail,
+    clientPhone,
+    clientCpf,
+    linkedPatientId,
+    plan.name,
+    idx,
+    birthDate,
+    sex,
+    goal,
+    allergies,
+    restrictions,
+    healthConditions,
+    medications,
+    hadNutritionist,
+    howFound,
+    selectedCity,
+  ]);
+
   // Load MP SDK when reaching payment step
   useEffect(() => {
     if (step !== 4) return;
@@ -332,84 +405,11 @@ const BookingPage = () => {
     return availSlots.filter(s => s.date === toLocalISO(date) && s.type === sessionType).map(s => s.start_time.substring(0, 5)).sort();
   };
 
-  const hasSlotConflict = useCallback(async (date: Date, time: string, type: "online" | "presencial") => {
-    const dateISO = toLocalISO(date);
-    const booked = await fetchBookingsForDate(dateISO, type, bookingGroupId);
-    return booked.some(b => (b.appointment_time || "").substring(0, 5) === time);
-  }, [bookingGroupId]);
-
   const handleSessionTypeChange = (type: "online" | "presencial") => {
     const newSessions = [...sessions];
     newSessions[currentSessionIdx] = { date: null, time: null, type };
     setSessions(newSessions);
   };
-
-  const saveBookings = useCallback(async (status = "pending"): Promise<boolean> => {
-    let allOk = true;
-    for (let i = 0; i < sessions.length; i++) {
-      const s = sessions[i];
-      if (!s.date || !s.time) continue;
-      const type = (s.type || consultationType)!;
-      const conflict = await hasSlotConflict(s.date, s.time, type);
-      if (conflict) {
-        toast({
-          title: "Conflito de agenda",
-          description: "Esse horário foi ocupado por outra pessoa enquanto você fazia o agendamento. Escolha outro horário.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      const notes = JSON.stringify({
-        birthDate, sex, goal, allergies, restrictions,
-        healthConditions, medications, hadNutritionist, howFound,
-        city: consultationType === "presencial" ? selectedCity : undefined,
-      });
-      const cpfDigits = clientCpf.replace(/\D/g, "");
-      const booking: Booking = {
-        booking_group_id: bookingGroupId,
-        session_number: i + 1,
-        total_sessions: totalSessions,
-        client_name: clientName,
-        client_email: clientEmail,
-        client_phone: clientPhone,
-        client_cpf: cpfDigits || undefined,
-        patient_id: linkedPatientId,
-        plan_name: plan.name,
-        plan_index: idx,
-        appointment_date: toLocalISO(s.date),
-        appointment_time: s.time,
-        type,
-        status,
-        notes,
-      };
-      const ok = await insertBooking(booking);
-      if (!ok) allOk = false;
-    }
-    return allOk;
-  }, [
-    sessions,
-    consultationType,
-    hasSlotConflict,
-    bookingGroupId,
-    totalSessions,
-    clientName,
-    clientEmail,
-    clientPhone,
-    clientCpf,
-    linkedPatientId,
-    plan.name,
-    idx,
-    birthDate,
-    sex,
-    goal,
-    allergies,
-    restrictions,
-    healthConditions,
-    medications,
-    hadNutritionist,
-    howFound,
-    selectedCity,
-  ]);
 
   const handlePixPayment = async () => {
     if (!payableAmount || payableAmount <= 0) {
