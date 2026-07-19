@@ -150,7 +150,7 @@ export default function AdminTemplateEditor() {
     if (!name.trim()) { toast.error("Informe um nome para o modelo."); return; }
     setSaving(true);
     try {
-      const saved = await upsertDietTemplate({
+      const templatePayload: Parameters<typeof upsertDietTemplate>[0] = {
         id:          numId ?? undefined,
         name:        name.trim(),
         description: description.trim() || undefined,
@@ -160,7 +160,8 @@ export default function AdminTemplateEditor() {
         carbs_g:     grand.carbs > 0 ? parseFloat(grand.carbs.toFixed(1)) : undefined,
         fat_g:       grand.fat   > 0 ? parseFloat(grand.fat.toFixed(1))   : undefined,
         is_active:   true,
-      } as any);
+      };
+      const saved = await upsertDietTemplate(templatePayload);
 
       if (!saved?.id) { toast.error("Erro ao salvar o modelo."); return; }
 

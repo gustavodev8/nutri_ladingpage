@@ -147,7 +147,11 @@ serve(async (req) => {
             "Authorization": `Bearer ${supabaseServiceKey}`,
             "Prefer": "return=minimal",
           },
-          body: JSON.stringify({ status: "confirmed" }),
+          body: JSON.stringify({
+            status: "confirmed",
+            payment_status: "paid",
+            payment_method: payment.payment_method_id === "pix" ? "pix" : "card",
+          }),
         });
       }
 

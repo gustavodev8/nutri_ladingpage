@@ -824,7 +824,8 @@ export async function fetchFullMealPlan(planId: number): Promise<Meal[]> {
     .eq("plan_id", planId)
     .order("sort_order");
   if (error) { console.error("[Supabase] fetchFullMealPlan:", error.message); return []; }
-  return (data ?? []).map((m: any) => ({ ...m, foods: m.foods ?? [] }));
+  type MealRow = Meal & { foods?: MealFood[] | null };
+  return ((data ?? []) as MealRow[]).map((m) => ({ ...m, foods: m.foods ?? [] }));
 }
 
 export async function saveMeals(planId: number, meals: Meal[]): Promise<string | null> {
@@ -885,6 +886,10 @@ export interface AvailabilitySlot {
   active: boolean;
 }
 
+export type BookingStatus = "pending" | "confirmed" | "completed" | "no_show" | "cancelled";
+export type BookingPaymentStatus = "pending" | "paid" | "cancelled" | "free";
+export type BookingPaymentMethod = "pix" | "card" | "manual" | "free";
+
 export interface Booking {
   id?: number;
   created_at?: string;
@@ -901,7 +906,9 @@ export interface Booking {
   appointment_date: string;
   appointment_time: string;
   type: 'online' | 'presencial';
-  status?: string;
+  status?: BookingStatus;
+  payment_status?: BookingPaymentStatus;
+  payment_method?: BookingPaymentMethod | null;
   notes?: string;
 }
 
@@ -1003,10 +1010,24 @@ export async function insertBooking(booking: Booking): Promise<boolean> {
   return true;
 }
 
-export async function updateBookingStatus(id: number, status: string, extra?: Record<string, unknown>): Promise<boolean> {
+export async function updateBookingStatus(id: number, status: BookingStatus, extra?: Record<string, unknown>): Promise<boolean> {
   const payload: Record<string, unknown> = { status, ...extra };
   const { error } = await supabaseAdmin.from('bookings').update(payload).eq('id', id);
   if (error) console.error('updateBookingStatus error:', JSON.stringify(error));
+  return !error;
+}
+
+export async function updateBookingPaymentStatus(
+  id: number,
+  paymentStatus: BookingPaymentStatus,
+  paymentMethod?: BookingPaymentMethod
+): Promise<boolean> {
+  const payload: Pick<Booking, "payment_status" | "payment_method"> = {
+    payment_status: paymentStatus,
+    payment_method: paymentMethod ?? "manual",
+  };
+  const { error } = await supabaseAdmin.from('bookings').update(payload).eq('id', id);
+  if (error) console.error('updateBookingPaymentStatus error:', JSON.stringify(error));
   return !error;
 }
 
@@ -1109,10 +1130,13 @@ export async function fetchConsultationRecords(booking_group_id: string): Promis
   return data || [];
 }
 
-export async function confirmBookingsByGroupId(bookingGroupId: string): Promise<boolean> {
+export async function confirmBookingsByGroupId(
+  bookingGroupId: string,
+  paymentMethod: BookingPaymentMethod = "pix"
+): Promise<boolean> {
   const { error } = await supabase
     .from('bookings')
-    .update({ status: 'confirmed' })
+    .update({ status: 'confirmed', payment_status: 'paid', payment_method: paymentMethod })
     .eq('booking_group_id', bookingGroupId);
   return !error;
 }
@@ -1245,11 +1269,13 @@ export async function fetchDietTemplates(): Promise<DietTemplate[]> {
     .eq("is_active", true)
     .order("name");
   if (error) { console.error("[Supabase] fetchDietTemplates:", error.message); return []; }
-  return (data ?? []).map((t: any) => ({
+  type DietTemplateMealRow = DietTemplateMeal & { foods?: DietTemplateFood[] | null };
+  type DietTemplateRow = DietTemplate & { meals?: DietTemplateMealRow[] | null };
+  return ((data ?? []) as DietTemplateRow[]).map((t) => ({
     ...t,
     meals: (t.meals ?? [])
       .sort((a: DietTemplateMeal, b: DietTemplateMeal) => (a.order_index ?? 0) - (b.order_index ?? 0))
-      .map((m: any) => ({
+      .map((m: DietTemplateMealRow) => ({
         ...m,
         foods: (m.foods ?? []).sort((a: DietTemplateFood, b: DietTemplateFood) => (a.order_index ?? 0) - (b.order_index ?? 0)),
       })),

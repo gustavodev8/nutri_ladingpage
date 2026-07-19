@@ -1,218 +1,121 @@
 import { useState, useEffect } from "react";
 import {
-  CalendarCheck, Loader2, Mail, Phone, CheckCircle2, XCircle,
-  CalendarClock, X, ChevronRight, ChevronLeft, Globe, MapPin, User,
-  Heart, Pill, Salad, HelpCircle, Target, Cake, ClipboardList,
-  UserX, Scale, Ruler, ChevronDown, FileText, ArrowRight,
-  Send, Paperclip, Trash2, Pencil, Search, SlidersHorizontal, Clock,
-  Plus, CalendarPlus, LinkIcon, CreditCard, UserPlus,
+  Loader2,
+  X, User,
+  ChevronDown,
+  Send, Trash2, Pencil,
+  Plus, LinkIcon, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  fetchBookings, updateBookingStatus, autoCompleteBookings, autoExpirePendingBookings,
-  insertBooking, insertConsultationRecord, updateConsultationRecord,
-  deleteConsultationRecord, fetchConsultationRecords, uploadRecordFile,
-  fetchAvailabilitySlots, fetchBookingsForDate, deleteBookingGroup, updateBookingGroup,
-  linkBookingGroupToPatient, findPatientByCPF, findSimilarPatients, upsertPatient, fetchPatients,
-  type Booking, type ConsultationRecord, type RecordFile, type Patient
+  fetchBookings, autoCompleteBookings, autoExpirePendingBookings,
+  insertBooking, insertConsultationRecord, uploadRecordFile,
+  fetchAvailabilitySlots, fetchBookingsForDate, updateBookingGroup,
+  fetchPatients,
+  type Booking, type ConsultationRecord, type RecordFile, type Patient,
+  type BookingPaymentStatus
 } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { useContent } from "@/contexts/ContentContext";
 import { toast } from "@/hooks/use-toast";
+import { calcBMI, normalizePersonName } from "./agendamentos/bookingDateUtils";
+import {
+  getBookingGroupStatus,
+  inferPaymentStatus
+} from "./agendamentos/bookingStatusUtils";
+import { NewBookingModal } from "./agendamentos/NewBookingModal";
+import { ScheduleReturnModal } from "./agendamentos/ScheduleReturnModal";
+import { CompleteSessionModal } from "./agendamentos/CompleteSessionModal";
+import { useBookingGroups } from "./agendamentos/useBookingGroups";
+import { useReturnScheduling } from "./agendamentos/useReturnScheduling";
+import { useBookingStatusActions } from "./agendamentos/useBookingStatusActions";
+import { useBookingPatientActions } from "./agendamentos/useBookingPatientActions";
+import { useSendMaterial } from "./agendamentos/useSendMaterial";
+import { SendMaterialModal } from "./agendamentos/SendMaterialModal";
+import { RescheduleBookingModal } from "./agendamentos/RescheduleBookingModal";
+import { RecordDetailModal } from "./agendamentos/RecordDetailModal";
+import { BookingRecordsTab } from "./agendamentos/BookingRecordsTab";
+import { BookingPatientPanel } from "./agendamentos/BookingPatientPanel";
+import { type BookingClinicalNotes } from "./agendamentos/bookingPatientDetails";
+import { BookingSessionsTab } from "./agendamentos/BookingSessionsTab";
+import { BookingDetailModal, type BookingDetailTab } from "./agendamentos/BookingDetailModal";
+import { BookingGroupsList } from "./agendamentos/BookingGroupsList";
+import { BookingFiltersBar } from "./agendamentos/BookingFiltersBar";
+import { BookingDashboardSummary } from "./agendamentos/BookingDashboardSummary";
+import { useBookingFilters } from "./agendamentos/useBookingFilters";
+import { useBookingRecords } from "./agendamentos/useBookingRecords";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-const CITIES = ["Alagoinhas","Feira de Santana","Salvador","Crisópolis","Olindina","Aporá","Acajutiba","Esplanada"];
-
-function toLocalISO(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-const STATUS: Record<string, { label: string; color: string }> = {
-  pending:   { label: "Aguardando pagamento", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  confirmed: { label: "Confirmado",           color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  completed: { label: "Concluído",            color: "bg-blue-50 text-blue-700 border-blue-200" },
-  no_show:   { label: "Não compareceu",       color: "bg-orange-50 text-orange-700 border-orange-200" },
-  cancelled: { label: "Cancelado",            color: "bg-red-50 text-red-600 border-red-200" },
-};
-
-const StatusPill = ({ status }: { status: string }) => {
-  const s = STATUS[status] || STATUS.pending;
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${s.color}`}>
-      {s.label}
-    </span>
-  );
-};
-
-const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
-  pending:   { label: "Pagamento pendente", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  paid:      { label: "Pagamento aprovado", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  cancelled: { label: "Pagamento cancelado", color: "bg-red-50 text-red-600 border-red-200" },
-};
-
-const PaymentPill = ({ status }: { status: string }) => {
-  const s = PAYMENT_STATUS[status] || PAYMENT_STATUS.pending;
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${s.color}`}>
-      {s.label}
-    </span>
-  );
-};
-
-const formatDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-
-const initials = (name: string) =>
-  name?.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase() || "?";
-
-const calcBMI = (w: number, h: number) => {
-  if (!w || !h) return null;
-  const bmi = w / Math.pow(h / 100, 2);
-  return bmi.toFixed(1);
-};
-
-const MAX_ATTACH_BYTES = 10 * 1024 * 1024; // 10 MB total
-
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve((reader.result as string).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-};
-
-interface ClinicalNotes {
-  birthDate?: string; sex?: string; goal?: string; allergies?: string;
-  restrictions?: string; healthConditions?: string; medications?: string;
-  hadNutritionist?: string; howFound?: string;
-}
-
-const GOAL_LABELS: Record<string, string> = {
-  emagrecimento: "Emagrecimento", ganho_massa: "Ganho de massa", saude_geral: "Saúde geral",
-  condicao_especifica: "Condição específica", gestante: "Gestação / pós-parto", outro: "Outro",
-};
-const RESTRICT_LABELS: Record<string, string> = {
-  vegetariano: "Vegetariano", vegano: "Vegano", sem_gluten: "Sem glúten",
-  sem_lactose: "Sem lactose", outra: "Outra restrição",
-};
-const FOUND_LABELS: Record<string, string> = {
-  instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
-};
-
-type FilterTab = "all" | "today" | "confirmed" | "pending" | "retornos" | "completed" | "no_show" | "cancelled";
-
-const BORDER_COLOR: Record<string, string> = {
-  confirmed: "border-l-primary",
-  pending:   "border-l-amber-400",
-  completed: "border-l-blue-400",
-  no_show:   "border-l-orange-400",
-  cancelled: "border-l-red-400",
-};
-
-const PAYMENT_GROUP_STATUS = (sessions: Booking[]): "pending" | "paid" | "cancelled" => {
-  if (sessions.length > 0 && sessions.every(s => s.status === "cancelled")) return "cancelled";
-  if (sessions.some(s => ["confirmed", "completed", "no_show"].includes(s.status || ""))) return "paid";
-  return "pending";
-};
 
 const AdminAgendamentos = () => {
   const { content } = useContent();
   const navigate = useNavigate();
   const planOptions    = content.loja.plans.map(p => p.name);
+  const onlinePlanName = planOptions[0];
+  const presencialPlanName = planOptions[1];
   const planSessionMap = Object.fromEntries(content.loja.plans.map(p => [p.name, p.sessionCount ?? 1]));
 
   const [bookings, setBookings]   = useState<Booking[]>([]);
-  const [linkingGroup, setLinkingGroup] = useState<string | null>(null);
-  const [creatingPatient, setCreatingPatient] = useState<string | null>(null);
-  const [duplicateModal, setDuplicateModal] = useState<{
-    booking: Booking;
-    notes: Record<string, string>;
-    matches: Patient[];
-  } | null>(null);
   const [loading, setLoading]     = useState(true);
-  const [updating, setUpdating]   = useState<number | null>(null);
-  const [filter, setFilter]       = useState<FilterTab>("all");
-  const [search, setSearch]       = useState("");
   const [detail, setDetail]       = useState<string | null>(null);
   const [detailMoreOpen, setDetailMoreOpen] = useState(false);
-  const [records, setRecords]     = useState<ConsultationRecord[]>([]);
-  const [loadingRecords, setLoadingRecords] = useState(false);
-
-  // Advanced filters
-  const [showFilters, setShowFilters]         = useState(false);
-  const [filterType, setFilterType]           = useState<"all" | "online" | "presencial">("all");
-  const [filterDateFrom, setFilterDateFrom]   = useState("");
-  const [filterDateTo, setFilterDateTo]       = useState("");
-  const [filterPlan, setFilterPlan]           = useState("");
+  const filters = useBookingFilters();
 
   // Patients for manual creation
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [isManualEntry, setIsManualEntry] = useState(true);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [ignoredExactPatientName, setIgnoredExactPatientName] = useState("");
   
   useEffect(() => {
     fetchPatients().then(setPatients);
   }, []);
 
   // Prontuário — visualização / edição / exclusão
-  const [viewRecord, setViewRecord]             = useState<ConsultationRecord | null>(null);
-  const [editingRecordId, setEditingRecordId]   = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId]   = useState<number | null>(null);
-  const [editNotes, setEditNotes]               = useState("");
-  const [editNextSteps, setEditNextSteps]       = useState("");
-  const [editNextReturn, setEditNextReturn]     = useState("");
-  const [editWeight, setEditWeight]             = useState("");
-  const [editHeight, setEditHeight]             = useState("");
-  const [editFiles, setEditFiles]               = useState<RecordFile[]>([]); // arquivos já salvos
-  const [editNewFiles, setEditNewFiles]         = useState<File[]>([]);       // novos a subir
-  const [savingEdit, setSavingEdit]             = useState(false);
-
-  // Reschedule
-  const [reschedule, setReschedule]       = useState<Booking | null>(null);
-  const [newDate, setNewDate]             = useState("");
-  const [newTime, setNewTime]             = useState("");
-  const [rescheduleMsg, setRescheduleMsg] = useState("");
-  const [rescheduling, setRescheduling]   = useState(false);
-
-  // Send material modal
-  interface AttachmentFile { name: string; base64: string; size: number; type: string }
-  const [sendTarget, setSendTarget]         = useState<Booking | null>(null);
-  const [sendSubject, setSendSubject]       = useState("");
-  const [sendBody, setSendBody]             = useState("");
-  const [sendFiles, setSendFiles]           = useState<AttachmentFile[]>([]);
-  const [sending, setSending]               = useState(false);
+  const {
+    records,
+    loadingRecords,
+    viewRecord,
+    setViewRecord,
+    editingRecordId,
+    setEditingRecordId,
+    confirmDeleteId,
+    setConfirmDeleteId,
+    editNotes,
+    setEditNotes,
+    editNextSteps,
+    setEditNextSteps,
+    editNextReturn,
+    setEditNextReturn,
+    editFiles,
+    setEditFiles,
+    editNewFiles,
+    setEditNewFiles,
+    savingEdit,
+    loadRecords,
+    openEditRecord,
+    handleSaveEdit,
+    handleDeleteRecord,
+  } = useBookingRecords();
 
   // Confirm destructive action (no_show / cancelled)
   const [confirmAction, setConfirmAction]   = useState<{ id: number; status: "no_show" | "cancelled" } | null>(null);
 
   // Detail inner tab — "dados" is mobile-only (replaces sidebar)
-  const [detailTab, setDetailTab] = useState<"sessions" | "records" | "dados">("sessions");
+  const [detailTab, setDetailTab] = useState<BookingDetailTab>("sessions");
 
   // Completion modal
   const [completing, setCompleting]           = useState<Booking | null>(null);
   const [compNotes, setCompNotes]             = useState("");
   const [compWeight, setCompWeight]           = useState("");
   const [compHeight, setCompHeight]           = useState("");
-  const [compNextReturn, setCompNextReturn]   = useState("");
-  const [compNextReturnTime, setCompNextReturnTime] = useState("");
   const [compNextSteps, setCompNextSteps]     = useState("");
   const [compFiles, setCompFiles]             = useState<File[]>([]);
   const [savingRecord, setSavingRecord]       = useState(false);
+  const [schedulingReturn, setSchedulingReturn] = useState<Booking | null>(null);
+  const [savingReturn, setSavingReturn]       = useState(false);
 
   // ── Editar agendamento ────────────────────────────────────────────────────
   const [editingDetail, setEditingDetail]   = useState(false);
@@ -278,24 +181,6 @@ const AdminAgendamentos = () => {
     }
   };
 
-  // ── Excluir agendamento ───────────────────────────────────────────────────
-  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<string | null>(null);
-  const [deletingGroup, setDeletingGroup]           = useState(false);
-
-  const handleDeleteGroup = async (groupId: string) => {
-    setDeletingGroup(true);
-    const ok = await deleteBookingGroup(groupId);
-    setDeletingGroup(false);
-    if (ok) {
-      setBookings(prev => prev.filter(b => b.booking_group_id !== groupId));
-      setConfirmDeleteGroup(null);
-      setDetail(null);
-      toast({ title: "Agendamento excluído." });
-    } else {
-      toast({ title: "Erro ao excluir agendamento.", variant: "destructive" });
-    }
-  };
-
   // ── Nova consulta manual ──────────────────────────────────────────────────
   const [newModal, setNewModal]           = useState(false);
   const [newName, setNewName]             = useState("");
@@ -304,6 +189,8 @@ const AdminAgendamentos = () => {
   const [newPlan, setNewPlan]             = useState("");
   const [newCustomPlan, setNewCustomPlan] = useState("");
   const [newType, setNewType]             = useState<"online" | "presencial">("online");
+  const [manualCity, setManualCity]       = useState("Alagoinhas");
+  const [newPaymentStatus, setNewPaymentStatus] = useState<BookingPaymentStatus>("pending");
   const [manualDate, setManualDate]       = useState("");
   const [manualTime, setManualTime]       = useState("");
   const [newSessions, setNewSessions]     = useState(1);
@@ -311,21 +198,51 @@ const AdminAgendamentos = () => {
   const [savingNew, setSavingNew]         = useState(false);
 
   // Availability calendar for manual modal
-  const [modalSlots, setModalSlots]           = useState<Array<{date: string; start_time: string; type: string}>>([]);
+  const [modalSlots, setModalSlots]           = useState<Array<{date: string; start_time: string; type: string; city?: string}>>([]);
   const [modalSlotsBusy, setModalSlotsBusy]   = useState<string[]>([]);
   const [loadingModalSlots, setLoadingModalSlots] = useState(false);
   const [modalCalYear, setModalCalYear]       = useState(new Date().getFullYear());
   const [modalCalMonth, setModalCalMonth]     = useState(new Date().getMonth());
+
+  const selectPatientForManualBooking = (patient: Patient) => {
+    setSelectedPatientId(patient.id ? String(patient.id) : "");
+    setNewName(patient.name);
+    setNewEmail(patient.email || "");
+    setNewPhone(patient.phone || "");
+    setPatientSearch(patient.name);
+    setIsManualEntry(false);
+    setIgnoredExactPatientName("");
+  };
+
+  const patientSearchTerm = normalizePersonName(patientSearch);
+  const filteredPatients = patientSearchTerm
+    ? patients.filter(patient => {
+        const haystack = normalizePersonName(`${patient.name} ${patient.email || ""} ${patient.phone || ""} ${patient.cpf || ""}`);
+        return haystack.includes(patientSearchTerm);
+      })
+    : patients;
+  const exactNamePatient = (() => {
+    const normalizedName = normalizePersonName(newName);
+    if (!isManualEntry || !normalizedName || normalizedName === ignoredExactPatientName) return null;
+    return patients.find(patient => normalizePersonName(patient.name) === normalizedName) || null;
+  })();
 
   // Fetch slots whenever modal type changes
   useEffect(() => {
     if (!newModal) return;
     setLoadingModalSlots(true);
     fetchAvailabilitySlots()
-      .then(slots => setModalSlots(slots.filter(s => s.type === newType)))
+      .then(slots => setModalSlots(slots.filter(s =>
+        s.type === newType && (newType !== "presencial" || s.city === manualCity)
+      )))
       .finally(() => setLoadingModalSlots(false));
     setManualDate(""); setManualTime("");
-  }, [newModal, newType]);
+  }, [newModal, newType, manualCity]);
+
+  useEffect(() => {
+    if (newPlan === onlinePlanName && newType !== "online") setNewType("online");
+    if (newPlan === presencialPlanName && newType !== "presencial") setNewType("presencial");
+  }, [newPlan, newType, onlinePlanName, presencialPlanName]);
 
   // Fetch booked times when date is selected
   useEffect(() => {
@@ -349,8 +266,14 @@ const AdminAgendamentos = () => {
 
   const openNewModal = () => {
     setNewName(""); setNewEmail(""); setNewPhone("");
+    setSelectedPatientId("");
+    setIsManualEntry(true);
+    setPatientSearch("");
+    setIgnoredExactPatientName("");
     setNewPlan(""); setNewCustomPlan("");
     setNewType("online");
+    setManualCity("Alagoinhas");
+    setNewPaymentStatus("pending");
     setManualDate(""); setManualTime("");
     setNewSessions(1); setNewNotes("");
     setModalCalYear(new Date().getFullYear());
@@ -363,6 +286,14 @@ const AdminAgendamentos = () => {
     if (!manualDate)     { toast({ title: "Informe a data da consulta.", variant: "destructive" }); return; }
     if (!manualTime)     { toast({ title: "Informe o horário.", variant: "destructive" }); return; }
     const planName = newPlan === "__custom__" ? newCustomPlan.trim() : newPlan;
+    if (!modalTimesForDate().includes(manualTime)) {
+      toast({ title: "Horário fora da disponibilidade", description: "Escolha um horário cadastrado na aba Disponibilidades.", variant: "destructive" });
+      return;
+    }
+    if (modalSlotsBusy.includes(manualTime)) {
+      toast({ title: "Horário indisponível", description: "Esse horário já está ocupado.", variant: "destructive" });
+      return;
+    }
     if (!planName) { toast({ title: "Selecione ou informe o plano.", variant: "destructive" }); return; }
 
     setSavingNew(true);
@@ -376,13 +307,20 @@ const AdminAgendamentos = () => {
       client_name:      newName.trim(),
       client_email:     newEmail.trim(),
       client_phone:     newPhone.trim(),
+      patient_id:       !isManualEntry && selectedPatientId ? Number(selectedPatientId) : undefined,
       plan_name:        planName,
       plan_index:       0,
       appointment_date: manualDate,
       appointment_time: manualTime,
       type:             newType,
       status:           "confirmed",
-      notes:            newNotes ? JSON.stringify({ _manual: true, obs: newNotes }) : JSON.stringify({ _manual: true }),
+      payment_status:   newPaymentStatus,
+      payment_method:   newPaymentStatus === "free" ? "free" : newPaymentStatus === "paid" ? "manual" : null,
+      notes:            JSON.stringify({
+        _manual: true,
+        ...(newType === "presencial" ? { _city: manualCity } : {}),
+        ...(newNotes ? { obs: newNotes } : {}),
+      }),
     };
 
     const ok = await insertBooking(b);
@@ -397,14 +335,73 @@ const AdminAgendamentos = () => {
     }
   };
 
-  // Calendário de retorno
-  const [returnAvailSlots, setReturnAvailSlots]   = useState<Array<{date: string; start_time: string; type: string}>>([]);
-  const [returnCalYear, setReturnCalYear]         = useState(new Date().getFullYear());
-  const [returnCalMonth, setReturnCalMonth]       = useState(new Date().getMonth());
-  const [returnBookedTimes, setReturnBookedTimes] = useState<string[]>([]);
-  const [loadingReturnSlots, setLoadingReturnSlots] = useState(false);
-  const [returnType, setReturnType]               = useState<"online" | "presencial">("online");
-  const [returnCity, setReturnCity]               = useState("Alagoinhas");
+  const {
+    returnCalYear,
+    returnCalMonth,
+    returnBookedTimes,
+    loadingReturnSlots,
+    returnType,
+    returnCity,
+    compNextReturn,
+    compNextReturnTime,
+    setReturnCalYear,
+    setReturnCalMonth,
+    setReturnType,
+    setReturnCity,
+    setCompNextReturn,
+    setCompNextReturnTime,
+    resetReturnSelection,
+    prepareReturnScheduling,
+    handleReturnDateSelect,
+    getReturnAvailableDates,
+    getReturnTimesForDate,
+    canSelectReturnDate,
+  } = useReturnScheduling();
+
+  const {
+    updating,
+    confirmDeleteGroup,
+    setConfirmDeleteGroup,
+    deletingGroup,
+    reschedule,
+    setReschedule,
+    newDate,
+    setNewDate,
+    newTime,
+    setNewTime,
+    rescheduleMsg,
+    setRescheduleMsg,
+    rescheduling,
+    handleDeleteGroup,
+    handleStatus,
+    handlePaymentStatus,
+    openReschedule,
+    handleReschedule,
+  } = useBookingStatusActions({ setBookings, setDetail });
+
+  const {
+    creatingPatient,
+    duplicateModal,
+    setDuplicateModal,
+    doCreatePatient,
+    doLinkExisting,
+    handleCreatePatient,
+  } = useBookingPatientActions({ setBookings });
+
+  const {
+    sendTarget,
+    setSendTarget,
+    sendSubject,
+    setSendSubject,
+    sendBody,
+    setSendBody,
+    sendFiles,
+    sending,
+    openSendMaterial,
+    handleAddFiles,
+    handleSendMaterial,
+    removeSendFile,
+  } = useSendMaterial();
 
   useEffect(() => { load(); }, []);
 
@@ -417,65 +414,97 @@ const AdminAgendamentos = () => {
     setLoading(false);
   };
 
-  const handleChangeType = async (session: Booking) => {
-    const newType = session.type === "online" ? "presencial" : "online";
-    const ok = await updateBookingStatus(session.id!, session.status!, { type: newType });
-    if (ok) {
-      setBookings(prev => prev.map(b => b.id === session.id ? { ...b, type: newType } : b));
-      toast({ title: `Modalidade alterada para ${newType === "online" ? "Online" : "Presencial"}` });
-    } else {
-      toast({ title: "Erro ao alterar modalidade", variant: "destructive" });
-    }
-  };
-
-  const handleStatus = async (id: number, status: string, extra?: Record<string, unknown>) => {
-    setUpdating(id);
-    const ok = await updateBookingStatus(id, status, extra);
-    if (ok) {
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status, ...extra } : b));
-      toast({ title: "Status atualizado!" });
-    } else {
-      toast({ title: "Erro ao atualizar", variant: "destructive" });
-    }
-    setUpdating(null);
-  };
-
   const openComplete = async (session: Booking) => {
     setCompleting(session);
     setCompNotes(""); setCompWeight(""); setCompHeight("");
-    setCompNextReturn(""); setCompNextReturnTime(""); setCompNextSteps(""); setCompFiles([]);
-    setReturnBookedTimes([]);
-    setReturnType((session.type as "online" | "presencial") || "online");
-    setReturnCity("Alagoinhas");
-    // Inicializa calendário no mês atual
-    const now = new Date();
-    setReturnCalYear(now.getFullYear());
-    setReturnCalMonth(now.getMonth());
-    // Carrega slots disponíveis
-    setLoadingReturnSlots(true);
-    const slots = await fetchAvailabilitySlots();
-    setReturnAvailSlots(slots);
-    setLoadingReturnSlots(false);
+    setCompNextSteps(""); setCompFiles([]);
+    await prepareReturnScheduling(session);
   };
 
-  const handleReturnDateSelect = async (dateISO: string, sessionType: string) => {
-    setCompNextReturn(dateISO);
-    setCompNextReturnTime("");
-    setReturnBookedTimes([]);
-    const booked = await fetchBookingsForDate(dateISO, sessionType);
-    setReturnBookedTimes(booked.map(b => (b as unknown as { appointment_time: string }).appointment_time.substring(0, 5)));
+  const openScheduleReturn = async (session: Booking) => {
+    setSchedulingReturn(session);
+    await prepareReturnScheduling(session);
   };
 
-  const getReturnTimesForDate = (dateISO: string, sessionType: string) =>
-    returnAvailSlots
-      .filter(s => s.date === dateISO && s.type === sessionType)
-      .map(s => s.start_time.substring(0, 5))
-      .sort();
+  const addCompletionFiles = (files: File[]) => {
+    const total = [...compFiles, ...files].reduce((acc, file) => acc + file.size, 0);
+    if (total > 20 * 1024 * 1024) {
+      toast({ title: "Limite de 20 MB excedido", variant: "destructive" });
+      return;
+    }
+    setCompFiles(prev => [...prev, ...files]);
+  };
 
-  const canSelectReturnDate = (date: Date, sessionType: string) => {
-    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-    if (date < todayMidnight) return false; // bloqueia apenas datas anteriores a hoje
-    return returnAvailSlots.some(s => s.date === toLocalISO(date) && s.type === sessionType);
+  const removeCompletionFile = (index: number) => {
+    setCompFiles(prev => prev.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const buildNextReturnBooking = (
+    baseSession: Booking,
+    appointmentDate: string,
+    appointmentTime: string
+  ): Booking => {
+    const baseNotes = (() => { try { return JSON.parse(baseSession.notes || "{}"); } catch { return {}; } })();
+    if (returnType === "presencial") baseNotes._city = returnCity;
+    else delete baseNotes._city;
+    return {
+      booking_group_id: baseSession.booking_group_id,
+      session_number: (baseSession.session_number ?? 1) + 1,
+      total_sessions: baseSession.total_sessions,
+      client_name: baseSession.client_name,
+      client_email: baseSession.client_email,
+      client_phone: baseSession.client_phone,
+      client_cpf: baseSession.client_cpf,
+      patient_id: baseSession.patient_id,
+      plan_name: baseSession.plan_name,
+      plan_index: baseSession.plan_index,
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime,
+      type: returnType,
+      status: "confirmed",
+      payment_status: baseSession.payment_status ?? inferPaymentStatus(baseSession),
+      payment_method: baseSession.payment_method ?? null,
+      notes: JSON.stringify(baseNotes),
+    };
+  };
+
+  const handleScheduleReturn = async () => {
+    if (!schedulingReturn) return;
+    if (!compNextReturn || !compNextReturnTime) {
+      toast({ title: "Selecione data e horário do próximo retorno.", variant: "destructive" });
+      return;
+    }
+    if ((schedulingReturn.session_number ?? 1) >= (schedulingReturn.total_sessions ?? 1)) {
+      toast({ title: "Esse plano já está na última sessão.", variant: "destructive" });
+      return;
+    }
+
+    const availableTimes = getReturnTimesForDate(compNextReturn, returnType);
+    if (!availableTimes.includes(compNextReturnTime)) {
+      toast({ title: "Horário fora da disponibilidade", description: "Escolha um horário cadastrado na aba Disponibilidades.", variant: "destructive" });
+      return;
+    }
+
+    setSavingReturn(true);
+    try {
+      const conflict = await fetchBookingsForDate(compNextReturn, returnType, schedulingReturn.booking_group_id);
+      if (conflict.some(b => (b.appointment_time || "").substring(0, 5) === compNextReturnTime)) {
+        toast({ title: "Horário indisponível", description: "Esse horário foi ocupado. Escolha outro.", variant: "destructive" });
+        return;
+      }
+
+      const ok = await insertBooking(buildNextReturnBooking(schedulingReturn, compNextReturn, compNextReturnTime));
+      if (!ok) {
+        toast({ title: "Erro ao agendar retorno.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Retorno agendado!" });
+      setSchedulingReturn(null);
+      load();
+    } finally {
+      setSavingReturn(false);
+    }
   };
 
   const handleSaveRecord = async () => {
@@ -487,6 +516,25 @@ const AdminAgendamentos = () => {
       const h = compHeight ? parseFloat(compHeight) : null;
 
       // 0. Idempotência: verifica se já existe registro para este booking_id
+      const isLastSession = (completing.session_number ?? 1) >= (completing.total_sessions ?? 1);
+
+      if (!isLastSession && compNextReturn) {
+        if (!compNextReturnTime) {
+          toast({ title: "Selecione o horário do próximo retorno.", variant: "destructive" });
+          return;
+        }
+        const availableTimes = getReturnTimesForDate(compNextReturn, returnType);
+        if (!availableTimes.includes(compNextReturnTime)) {
+          toast({ title: "Horário fora da disponibilidade", description: "Escolha um horário cadastrado na aba Disponibilidades.", variant: "destructive" });
+          return;
+        }
+        const conflict = await fetchBookingsForDate(compNextReturn, returnType, completing.booking_group_id);
+        if (conflict.some(b => (b.appointment_time || "").substring(0, 5) === compNextReturnTime)) {
+          toast({ title: "Horário indisponível", description: "Esse horário já foi ocupado. Escolha outro.", variant: "destructive" });
+          return;
+        }
+      }
+
       const existing = records.find(r => r.booking_id === completing.id);
       if (existing) {
         toast({ title: "Prontuário já registrado para esta sessão.", variant: "destructive" });
@@ -550,28 +598,11 @@ const AdminAgendamentos = () => {
       }
 
       // 3. Cria próximo retorno APENAS se não for a última sessão do plano
-      const isLastSession = (completing.session_number ?? 1) >= (completing.total_sessions ?? 1);
       let returnCreated = false;
       if (!isLastSession && compNextReturn) {
-        const baseNotes = (() => { try { return JSON.parse(completing.notes || "{}"); } catch { return {}; } })();
-        if (returnType === "presencial") baseNotes._city = returnCity;
-        else delete baseNotes._city;
-        const returnSession: Booking = {
-          booking_group_id: completing.booking_group_id,
-          session_number: completing.session_number + 1,
-          total_sessions: completing.total_sessions,
-          client_name: completing.client_name,
-          client_email: completing.client_email,
-          client_phone: completing.client_phone,
-          plan_name: completing.plan_name,
-          plan_index: completing.plan_index,
-          appointment_date: compNextReturn,
-          appointment_time: compNextReturnTime || completing.appointment_time,
-          type: returnType,
-          status: "confirmed",
-          notes: JSON.stringify(baseNotes),
-        };
-        returnCreated = await insertBooking(returnSession);
+        returnCreated = await insertBooking(
+          buildNextReturnBooking(completing, compNextReturn, compNextReturnTime || completing.appointment_time)
+        );
       }
 
       // 4. Atualiza estado local imediatamente, depois recarrega em background
@@ -581,7 +612,7 @@ const AdminAgendamentos = () => {
       );
       setCompleting(null);
       setDetail(null);
-      setFilter(isLastSession ? "completed" : "confirmed");
+      filters.setFilter(isLastSession ? "completed" : "confirmed");
 
       load();
 
@@ -600,78 +631,6 @@ const AdminAgendamentos = () => {
     }
   };
 
-  const loadRecords = async (groupId: string) => {
-    setLoadingRecords(true);
-    setRecords(await fetchConsultationRecords(groupId));
-    setLoadingRecords(false);
-  };
-
-  const openEditRecord = (rec: ConsultationRecord) => {
-    setEditingRecordId(rec.id!);
-    setConfirmDeleteId(null);
-    setEditNotes(rec.notes || "");
-    setEditNextSteps(rec.next_steps || "");
-    setEditNextReturn(rec.next_return_date || "");
-    setEditWeight(rec.weight ? String(rec.weight) : "");
-    setEditHeight(rec.height ? String(rec.height) : "");
-    setEditFiles(rec.files || []);
-    setEditNewFiles([]);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingRecordId || !detail) return;
-    setSavingEdit(true);
-
-    // Upload novos arquivos e mescla com os já existentes
-    let mergedFiles: RecordFile[] | null = null;
-    const kept = editFiles;
-    const uploaded: RecordFile[] = [];
-    if (editNewFiles.length > 0) {
-      // Precisamos do booking_group_id do registro sendo editado
-      const rec = records.find(r => r.id === editingRecordId);
-      const groupId = rec?.booking_group_id || detail;
-      const results = await Promise.all(
-        editNewFiles.map(async f => {
-          const url = await uploadRecordFile(f, groupId);
-          return url ? { name: f.name, url } : null;
-        })
-      );
-      results.forEach(r => { if (r) uploaded.push(r); });
-    }
-    const allFiles = [...kept, ...uploaded];
-    if (allFiles.length > 0) mergedFiles = allFiles;
-
-    const ok = await updateConsultationRecord(editingRecordId, {
-      notes: editNotes.trim() || null,
-      next_steps: editNextSteps.trim() || null,
-      next_return_date: editNextReturn || null,
-      weight: editWeight ? parseFloat(editWeight) : null,
-      height: editHeight ? parseFloat(editHeight) : null,
-      files: mergedFiles,
-    });
-    if (ok) {
-      toast({ title: "Registro atualizado." });
-      setEditingRecordId(null);
-      setEditNewFiles([]);
-      await loadRecords(detail);
-    } else {
-      toast({ title: "Erro ao salvar", variant: "destructive" });
-    }
-    setSavingEdit(false);
-  };
-
-  const handleDeleteRecord = async (id: number) => {
-    if (!detail) return;
-    const ok = await deleteConsultationRecord(id);
-    if (ok) {
-      toast({ title: "Registro excluído." });
-      setConfirmDeleteId(null);
-      await loadRecords(detail);
-    } else {
-      toast({ title: "Erro ao excluir", variant: "destructive" });
-    }
-  };
-
   const openDetail = (groupId: string) => {
     setDetail(groupId);
     setDetailTab("sessions");
@@ -680,325 +639,29 @@ const AdminAgendamentos = () => {
     loadRecords(groupId);
   };
 
-  const handleLinkPatient = async (groupId: string, cpf: string) => {
-    setLinkingGroup(groupId);
-    const patient = await findPatientByCPF(cpf);
-    if (patient && patient.id) {
-      const ok = await linkBookingGroupToPatient(groupId, patient.id, cpf);
-      if (ok) {
-        toast({ title: "Paciente vinculado!", description: `${patient.name} foi vinculado a este agendamento.` });
-        const updated = await fetchBookings();
-        setBookings(updated);
-      } else {
-        toast({ title: "Erro ao vincular", variant: "destructive" });
-      }
-    } else {
-      toast({ title: "CPF não encontrado nos pacientes", description: "Cadastre o paciente primeiro em Pacientes.", variant: "destructive" });
-    }
-    setLinkingGroup(null);
-  };
-
-  const doCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
-    setCreatingPatient(booking.booking_group_id);
-    const genderMap: Record<string, "M" | "F" | "outro"> = { masculino: "M", feminino: "F" };
-    const created = await upsertPatient({
-      name:       booking.client_name,
-      email:      booking.client_email  || undefined,
-      phone:      booking.client_phone  || undefined,
-      cpf:        booking.client_cpf    || undefined,
-      birth_date: notes.birthDate       || undefined,
-      gender:     genderMap[notes.sex ?? ""] ?? undefined,
-    });
-    if (!created?.id) {
-      toast({ title: "Erro ao cadastrar paciente", variant: "destructive" });
-      setCreatingPatient(null);
-      return;
-    }
-    if (booking.client_cpf) {
-      await linkBookingGroupToPatient(booking.booking_group_id, created.id, booking.client_cpf);
-    }
-    const updated = await fetchBookings();
-    setBookings(updated);
-    setCreatingPatient(null);
-    setDuplicateModal(null);
-    toast({ title: "Paciente cadastrado!", description: `${created.name} foi adicionado ao sistema.` });
-    navigate(`/admin/pacientes/${created.id}`);
-  };
-
-  const doLinkExisting = async (booking: Booking, patient: Patient) => {
-    setCreatingPatient(booking.booking_group_id);
-    await linkBookingGroupToPatient(booking.booking_group_id, patient.id!, booking.client_cpf ?? "");
-    const updated = await fetchBookings();
-    setBookings(updated);
-    setCreatingPatient(null);
-    setDuplicateModal(null);
-    toast({ title: "Vinculado ao paciente existente!", description: patient.name });
-    navigate(`/admin/pacientes/${patient.id}`);
-  };
-
-  const handleCreatePatient = async (booking: Booking, notes: Record<string, string>) => {
-    setCreatingPatient(booking.booking_group_id);
-    // 1. CPF match → link directly, no ambiguity
-    if (booking.client_cpf) {
-      const byCpf = await findPatientByCPF(booking.client_cpf);
-      if (byCpf?.id) {
-        await linkBookingGroupToPatient(booking.booking_group_id, byCpf.id, booking.client_cpf);
-        const updated = await fetchBookings();
-        setBookings(updated);
-        setCreatingPatient(null);
-        navigate(`/admin/pacientes/${byCpf.id}`);
-        return;
-      }
-    }
-    // 2. Check name/email similarity for duplicates
-    const similar = await findSimilarPatients(booking.client_name, booking.client_email);
-    setCreatingPatient(null);
-    if (similar.length > 0) {
-      setDuplicateModal({ booking, notes, matches: similar });
-      return;
-    }
-    // 3. No duplicates — create directly
-    await doCreatePatient(booking, notes);
-  };
-
-  const openSendMaterial = (booking: Booking) => {
-    setSendTarget(booking);
-    setSendSubject("");
-    setSendBody("");
-    setSendFiles([]);
-  };
-
-  const handleAddFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files || []);
-    e.target.value = ""; // reset input so same file can be re-added
-    if (!picked.length) return;
-
-    // Validate total size
-    const current = sendFiles.reduce((acc, f) => acc + f.size, 0);
-    const incoming = picked.reduce((acc, f) => acc + f.size, 0);
-    if (current + incoming > MAX_ATTACH_BYTES) {
-      toast({ title: "Tamanho total ultrapassa 10 MB", variant: "destructive" });
-      return;
-    }
-
-    const converted = await Promise.all(
-      picked.map(async (file) => ({
-        name: file.name,
-        base64: await fileToBase64(file),
-        size: file.size,
-        type: file.type,
-      }))
-    );
-    setSendFiles(prev => [...prev, ...converted]);
-  };
-
-  const handleSendMaterial = async () => {
-    if (!sendTarget || !sendSubject.trim() || !sendBody.trim()) {
-      toast({ title: "Preencha assunto e mensagem", variant: "destructive" });
-      return;
-    }
-    setSending(true);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-material`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "apikey": SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          to: sendTarget.client_email,
-          client_name: sendTarget.client_name,
-          subject: sendSubject.trim(),
-          body: sendBody.trim(),
-          attachments: sendFiles.map(f => ({ filename: f.name, content: f.base64 })),
-        }),
-      });
-
-      let data: Record<string, string> = {};
-      try { data = await res.json(); } catch { /* empty body */ }
-
-      if (!res.ok) {
-        const msg = data.error || data.message || data.msg || `HTTP ${res.status}`;
-        throw new Error(msg);
-      }
-
-      toast({ title: "Email enviado!", description: `Para ${sendTarget.client_email}` });
-      setSendTarget(null);
-    } catch (e) {
-      toast({ title: "Erro ao enviar email", description: e instanceof Error ? e.message : "Tente novamente", variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const openReschedule = (session: Booking) => {
-    setReschedule(session);
-    setNewDate(session.appointment_date || "");
-    setNewTime((session.appointment_time || "").substring(0, 5));
-    setRescheduleMsg("");
-  };
-
-  const handleReschedule = async () => {
-    if (!reschedule || !newDate || !newTime) {
-      toast({ title: "Preencha a nova data e horário", variant: "destructive" });
-      return;
-    }
-    setRescheduling(true);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/reschedule-booking`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({
-          booking_id: reschedule.id, new_date: newDate, new_time: newTime,
-          client_email: reschedule.client_email, client_name: reschedule.client_name,
-          plan_name: reschedule.plan_name, message: rescheduleMsg.trim() || null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro");
-      setBookings(prev => prev.map(b =>
-        b.id === reschedule.id ? { ...b, appointment_date: newDate, appointment_time: newTime } : b
-      ));
-      toast({ title: "Reagendado!", description: "Email enviado ao paciente." });
-      setReschedule(null);
-    } catch (e) {
-      toast({ title: "Erro ao reagendar", description: e instanceof Error ? e.message : "Tente novamente", variant: "destructive" });
-    } finally {
-      setRescheduling(false);
-    }
-  };
-
-  // Agrupa todos os bookings por grupo
-  const allGrouped: Record<string, Booking[]> = {};
-  bookings.forEach(b => {
-    if (!allGrouped[b.booking_group_id]) allGrouped[b.booking_group_id] = [];
-    allGrouped[b.booking_group_id].push(b);
+  const {
+    adminTodayISO,
+    allGrouped,
+    counts,
+    groupEntries,
+    detailGroup,
+    detailFirst,
+    upcomingReturnSessions,
+    todaySessions,
+  } = useBookingGroups({
+    bookings,
+    detail,
+    filter: filters.filter,
+    search: filters.search,
+    filterType: filters.filterType,
+    filterDateFrom: filters.filterDateFrom,
+    filterDateTo: filters.filterDateTo,
+    filterPlan: filters.filterPlan,
   });
-  const adminTodayISO = toLocalISO(new Date());
 
-  // Status de um grupo: "group_completed" quando a última sessão criada
-  // tem status "completed" E session_number >= total_sessions (plano encerrado)
-  const groupStatus = (sessions: Booking[]): string => {
-    const sorted = [...sessions].sort((a, b) => (b.session_number ?? 0) - (a.session_number ?? 0));
-    const latest = sorted[0];
-    if (!latest) return "unknown";
-    if (
-      latest.status === "completed" &&
-      (latest.session_number ?? 1) >= (latest.total_sessions ?? 1)
-    ) return "group_completed";
-    return latest.status ?? "confirmed";
-  };
-
-  const isGroupComplete = (sessions: Booking[]) => groupStatus(sessions) === "group_completed";
-
-  // Counts por grupo (não por sessão individual)
-  const counts: Record<FilterTab, number> = {
-    all:       Object.values(allGrouped).length,
-    today:     Object.values(allGrouped).filter(s => s.some(b => b.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(b.status || ""))).length,
-    confirmed: Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "confirmed")).length,
-    pending:   Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "pending")).length,
-    retornos:  Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed")).length,
-    completed: Object.values(allGrouped).filter(s => isGroupComplete(s)).length,
-    no_show:   Object.values(allGrouped).filter(s => !isGroupComplete(s) && s.some(b => b.status === "no_show")).length,
-    cancelled: Object.values(allGrouped).filter(s => s.every(b => b.status === "cancelled")).length,
-  };
-
-  const TABS: { id: FilterTab; label: string }[] = [
-    { id: "all",       label: "Todos" },
-    { id: "today",     label: "Hoje" },
-    { id: "confirmed", label: "Confirmados" },
-    { id: "pending",   label: "Pendentes" },
-    { id: "retornos",  label: "Retornos" },
-    { id: "completed", label: "Concluídos" },
-    { id: "cancelled", label: "Cancelados" },
-  ];
-
-  // Filtra grupos pelo tab ativo
-  const filteredGroupIds = Object.entries(allGrouped)
-    .filter(([, sessions]) => {
-      const complete = isGroupComplete(sessions);
-      if (filter === "all")       return true;
-      if (filter === "today")     return sessions.some(b => b.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(b.status || ""));
-      if (filter === "completed") return complete;
-      if (complete) return false;
-      if (filter === "cancelled") return sessions.every(b => b.status === "cancelled");
-      if (filter === "retornos") {
-        return sessions.some(b => (b.session_number ?? 1) > 1 && b.status === "confirmed");
-      }
-      return sessions.some(b => b.status === filter);
-    })
-    .map(([id]) => id);
-
-  const groups: Record<string, Booking[]> = {};
-  filteredGroupIds.forEach(id => { groups[id] = allGrouped[id]; });
-
-  const activeFilterCount = [
-    filterType !== "all",
-    !!filterDateFrom,
-    !!filterDateTo,
-    !!filterPlan,
-  ].filter(Boolean).length;
-
-  const groupEntries = Object.entries(groups)
-    .filter(([, sessions]) => {
-      const first = sessions[0];
-      const latest = [...sessions].sort((a, b) => (b.session_number ?? 0) - (a.session_number ?? 0))[0];
-      // Text search
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!first.client_name?.toLowerCase().includes(q) &&
-            !first.plan_name?.toLowerCase().includes(q) &&
-            !first.client_email?.toLowerCase().includes(q)) return false;
-      }
-      // Modalidade
-      if (filterType !== "all" && !sessions.some(s => s.type === filterType)) return false;
-      // Date from
-      if (filterDateFrom && latest.appointment_date < filterDateFrom) return false;
-      // Date to
-      if (filterDateTo && latest.appointment_date > filterDateTo) return false;
-      // Plan
-      if (filterPlan && first.plan_name !== filterPlan) return false;
-      return true;
-    })
-    .sort(([, a], [, b]) => {
-      const latestA = [...a].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
-      const latestB = [...b].sort((x, y) => (y.session_number ?? 0) - (x.session_number ?? 0))[0];
-      return new Date(latestB.appointment_date).getTime() - new Date(latestA.appointment_date).getTime();
-    });
-
-  // Detail — reutiliza allGrouped já calculado acima
-  const detailGroup = detail ? (allGrouped[detail] || []).sort((a, b) => a.session_number - b.session_number) : [];
-  const detailFirst = detailGroup[0];
-  const detailNotes: ClinicalNotes = (() => {
+  const detailNotes: BookingClinicalNotes = (() => {
     try { return JSON.parse(detailFirst?.notes || "{}"); } catch { return {}; }
   })();
-
-  const upcomingReturnSessions = Object.entries(allGrouped)
-    .flatMap(([groupId, sessions]) => {
-      const first = sessions[0];
-      return sessions
-        .filter(session => (session.session_number ?? 1) > 1 && session.status === "confirmed")
-        .map(session => ({
-          groupId,
-          first,
-          session,
-        }));
-    })
-    .sort((a, b) => {
-      const dateDiff = a.session.appointment_date.localeCompare(b.session.appointment_date);
-      if (dateDiff !== 0) return dateDiff;
-      return (a.session.appointment_time || "").localeCompare(b.session.appointment_time || "");
-    });
-
-  const todaySessions = Object.entries(allGrouped)
-    .flatMap(([groupId, sessions]) => {
-      const first = sessions[0];
-      return sessions
-        .filter(session => session.appointment_date === adminTodayISO && !["cancelled", "completed", "no_show"].includes(session.status || ""))
-        .map(session => ({ groupId, first, session }));
-    })
-    .sort((a, b) => (a.session.appointment_time || "").localeCompare(b.session.appointment_time || ""));
 
   return (
     <div className="space-y-5">
@@ -1015,2056 +678,315 @@ const AdminAgendamentos = () => {
         </Button>
       </div>
 
-      {/* Search + Filter */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar paciente, plano, email..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+      <BookingFiltersBar
+        filters={filters}
+        bookings={bookings}
+        counts={counts}
+      />
+
+      <BookingDashboardSummary
+        todaySessions={todaySessions}
+        upcomingReturnSessions={upcomingReturnSessions}
+        groupedBookings={allGrouped}
+        onOpenDetail={openDetail}
+        setFilter={filters.setFilter}
+      />
+
+      <BookingGroupsList
+        loading={loading}
+        groupEntries={groupEntries}
+        onOpenDetail={openDetail}
+      />
+
+      <BookingDetailModal
+        groupId={detail}
+        first={detailFirst}
+        sessions={detailGroup}
+        recordsCount={records.length}
+        activeTab={detailTab}
+        setActiveTab={setDetailTab}
+        creatingPatient={creatingPatient}
+        moreOpen={detailMoreOpen}
+        setMoreOpen={setDetailMoreOpen}
+        confirmDeleteGroup={confirmDeleteGroup}
+        deletingGroup={deletingGroup}
+        onClose={() => setDetail(null)}
+        onOpenPatient={patientId => navigate(`/admin/pacientes/${patientId}`)}
+        onCreatePatient={() => detailFirst && handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
+        onSendMaterial={() => {
+          if (!detailFirst) return;
+          setDetail(null);
+          setTimeout(() => openSendMaterial(detailFirst), 100);
+        }}
+        onRequestDelete={() => setConfirmDeleteGroup(detail)}
+        onCancelDelete={() => setConfirmDeleteGroup(null)}
+        onConfirmDelete={() => detail && handleDeleteGroup(detail)}
+        desktopPatientPanel={
+          detailFirst ? (
+            <BookingPatientPanel
+              variant="desktop"
+              booking={detailFirst}
+              notes={detailNotes}
+              editing={editingDetail}
+              saving={savingDetailEdit}
+              creatingPatient={creatingPatient}
+              editName={editDName}
+              setEditName={setEditDName}
+              editEmail={editDEmail}
+              setEditEmail={setEditDEmail}
+              editPhone={editDPhone}
+              setEditPhone={setEditDPhone}
+              editGoal={editDGoal}
+              setEditGoal={setEditDGoal}
+              editRestrictions={editDRestrictions}
+              setEditRestrictions={setEditDRestrictions}
+              editAllergies={editDAllergies}
+              setEditAllergies={setEditDAllergies}
+              editHealth={editDHealth}
+              setEditHealth={setEditDHealth}
+              editMeds={editDMeds}
+              setEditMeds={setEditDMeds}
+              editHadNutri={editDHadNutri}
+              setEditHadNutri={setEditDHadNutri}
+              editHowFound={editDHowFound}
+              setEditHowFound={setEditDHowFound}
+              editObs={editDObs}
+              setEditObs={setEditDObs}
+              onOpenEdit={() => openDetailEdit(detailFirst, detailNotes)}
+              onCancelEdit={() => setEditingDetail(false)}
+              onSaveEdit={handleSaveDetailEdit}
+              onOpenPatient={patientId => navigate(`/admin/pacientes/${patientId}`)}
+              onCreatePatient={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
             />
-          </div>
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
-              showFilters || activeFilterCount > 0
-                ? "border-primary/50 bg-primary/5 text-primary"
-                : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/30"
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filtros
-            {activeFilterCount > 0 && (
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Advanced filter panel */}
-        {showFilters && (
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Modalidade */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Modalidade</label>
-                <div className="flex gap-1.5">
-                  {(["all", "online", "presencial"] as const).map(t => (
-                    <button key={t} onClick={() => setFilterType(t)}
-                      className={`flex-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all ${
-                        filterType === t
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}>
-                      {t === "all" ? "Todos" : t === "online" ? "Online" : "Presencial"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Data de */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Data de</label>
-                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-                  className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-
-              {/* Data até */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Data até</label>
-                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-                  className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-            </div>
-
-            {/* Plano */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Plano</label>
-              <select value={filterPlan} onChange={e => setFilterPlan(e.target.value)}
-                className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <option value="">Todos os planos</option>
-                {[...new Set(bookings.map(b => b.plan_name).filter(Boolean))].sort().map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-
-            {activeFilterCount > 0 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => { setFilterType("all"); setFilterDateFrom(""); setFilterDateTo(""); setFilterPlan(""); }}
-                  className="text-xs text-muted-foreground hover:text-red-500 transition-colors flex items-center gap-1"
-                >
-                  <X className="h-3 w-3" /> Limpar filtros
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Underline Tabs */}
-      <div className="border-b border-border overflow-x-auto scrollbar-none">
-        <div className="flex gap-0 min-w-max">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setFilter(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium transition-all relative whitespace-nowrap ${
-                filter === t.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}>
-              {t.label}
-              <span className={`ml-1.5 text-xs ${filter === t.id ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
-                {counts[t.id]}
-              </span>
-              {filter === t.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Hoje</p>
-            <p className="text-sm text-muted-foreground">
-              {todaySessions.length === 0
-                ? "Nenhuma consulta ativa para hoje"
-                : `${todaySessions.length} consulta${todaySessions.length > 1 ? "s" : ""} ativa${todaySessions.length > 1 ? "s" : ""}`}
-            </p>
-          </div>
-          {todaySessions.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setFilter("today")} className="h-8 rounded-md">
-              Ver hoje
-            </Button>
-          )}
-        </div>
-
-        {todaySessions.length > 0 && (
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {todaySessions.slice(0, 6).map(({ groupId, first, session }) => (
-              <button
-                key={`${groupId}-${session.id}`}
-                onClick={() => openDetail(groupId)}
-                className="text-left rounded-lg border border-border bg-background/60 hover:bg-primary/5 hover:border-primary/30 transition-colors p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{first.plan_name}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-primary tabular-nums">{(session.appointment_time || "").substring(0, 5)}</span>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <StatusPill status={session.status || "pending"} />
-                  <PaymentPill status={PAYMENT_GROUP_STATUS(allGrouped[groupId] || [])} />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {upcomingReturnSessions.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Próximos retornos</p>
-              <p className="text-sm text-muted-foreground">
-                {upcomingReturnSessions.length} retorno{upcomingReturnSessions.length > 1 ? "s" : ""} já agendado{upcomingReturnSessions.length > 1 ? "s" : ""}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFilter("retornos")}
-              className="h-8 rounded-md"
-            >
-              Ver retornos
-            </Button>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {upcomingReturnSessions.slice(0, 6).map(({ groupId, first, session }) => {
-              const sessionLabel = session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`;
-              return (
-                <button
-                  key={`${groupId}-${session.id}`}
-                  onClick={() => openDetail(groupId)}
-                  className="text-left rounded-lg border border-border bg-background/60 hover:bg-primary/5 hover:border-primary/30 transition-colors p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{first.plan_name}</p>
-                    </div>
-                    <StatusPill status={session.status || "pending"} />
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <CalendarCheck className="h-3 w-3" />
-                      {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {(session.appointment_time || "").substring(0, 5)}
-                    </span>
-                    <span className="text-primary font-medium">{sessionLabel}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-        </div>
-      )}
-
-      {/* Table */}
-      {!loading && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {/* Table Header — hidden on mobile */}
-          <div className="hidden md:grid grid-cols-[1fr_180px_130px_130px_110px] gap-4 px-4 py-2.5 border-b border-border bg-muted/30">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Paciente</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Data / Hora</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Progresso</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Consulta</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Pagamento</span>
-          </div>
-
-          {groupEntries.length === 0 && (
-            <div className="py-14 text-center">
-              <CalendarCheck className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado.</p>
-            </div>
-          )}
-
-          {groupEntries.map(([groupId, sessions], idx) => {
-            const first = sessions[0];
-            // Sessão mais recente como referência de data/hora
-            const latestSession = [...sessions].sort((a, b) => (b.session_number ?? 0) - (a.session_number ?? 0))[0];
-            const completedCount = sessions.filter(s => s.status === "completed").length;
-            const totalSess = latestSession.total_sessions ?? 1;
-            const progress = Math.round((completedCount / totalSess) * 100);
-            const overallStatus = isGroupComplete(sessions) ? "completed"
-              : sessions.some(s => s.status === "confirmed") ? "confirmed"
-              : sessions.some(s => s.status === "no_show") ? "no_show"
-              : sessions.some(s => s.status === "cancelled") ? "cancelled" : "pending";
-            const paymentStatus = PAYMENT_GROUP_STATUS(sessions);
-
-            // Extrair goal das notas clínicas
-            const clinicalNotes: ClinicalNotes = (() => {
-              try { return JSON.parse(first.notes || "{}"); } catch { return {}; }
-            })();
-            const goalLabel = clinicalNotes.goal ? (GOAL_LABELS[clinicalNotes.goal] || clinicalNotes.goal) : null;
-
-            const borderColor = BORDER_COLOR[overallStatus] || "border-l-border";
-
-            return (
-              <div key={groupId}
-                onClick={() => openDetail(groupId)}
-                className={`border-l-[3px] ${borderColor} cursor-pointer hover:bg-muted/20 transition-colors ${idx !== groupEntries.length - 1 ? "border-b border-border" : ""}`}>
-
-                {/* Mobile layout (< md) */}
-                <div className="md:hidden flex items-center gap-3 px-4 py-3.5">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-muted-foreground">{initials(first.client_name)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {first.plan_name?.toLowerCase().includes("gratuita") && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">Gratuita</span>
-                        )}
-                        <StatusPill status={overallStatus} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="text-xs text-muted-foreground">{first.plan_name}</span>
-                      <span className="text-muted-foreground/30">·</span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
-                      </span>
-                      {totalSess > 1 && (
-                        <>
-                          <span className="text-muted-foreground/30">·</span>
-                          <span className="text-xs text-primary font-medium">
-                            {totalSess - 1} retorno{totalSess - 1 > 1 ? "s" : ""} no plano
-                          </span>
-                        </>
-                      )}
-                      <span className="text-muted-foreground/30">·</span>
-                      <PaymentPill status={paymentStatus} />
-                    </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <CalendarCheck className="h-3 w-3 text-muted-foreground/40" />
-                        {new Date(latestSession.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3 text-muted-foreground/40" />
-                        {(latestSession.appointment_time || "").substring(0, 5)}
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{totalSess}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Desktop layout (≥ md) */}
-                <div className="hidden md:grid grid-cols-[1fr_180px_130px_130px_110px] gap-4 items-center px-4 py-3.5">
-                  {/* Paciente */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-muted-foreground">{initials(first.client_name)}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-foreground truncate">{first.client_name}</p>
-                        {first.plan_name?.toLowerCase().includes("gratuita") && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">Gratuita</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {goalLabel && <><span className="text-xs text-muted-foreground">{goalLabel}</span><span className="text-muted-foreground/30">·</span></>}
-                        <span className="text-xs text-muted-foreground">{first.plan_name}</span>
-                        <span className="text-muted-foreground/30">·</span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          {first.type === "online" ? <><Globe className="h-3 w-3" />Online</> : <><MapPin className="h-3 w-3" />Presencial</>}
-                        </span>
-                        {totalSess > 1 && (
-                          <>
-                            <span className="text-muted-foreground/30">·</span>
-                            <span className="text-xs text-primary font-medium">
-                              {totalSess - 1} retorno{totalSess - 1 > 1 ? "s" : ""} no plano
-                            </span>
-                          </>
-                        )}
-                        <span className="text-muted-foreground/30">·</span>
-                        <PaymentPill status={paymentStatus} />
-                      </div>
-                    </div>
-                  </div>
-                  {/* Data / Hora */}
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1.5 text-xs text-foreground">
-                      <CalendarCheck className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                      {formatDate(latestSession.appointment_date)}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                      {(latestSession.appointment_time || "").substring(0, 5)}
-                    </div>
-                  </div>
-                  {/* Progresso */}
-                  <div className="space-y-1.5">
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground font-medium">{completedCount}/{totalSess}</p>
-                  </div>
-                  {/* Consulta */}
-                  <div><StatusPill status={overallStatus} /></div>
-                  {/* Pagamento */}
-                  <div><PaymentPill status={paymentStatus} /></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Detail Modal ── */}
-      {detail && detailFirst && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 bg-black/60 backdrop-blur-[2px]"
-          onClick={() => setDetail(null)}
-        >
-          <div
-            className="w-full md:max-w-4xl bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "88dvh", height: "88dvh" }}
-            onClick={e => e.stopPropagation()}
-          >
-
-            {/* ── Header ── */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary-foreground">{initials(detailFirst.client_name)}</span>
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-sm text-foreground leading-tight truncate">{detailFirst.client_name}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                  <span className="truncate max-w-[160px]">{detailFirst.plan_name}</span>
-                  <span className="opacity-30 shrink-0">·</span>
-                  <span className="flex items-center gap-1 shrink-0">
-                    {detailFirst.type === "online" ? <Globe className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
-                    {detailFirst.type === "online" ? "Online" : "Presencial"}
-                  </span>
-                  <span className="opacity-30 shrink-0">·</span>
-                  <span className="shrink-0">{detailGroup.length} {detailGroup.length === 1 ? "sessão" : "sessões"}</span>
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Consulta</span>
-                    <StatusPill status={groupStatus(detailGroup)} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Pagamento</span>
-                    <PaymentPill status={PAYMENT_GROUP_STATUS(detailGroup)} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                {detailFirst.patient_id ? (
-                  <button
-                    onClick={() => navigate(`/admin/pacientes/${detailFirst.patient_id}`)}
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all"
-                  >
-                    <LinkIcon className="h-3.5 w-3.5 shrink-0" />
-                    Prontuario
-                  </button>
-                ) : (
-                  <button
-                    disabled={creatingPatient === detailFirst.booking_group_id}
-                    onClick={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all disabled:opacity-50"
-                  >
-                    {creatingPatient === detailFirst.booking_group_id
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <UserPlus className="h-3.5 w-3.5 shrink-0" />}
-                    Cadastrar
-                  </button>
-                )}
-                <button
-                  onClick={() => { setDetail(null); setTimeout(() => openSendMaterial(detailFirst), 100); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
-                >
-                  <Send className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden sm:inline">Enviar material</span>
-                </button>
-                {detailMoreOpen && confirmDeleteGroup === detail ? (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900">
-                    <span className="text-xs text-red-600 dark:text-red-400 font-medium hidden sm:inline">Excluir?</span>
-                    <button
-                      onClick={() => handleDeleteGroup(detail!)}
-                      disabled={deletingGroup}
-                      className="text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded transition-colors disabled:opacity-40"
-                    >
-                      {deletingGroup ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Sim"}
-                    </button>
-                    <span className="text-red-300 text-xs">|</span>
-                    <button
-                      onClick={() => setConfirmDeleteGroup(null)}
-                      className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded transition-colors"
-                    >
-                      Não
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <button
-                      onClick={() => setDetailMoreOpen(v => !v)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                      title="Mais ações"
-                    >
-                      <ChevronDown className={`h-4 w-4 transition-transform ${detailMoreOpen ? "rotate-180" : ""}`} />
-                    </button>
-                  {detailMoreOpen && (
-                    <div className="absolute right-0 top-9 z-10 w-52 rounded-xl border border-border bg-background shadow-xl p-1">
-                      <button
-                        onClick={() => setConfirmDeleteGroup(detail)}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Excluir agendamento
-                      </button>
-                    </div>
-                  )}
-                  </div>
-                )}
-                <button
-                  onClick={() => { setDetail(null); setConfirmDeleteGroup(null); setDetailMoreOpen(false); }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* ── Body: sidebar + main panel ── */}
-            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-
-              {/* ── Sidebar ── */}
-              <div className="md:w-52 shrink-0 md:border-r border-border md:overflow-y-auto bg-muted/20">
-
-  
-                {/* Desktop: full vertical sidebar */}
-                <div className="hidden md:flex flex-col h-full">
-                  {editingDetail ? (
-                    /* ── EDIT MODE ── */
-                    <div className="flex flex-col h-full overflow-y-auto p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Editar dados</p>
-                        <button
-                          onClick={() => setEditingDetail(false)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Nome */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Nome</Label>
-                        <Input value={editDName} onChange={e => setEditDName(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      {/* Email */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Email</Label>
-                        <Input value={editDEmail} onChange={e => setEditDEmail(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      {/* Telefone */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Telefone</Label>
-                        <Input value={editDPhone} onChange={e => setEditDPhone(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      <div className="h-px bg-border/50" />
-
-                      {/* Objetivo */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Objetivo</Label>
-                        <select
-                          value={editDGoal}
-                          onChange={e => setEditDGoal(e.target.value)}
-                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">—</option>
-                          {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                      </div>
-
-                      {/* Restrições */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Restrições</Label>
-                        <select
-                          value={editDRestrictions}
-                          onChange={e => setEditDRestrictions(e.target.value)}
-                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">—</option>
-                          {Object.entries(RESTRICT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                      </div>
-
-                      {/* Alergias */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Alergias</Label>
-                        <Input value={editDAllergies} onChange={e => setEditDAllergies(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      {/* Condições de saúde */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Condições de saúde</Label>
-                        <Input value={editDHealth} onChange={e => setEditDHealth(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      {/* Medicamentos */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Medicamentos</Label>
-                        <Input value={editDMeds} onChange={e => setEditDMeds(e.target.value)} className="h-7 text-xs" />
-                      </div>
-
-                      {/* Acompanhamento anterior */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Acomp. anterior</Label>
-                        <select
-                          value={editDHadNutri}
-                          onChange={e => setEditDHadNutri(e.target.value)}
-                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">—</option>
-                          <option value="sim">Sim</option>
-                          <option value="nao">Não</option>
-                        </select>
-                      </div>
-
-                      {/* Como encontrou */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Como chegou</Label>
-                        <select
-                          value={editDHowFound}
-                          onChange={e => setEditDHowFound(e.target.value)}
-                          className="w-full h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">—</option>
-                          {Object.entries(FOUND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                      </div>
-
-                      {/* Observações */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Observações</Label>
-                        <textarea
-                          value={editDObs}
-                          onChange={e => setEditDObs(e.target.value)}
-                          rows={3}
-                          className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </div>
-
-                      {/* Botões */}
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={handleSaveDetailEdit}
-                          disabled={savingDetailEdit}
-                          className="flex-1 h-8 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                        >
-                          {savingDetailEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar"}
-                        </button>
-                        <button
-                          onClick={() => setEditingDetail(false)}
-                          disabled={savingDetailEdit}
-                          className="flex-1 h-8 rounded-lg border border-border text-muted-foreground text-xs font-medium hover:text-foreground hover:bg-muted transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* ── VIEW MODE ── */
-                    <div className="p-4 space-y-5 overflow-y-auto">
-                      {/* Contato */}
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
-                          <button
-                            onClick={() => openDetailEdit(detailFirst, detailNotes)}
-                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            title="Editar dados"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-px" />
-                            <span className="text-xs text-foreground break-all leading-snug">{detailFirst.client_email}</span>
-                          </div>
-                          {detailFirst.client_phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                              <span className="text-xs text-foreground">{detailFirst.client_phone}</span>
-                            </div>
-                          )}
-                          {detailNotes.birthDate && (
-                            <div className="flex items-center gap-2">
-                              <Cake className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                              <span className="text-xs text-foreground">
-                                {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
-                                {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
-                              </span>
-                            </div>
-                          )}
-                          {/* CPF + patient link */}
-                          {detailFirst.client_cpf && (
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                              <span className="text-xs text-foreground font-mono">
-                                {detailFirst.client_cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
-                              </span>
-                            </div>
-                          )}
-                          {detailFirst.patient_id ? (
-                            <button
-                              onClick={() => navigate(`/admin/pacientes/${detailFirst.patient_id}`)}
-                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-semibold hover:bg-primary/20 transition-colors"
-                            >
-                              <LinkIcon className="h-3.5 w-3.5" />
-                              Ver prontuário do paciente
-                            </button>
-                          ) : (
-                            <button
-                              disabled={creatingPatient === detailFirst.booking_group_id}
-                              onClick={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
-                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-                            >
-                              {creatingPatient === detailFirst.booking_group_id
-                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                : <UserPlus className="h-3.5 w-3.5" />}
-                              Cadastrar paciente no sistema
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Ficha Clínica */}
-                      {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
-                        detailNotes.healthConditions || detailNotes.medications ||
-                        detailNotes.hadNutritionist || detailNotes.howFound) && (
-                        <div className="space-y-2.5">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
-                          <div className="space-y-2.5">
-                            {[
-                              { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
-                              { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
-                              { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
-                              { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
-                              { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
-                              { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
-                              { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
-                            ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
-                              <div key={label}>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1 mb-0.5">
-                                  <Icon className="h-2.5 w-2.5" />{label}
-                                </p>
-                                <p className="text-xs font-medium text-foreground leading-snug pl-3.5">{val}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Right panel ── */}
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-
-                {/* Tabs */}
-                <div className="flex border-b border-border shrink-0 px-5">
-                  {([
-                    { id: "sessions" as const, label: "Sessões",    count: detailGroup.length, mobileOnly: false },
-                    { id: "records"  as const, label: "Prontuário", count: records.length,     mobileOnly: false },
-                    { id: "dados"    as const, label: "Paciente",   count: 0,                  mobileOnly: true  },
-                  ]).map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setDetailTab(tab.id)}
-                      className={`relative py-3 mr-5 text-sm font-medium transition-colors shrink-0 ${tab.mobileOnly ? "md:hidden" : ""} ${
-                        detailTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab.label}
-                      {tab.count > 0 && (
-                        <span className="ml-1.5 text-muted-foreground/60 text-xs">{tab.count}</span>
-                      )}
-                      {detailTab === tab.id && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── SESSIONS TAB ── */}
-                {detailTab === "sessions" && (
-                  <div className="flex-1 overflow-y-auto divide-y divide-border/40">
-                    {detailGroup.map((session) => {
-                      const isActive = session.status === "confirmed" || session.status === "pending";
-                      const isConfirming = confirmAction?.id === session.id;
-                      const dotColor =
-                        session.status === "completed" ? "bg-emerald-400" :
-                        session.status === "confirmed"  ? "bg-blue-400" :
-                        session.status === "no_show"    ? "bg-orange-400" :
-                        session.status === "cancelled"  ? "bg-red-400" : "bg-amber-400";
-                      const sessionLabel = session.session_number === 1 ? "Consulta inicial" : `Retorno ${session.session_number - 1}`;
-
-                      return (
-                        <div key={session.id} className={`transition-colors ${isActive ? "hover:bg-muted/20" : "opacity-50"}`}>
-                          <div className="flex items-start gap-3 px-5 py-3.5">
-
-                            {/* Dot */}
-                            <span className={`w-2 h-2 rounded-full shrink-0 mt-[5px] ${dotColor}`} />
-
-                            {/* Info block — takes available space */}
-                            <div className="flex-1 min-w-0">
-
-                              {/* Row 1: label + date + time + status */}
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <span className="text-sm font-medium text-foreground shrink-0">{sessionLabel}</span>
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums shrink-0">
-                                  <CalendarCheck className="h-3 w-3 text-muted-foreground/40" />
-                                  {new Date(session.appointment_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                                </span>
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums shrink-0">
-                                  <Clock className="h-3 w-3 text-muted-foreground/40" />
-                                  {(session.appointment_time || "").substring(0, 5)}
-                                </span>
-                                <div className="shrink-0">
-                                  <StatusPill status={session.status || "pending"} />
-                                </div>
-                              </div>
-
-                              {/* Row 2: actions */}
-                              {isActive && !isConfirming && (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                                  <button
-                                    onClick={() => { setDetail(null); setTimeout(() => openReschedule(session), 100); }}
-                                    className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
-                                  >Realocar</button>
-                                  <span className="text-border text-xs">·</span>
-                                  <button
-                                    disabled={updating === session.id}
-                                    onClick={() => { setDetail(null); setTimeout(() => openComplete(session), 100); }}
-                                    className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:opacity-40"
-                                  >Concluir</button>
-                                  <span className="text-border text-xs">·</span>
-                                  <button
-                                    disabled={updating === session.id}
-                                    onClick={() => setConfirmAction({ id: session.id!, status: "no_show" })}
-                                    className="text-xs text-muted-foreground hover:text-orange-500 font-medium transition-colors"
-                                  >Faltou</button>
-                                  <span className="text-border text-xs">·</span>
-                                  <button
-                                    disabled={updating === session.id}
-                                    onClick={() => setConfirmAction({ id: session.id!, status: "cancelled" })}
-                                    className="text-xs text-muted-foreground hover:text-red-500 font-medium transition-colors"
-                                  >Cancelar</button>
-                                </div>
-                              )}
-
-                              {/* Confirm no_show */}
-                              {isConfirming && confirmAction!.status === "no_show" && (
-                                <div className="flex items-center gap-2 mt-1.5 text-xs">
-                                  <span className="text-muted-foreground">Marcar falta?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "no_show"); setConfirmAction(null); }} className="font-semibold text-orange-500 hover:text-orange-600">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
-                                </div>
-                              )}
-
-                              {/* Confirm cancel */}
-                              {isConfirming && confirmAction!.status === "cancelled" && (
-                                <div className="flex items-center gap-2 mt-1.5 text-xs">
-                                  <span className="text-muted-foreground">Cancelar sessão?</span>
-                                  <button onClick={() => { handleStatus(session.id!, "cancelled"); setConfirmAction(null); }} className="font-semibold text-red-500 hover:text-red-600">Sim</button>
-                                  <button onClick={() => setConfirmAction(null)} className="text-muted-foreground hover:text-foreground">Não</button>
-                                </div>
-                              )}
-
-                              {/* Completed badge */}
-                              {session.status === "completed" && (
-                                <span className="flex items-center gap-1 mt-1.5 text-xs text-emerald-600 font-medium">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />Realizada
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* ── PRONTUÁRIO TAB ── */}
-                {detailTab === "records" && (
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {loadingRecords ? (
-                      <div className="flex items-center justify-center py-16">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
-                      </div>
-                    ) : records.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
-                          <FileText className="h-5 w-5 text-muted-foreground/30" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground">Sem prontuários</p>
-                        <p className="text-xs text-muted-foreground mt-1">Conclua uma sessão para criar o primeiro registro.</p>
-                      </div>
-                    ) : (
-                      records.map(rec => {
-                        const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
-                        const isEditing = editingRecordId === rec.id;
-                        const isConfirmingDelete = confirmDeleteId === rec.id;
-                        const sessionLabel = rec.session_number === 1 ? "Consulta inicial" : rec.session_number ? `Retorno ${rec.session_number - 1}` : "Consulta";
-                        return (
-                          <div key={rec.id} className="rounded-lg border border-border overflow-hidden">
-
-                            {/* ── Compact card (view mode) — click to open detail ── */}
-                            {!isEditing && !isConfirmingDelete && (
-                              <button
-                                onClick={() => setViewRecord(rec)}
-                                className="w-full text-left hover:bg-muted/30 transition-colors group"
-                              >
-                                <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                                  <div className="flex items-center gap-2.5 flex-wrap">
-                                    <span className="text-xs font-semibold text-foreground">{sessionLabel}</span>
-                                    <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-                                      {new Date(rec.created_at!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                                    </span>
-                                    {rec.weight && (
-                                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                        <Scale className="h-2.5 w-2.5" />{rec.weight} kg
-                                        {bmi && <><span className="mx-0.5 opacity-40">·</span>IMC {bmi}</>}
-                                      </span>
-                                    )}
-                                    {rec.files && rec.files.length > 0 && (
-                                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                        <Paperclip className="h-2.5 w-2.5" />{rec.files.length}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                                    <button onClick={() => openEditRecord(rec)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Pencil className="h-3 w-3" /></button>
-                                    <button onClick={() => { setConfirmDeleteId(rec.id!); setEditingRecordId(null); }} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="h-3 w-3" /></button>
-                                  </div>
-                                </div>
-                                <div className="px-4 py-3">
-                                  {rec.notes ? (
-                                    <p className="text-xs text-foreground/70 leading-relaxed line-clamp-2">{rec.notes}</p>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground/40 italic">Sem observações — clique para ver detalhes</p>
-                                  )}
-                                  {rec.next_return_date && (
-                                    <p className="flex items-center gap-1 text-[10px] text-primary font-medium mt-1.5">
-                                      <ArrowRight className="h-2.5 w-2.5" />
-                                      Retorno em {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
-                            )}
-
-                            {/* Confirm delete */}
-                            {isConfirmingDelete && !isEditing && (
-                              <div className="flex items-center justify-between px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-semibold text-foreground">{sessionLabel}</span>
-                                  <span className="text-xs text-muted-foreground">Excluir este registro?</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <button onClick={() => handleDeleteRecord(rec.id!)} className="font-semibold text-red-500 hover:text-red-600">Sim</button>
-                                  <button onClick={() => setConfirmDeleteId(null)} className="text-muted-foreground hover:text-foreground">Não</button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Edit mode */}
-                            {isEditing && (
-                              <div className="px-4 py-4 space-y-3">
-                                <p className="text-xs font-semibold text-foreground">{sessionLabel}</p>
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">Observações</label>
-                                  <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40" placeholder="Observações da consulta…" />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">Próximos passos</label>
-                                  <textarea value={editNextSteps} onChange={e => setEditNextSteps(e.target.value)} rows={2} className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40" placeholder="Encaminhamentos, plano alimentar enviado…" />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">Próximo retorno</label>
-                                  <input type="date" value={editNextReturn} onChange={e => setEditNextReturn(e.target.value)} className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                </div>
-
-                                {/* Files */}
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <label className="text-xs font-medium text-muted-foreground">Arquivos</label>
-                                    <label className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/70 cursor-pointer transition-colors">
-                                      <Paperclip className="h-3 w-3" />Anexar
-                                      <input type="file" multiple className="hidden"
-                                        accept=".pdf,.xlsx,.xls,.csv,.docx,.doc,.png,.jpg,.jpeg"
-                                        onChange={e => {
-                                          const picked = Array.from(e.target.files || []);
-                                          e.target.value = "";
-                                          if (!picked.length) return;
-                                          const total = [...editFiles, ...editNewFiles, ...picked].reduce((acc, f) => acc + ("size" in f ? (f as File).size : 0), 0);
-                                          if (total > 20 * 1024 * 1024) { toast({ title: "Limite de 20 MB excedido", variant: "destructive" }); return; }
-                                          setEditNewFiles(prev => [...prev, ...picked]);
-                                        }}
-                                      />
-                                    </label>
-                                  </div>
-
-                                  {/* Existing files */}
-                                  {editFiles.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                      {editFiles.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted border border-border/50 text-xs text-foreground/80 max-w-full">
-                                          <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
-                                          <a href={f.url} target="_blank" rel="noopener noreferrer" className="truncate max-w-[140px] hover:underline">{f.name}</a>
-                                          <button onClick={() => setEditFiles(prev => prev.filter((_, idx) => idx !== i))} className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors shrink-0">
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* New files to upload */}
-                                  {editNewFiles.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                      {editNewFiles.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-primary/5 border border-primary/20 text-xs text-foreground/80 max-w-full">
-                                          <Paperclip className="h-3 w-3 text-primary shrink-0" />
-                                          <span className="truncate max-w-[140px]">{f.name}</span>
-                                          <span className="text-muted-foreground shrink-0">{formatBytes(f.size)}</span>
-                                          <button onClick={() => setEditNewFiles(prev => prev.filter((_, idx) => idx !== i))} className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors shrink-0">
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {editFiles.length === 0 && editNewFiles.length === 0 && (
-                                    <p className="text-xs text-muted-foreground/50">Nenhum arquivo anexado.</p>
-                                  )}
-                                </div>
-
-                                <div className="flex gap-2 pt-1">
-                                  <Button variant="outline" size="sm" className="flex-1 h-9 rounded-md text-xs" onClick={() => setEditingRecordId(null)} disabled={savingEdit}>Cancelar</Button>
-                                  <Button size="sm" className="flex-1 h-9 rounded-md text-xs gap-1.5" onClick={handleSaveEdit} disabled={savingEdit}>
-                                    {savingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : null}Salvar alterações
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-
-                {/* ── DADOS TAB (mobile only) ── */}
-                {detailTab === "dados" && (
-                  <div className="flex-1 overflow-y-auto md:hidden">
-                    {editingDetail ? (
-                      /* EDIT MODE */
-                      <div className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Editar dados</p>
-                          <button onClick={() => setEditingDetail(false)} className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Nome</Label>
-                          <Input value={editDName} onChange={e => setEditDName(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Email</Label>
-                          <Input value={editDEmail} onChange={e => setEditDEmail(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Telefone</Label>
-                          <Input value={editDPhone} onChange={e => setEditDPhone(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="h-px bg-border/50" />
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Objetivo</Label>
-                          <select value={editDGoal} onChange={e => setEditDGoal(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
-                            <option value="">—</option>
-                            {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Restrições</Label>
-                          <select value={editDRestrictions} onChange={e => setEditDRestrictions(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
-                            <option value="">—</option>
-                            {Object.entries(RESTRICT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Alergias</Label>
-                          <Input value={editDAllergies} onChange={e => setEditDAllergies(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Condições de saúde</Label>
-                          <Input value={editDHealth} onChange={e => setEditDHealth(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Medicamentos</Label>
-                          <Input value={editDMeds} onChange={e => setEditDMeds(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Acomp. anterior</Label>
-                          <select value={editDHadNutri} onChange={e => setEditDHadNutri(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
-                            <option value="">—</option>
-                            <option value="sim">Sim</option>
-                            <option value="nao">Não</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Como chegou</Label>
-                          <select value={editDHowFound} onChange={e => setEditDHowFound(e.target.value)} className="w-full h-9 text-sm rounded-md border border-input bg-background px-2 text-foreground focus:outline-none">
-                            <option value="">—</option>
-                            {Object.entries(FOUND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Observações</Label>
-                          <textarea value={editDObs} onChange={e => setEditDObs(e.target.value)} rows={3} className="w-full text-sm rounded-md border border-input bg-background px-3 py-2 text-foreground resize-none focus:outline-none" />
-                        </div>
-                        <div className="flex gap-2 pt-1 pb-4">
-                          <button onClick={handleSaveDetailEdit} disabled={savingDetailEdit}
-                            className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
-                            {savingDetailEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
-                          </button>
-                          <button onClick={() => setEditingDetail(false)} disabled={savingDetailEdit}
-                            className="flex-1 h-10 rounded-lg border border-border text-muted-foreground text-sm hover:bg-muted transition-colors">
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* VIEW MODE */
-                      <div className="p-4 space-y-5">
-                        {/* Contato */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Contato</p>
-                            <button onClick={() => openDetailEdit(detailFirst, detailNotes)}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2.5 py-1 hover:bg-muted transition-colors">
-                              <Pencil className="h-3 w-3" />Editar
-                            </button>
-                          </div>
-                          <div className="bg-muted/30 rounded-lg p-3 space-y-2.5">
-                            {detailFirst.client_email && (
-                              <div className="flex items-start gap-2.5">
-                                <Mail className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-px" />
-                                <span className="text-sm text-foreground break-all">{detailFirst.client_email}</span>
-                              </div>
-                            )}
-                            {detailFirst.client_phone && (
-                              <div className="flex items-center gap-2.5">
-                                <Phone className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                                <span className="text-sm text-foreground">{detailFirst.client_phone}</span>
-                              </div>
-                            )}
-                            {detailNotes.birthDate && (
-                              <div className="flex items-center gap-2.5">
-                                <Cake className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                                <span className="text-sm text-foreground">
-                                  {new Date(detailNotes.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
-                                  {detailNotes.sex && <span className="text-muted-foreground"> · {detailNotes.sex}</span>}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Ficha Clínica */}
-                        {(detailNotes.goal || detailNotes.restrictions || detailNotes.allergies ||
-                          detailNotes.healthConditions || detailNotes.medications ||
-                          detailNotes.hadNutritionist || detailNotes.howFound) && (
-                          <div className="space-y-3">
-                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Ficha Clínica</p>
-                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
-                              {[
-                                { icon: Target,     label: "Objetivo",     val: GOAL_LABELS[detailNotes.goal!] || detailNotes.goal },
-                                { icon: Salad,      label: "Restrições",   val: RESTRICT_LABELS[detailNotes.restrictions!] || detailNotes.restrictions },
-                                { icon: HelpCircle, label: "Alergias",     val: detailNotes.allergies },
-                                { icon: Heart,      label: "Condições",    val: detailNotes.healthConditions },
-                                { icon: Pill,       label: "Medicamentos", val: detailNotes.medications },
-                                { icon: User,       label: "Acomp. ant.",  val: detailNotes.hadNutritionist === "sim" ? "Sim" : detailNotes.hadNutritionist ? "Não" : null },
-                                { icon: HelpCircle, label: "Como chegou",  val: FOUND_LABELS[detailNotes.howFound!] || detailNotes.howFound },
-                              ].filter(r => r.val).map(({ icon: Icon, label, val }) => (
-                                <div key={label} className="flex items-start gap-2.5">
-                                  <Icon className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-px" />
-                                  <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">{label}</p>
-                                    <p className="text-sm text-foreground leading-snug mt-0.5">{val}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Record Detail Modal ── */}
-      {viewRecord && (() => {
-        const rec = viewRecord;
-        const bmi = rec.weight && rec.height ? calcBMI(rec.weight, rec.height) : null;
-        const sessionLabel = rec.session_number === 1 ? "Consulta inicial" : rec.session_number ? `Retorno ${rec.session_number - 1}` : "Consulta";
-        return (
-          <div
-            className="fixed inset-0 z-[70] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]"
-            onClick={() => setViewRecord(null)}
-          >
-            <div
-              className="bg-background rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-lg flex flex-col max-h-[92svh] md:max-h-[88vh] overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <FileText className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground">{sessionLabel}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {rec.client_name && <><span className="font-medium text-foreground/80">{rec.client_name}</span><span className="mx-1.5 opacity-30">·</span></>}
-                    {new Date(rec.created_at!).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => { setViewRecord(null); setTimeout(() => openEditRecord(rec), 80); }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title="Editar"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => { setViewRecord(null); setTimeout(() => setConfirmDeleteId(rec.id!), 80); }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setViewRecord(null)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors ml-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-
-                {/* Observações */}
-                {rec.notes && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Observações da consulta</p>
-                    <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap">{rec.notes}</p>
-                  </div>
-                )}
-
-                {/* Próximos passos */}
-                {rec.next_steps && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Próximos passos</p>
-                    <div className="border-l-2 border-primary/30 pl-3">
-                      <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap">{rec.next_steps}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Próximo retorno */}
-                {rec.next_return_date && (
-                  <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-lg bg-primary/5 border border-primary/20">
-                    <CalendarCheck className="h-4 w-4 text-primary shrink-0" />
-                    <div>
-                      <p className="text-[10px] text-primary/60 font-medium">Próximo retorno agendado</p>
-                      <p className="text-sm font-semibold text-primary mt-0.5">
-                        {new Date(rec.next_return_date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Arquivos */}
-                {rec.files && rec.files.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
-                      Arquivos <span className="normal-case font-normal tracking-normal text-muted-foreground/30">({rec.files.length})</span>
-                    </p>
-                    <div className="flex flex-col gap-1.5">
-                      {rec.files.map((f, i) => (
-                        <a
-                          key={i}
-                          href={f.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 hover:border-border text-sm text-foreground/80 hover:text-foreground transition-all group/file"
-                        >
-                          <Paperclip className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 group-hover/file:text-primary transition-colors" />
-                          <span className="flex-1 truncate font-medium">{f.name}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground/30 shrink-0 group-hover/file:text-primary transition-colors" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {!rec.notes && !rec.next_steps && !rec.next_return_date && (!rec.files || rec.files.length === 0) && !rec.weight && !rec.height && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileText className="h-8 w-8 text-muted-foreground/20 mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhuma informação registrada neste prontuário.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-5 py-4 border-t border-border shrink-0">
-                <Button
-                  className="w-full h-9 rounded-lg text-sm gap-2"
-                  onClick={() => { setViewRecord(null); setTimeout(() => openEditRecord(rec), 80); }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Editar prontuário
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Completion Modal ── */}
-      {completing && (
-        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg flex flex-col" style={{ maxHeight: "90dvh" }}>
-
-            {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">{initials(completing.client_name)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{completing.client_name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDate(completing.appointment_date)}
-                  <span className="mx-1.5 opacity-30">·</span>
-                  {(completing.appointment_time || "").substring(0, 5)}
-                  <span className="mx-1.5 opacity-30">·</span>
-                  {completing.session_number === 1 ? "Consulta inicial" : `Retorno ${completing.session_number - 1}`}
-                </p>
-              </div>
-              <button onClick={() => setCompleting(null)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-
-              {/* Observações */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Observações da consulta</label>
-                <textarea value={compNotes} onChange={e => setCompNotes(e.target.value)} rows={4}
-                  placeholder="O que foi discutido, avaliações realizadas, condutas adotadas..."
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/30" />
-              </div>
-
-              {/* Próximos passos */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Próximos passos</label>
-                <textarea value={compNextSteps} onChange={e => setCompNextSteps(e.target.value)} rows={3}
-                  placeholder="Plano alimentar enviado, retorno em 30 dias, exames solicitados..."
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/30" />
-              </div>
-
-              {/* Próximo retorno — só aparece se não for a última sessão */}
-              {(() => {
-                const isLast = (completing?.session_number ?? 1) >= (completing?.total_sessions ?? 1);
-                if (isLast) return (
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary/5 border border-primary/20">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <p className="text-xs text-primary font-medium">
-                      Último retorno do plano — nenhum novo agendamento será criado.
-                    </p>
-                  </div>
-                );
-                return null;
-              })()}
-              {(completing?.session_number ?? 1) < (completing?.total_sessions ?? 1) && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                    Próximo retorno <span className="normal-case font-normal tracking-normal">(opcional — {((completing?.total_sessions ?? 1) - (completing?.session_number ?? 1))} restante{((completing?.total_sessions ?? 1) - (completing?.session_number ?? 1)) > 1 ? "s" : ""})</span>
-                  </label>
-                  {compNextReturn && (
-                    <button onClick={() => { setCompNextReturn(""); setCompNextReturnTime(""); }}
-                      className="text-[10px] text-muted-foreground hover:text-red-500 transition-colors flex items-center gap-1">
-                      <X className="h-2.5 w-2.5" /> Limpar
-                    </button>
-                  )}
-                </div>
-
-                {/* Tipo de retorno */}
-                <div className="flex gap-1.5">
-                  {(["online", "presencial"] as const).map(t => (
-                    <button key={t} onClick={() => { setReturnType(t); setCompNextReturn(""); setCompNextReturnTime(""); }}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                        returnType === t
-                          ? t === "online"
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}>
-                      {t === "online" ? <Globe className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-                      {t === "online" ? "Online" : "Presencial"}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Seletor de cidade (presencial) */}
-                {returnType === "presencial" && (
-                  <select
-                    value={returnCity}
-                    onChange={e => { setReturnCity(e.target.value); setCompNextReturn(""); setCompNextReturnTime(""); }}
-                    className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                )}
-
-                {loadingReturnSlots ? (
-                  <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
-                ) : (() => {
-                  const sessionType = returnType;
-                  const firstDay = new Date(returnCalYear, returnCalMonth, 1).getDay();
-                  const daysInMonth = new Date(returnCalYear, returnCalMonth + 1, 0).getDate();
-                  const todayISO = toLocalISO(new Date());
-                  const returnTimes = compNextReturn ? getReturnTimesForDate(compNextReturn, sessionType) : [];
-
-                  return (
-                    <div className="border border-border rounded-xl overflow-hidden">
-                      {/* Cabeçalho do calendário */}
-                      {(() => {
-                        const now = new Date();
-                        const isCurrentMonth = returnCalYear === now.getFullYear() && returnCalMonth === now.getMonth();
-                        return (
-                          <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
-                            <button
-                              disabled={isCurrentMonth}
-                              onClick={() => { if (returnCalMonth === 0) { setReturnCalYear(y => y - 1); setReturnCalMonth(11); } else setReturnCalMonth(m => m - 1); }}
-                              className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
-                              <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
-                            <span className="text-xs font-semibold">{MONTHS_PT[returnCalMonth]} {returnCalYear}</span>
-                            <button onClick={() => { if (returnCalMonth === 11) { setReturnCalYear(y => y + 1); setReturnCalMonth(0); } else setReturnCalMonth(m => m + 1); }}
-                              className="p-1 rounded hover:bg-muted transition-colors">
-                              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Dias da semana */}
-                      <div className="grid grid-cols-7 border-b border-border">
-                        {["D","S","T","Q","Q","S","S"].map((d, i) => (
-                          <div key={i} className="text-center text-[10px] text-muted-foreground py-1.5">{d}</div>
-                        ))}
-                      </div>
-
-                      {/* Dias */}
-                      <div className="grid grid-cols-7 gap-px bg-border p-px">
-                        {Array(firstDay).fill(null).map((_, i) => (
-                          <div key={`e${i}`} className="bg-background h-8" />
-                        ))}
-                        {Array(daysInMonth).fill(null).map((_, i) => {
-                          const day = i + 1;
-                          const date = new Date(returnCalYear, returnCalMonth, day);
-                          const dateISO = `${returnCalYear}-${String(returnCalMonth + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-                          const canSelect = canSelectReturnDate(date, sessionType);
-                          const isSelected = compNextReturn === dateISO;
-                          const isToday = dateISO === todayISO;
-                          return (
-                            <button key={day} disabled={!canSelect}
-                              onClick={() => handleReturnDateSelect(dateISO, sessionType)}
-                              className={`bg-background h-8 text-xs font-medium transition-all ${
-                                !canSelect ? "text-muted-foreground/20 cursor-not-allowed" :
-                                isSelected ? "bg-primary text-primary-foreground font-bold" :
-                                isToday ? "text-primary font-bold hover:bg-primary/10" :
-                                "text-foreground hover:bg-muted"
-                              }`}>
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Horários disponíveis */}
-                      {compNextReturn && (
-                        <div className="border-t border-border p-3 space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                            Horários — {new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short" })}
-                          </p>
-                          {returnTimes.length === 0 ? (
-                            <p className="text-xs text-muted-foreground/60">Sem horários disponíveis nesta data.</p>
-                          ) : (
-                            <div className="flex flex-wrap gap-1.5">
-                              {returnTimes.map(time => {
-                                const isBooked = returnBookedTimes.includes(time);
-                                const isSelected = compNextReturnTime === time;
-                                return (
-                                  <button key={time} disabled={isBooked}
-                                    onClick={() => !isBooked && setCompNextReturnTime(time)}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
-                                      isBooked ? "bg-muted/30 border-border/40 text-muted-foreground/30 cursor-not-allowed line-through" :
-                                      isSelected ? "bg-primary text-primary-foreground border-primary" :
-                                      "bg-background border-border hover:border-primary/50"
-                                    }`}>
-                                    {time}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Resumo selecionado */}
-                      {compNextReturn && compNextReturnTime && (
-                        <div className="border-t border-border px-3 py-2 bg-primary/5 flex items-center justify-between">
-                          <span className="text-xs font-medium text-primary">
-                            {new Date(compNextReturn + "T12:00:00").toLocaleDateString("pt-BR")} às {compNextReturnTime}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground capitalize">
-                            {returnType === "presencial" ? `Presencial · ${returnCity}` : "Online"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-              )}
-
-              {/* Arquivos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                    Arquivos <span className="normal-case font-normal tracking-normal">(opcional)</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-                    <Paperclip className="h-3 w-3" />Anexar
-                    <input type="file" multiple className="hidden" accept=".pdf,.xlsx,.xls,.csv,.docx,.doc,.png,.jpg,.jpeg"
-                      onChange={e => {
-                        const picked = Array.from(e.target.files || []);
-                        e.target.value = "";
-                        if (!picked.length) return;
-                        const total = [...compFiles, ...picked].reduce((acc, f) => acc + f.size, 0);
-                        if (total > 20 * 1024 * 1024) { toast({ title: "Limite de 20 MB excedido", variant: "destructive" }); return; }
-                        setCompFiles(prev => [...prev, ...picked]);
-                      }} />
-                  </label>
-                </div>
-                {compFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {compFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted border border-border/50 text-xs text-foreground/80">
-                        <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="truncate max-w-[140px]">{f.name}</span>
-                        <span className="text-muted-foreground shrink-0">{formatBytes(f.size)}</span>
-                        <button onClick={() => setCompFiles(prev => prev.filter((_, idx) => idx !== i))} className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors"><X className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex gap-2 px-6 py-4 border-t border-border shrink-0">
-              <Button variant="outline" className="flex-1 h-9 rounded-md text-sm" onClick={() => setCompleting(null)} disabled={savingRecord}>Cancelar</Button>
-              <Button className="flex-1 h-9 rounded-md text-sm gap-2" onClick={handleSaveRecord} disabled={savingRecord}>
-                {savingRecord ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-                Salvar prontuário
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Send Material Modal ── */}
-      {sendTarget && (
-        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-black/60 backdrop-blur-[2px]">
-          <div className="bg-background rounded-t-2xl md:rounded-xl border border-border shadow-2xl w-full md:max-w-lg max-h-[92svh] md:max-h-[90vh] flex flex-col">
-
-            {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">{initials(sendTarget.client_name)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{sendTarget.client_name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{sendTarget.client_email}</p>
-              </div>
-              <button onClick={() => setSendTarget(null)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Assunto</label>
-                <input type="text" value={sendSubject} onChange={e => setSendSubject(e.target.value)}
-                  placeholder="Ex: Seu protocolo alimentar personalizado"
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Mensagem</label>
-                <textarea value={sendBody} onChange={e => setSendBody(e.target.value)} rows={5}
-                  placeholder={`Olá, ${sendTarget.client_name.split(" ")[0]}!\n\nSegue em anexo o seu protocolo alimentar...`}
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/30" />
-              </div>
-
-              {/* Anexos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Anexos</label>
-                  {sendFiles.length > 0 && (
-                    <span className="text-xs text-muted-foreground tabular-nums">{formatBytes(sendFiles.reduce((a, f) => a + f.size, 0))} / 10 MB</span>
-                  )}
-                </div>
-
-                {sendFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {sendFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted border border-border/50 text-xs text-foreground/80">
-                        <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="truncate max-w-[160px]">{f.name}</span>
-                        <span className="text-muted-foreground shrink-0">{formatBytes(f.size)}</span>
-                        <button onClick={() => setSendFiles(prev => prev.filter((_, idx) => idx !== i))} className="ml-0.5 text-muted-foreground hover:text-red-500 transition-colors"><X className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <label className="flex items-center gap-2 px-4 py-3 rounded-md border border-dashed border-border hover:border-primary/40 hover:bg-muted/30 cursor-pointer transition-colors group">
-                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
-                  <span className="text-xs text-muted-foreground/70 group-hover:text-foreground transition-colors">
-                    Adicionar arquivo — PDF, DOCX, XLSX, imagem (máx. 10 MB)
-                  </span>
-                  <input type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.zip" onChange={handleAddFiles} />
-                </label>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex gap-2 px-6 py-4 border-t border-border shrink-0">
-              <Button variant="outline" className="flex-1 h-9 rounded-md text-sm" onClick={() => setSendTarget(null)} disabled={sending}>Cancelar</Button>
-              <Button className="flex-1 h-9 rounded-md text-sm gap-2" onClick={handleSendMaterial} disabled={sending || !sendSubject.trim() || !sendBody.trim()}>
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Enviar email
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Reschedule Modal ── */}
-      {reschedule && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-card rounded-lg border border-border shadow-2xl w-full max-w-md">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-4 w-4 text-primary" />
-                <h2 className="font-semibold text-sm">Realocar consulta</h2>
-              </div>
-              <button onClick={() => setReschedule(null)} className="w-7 h-7 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Patient strip */}
-            <div className="px-6 py-3 bg-muted/20 border-b border-border">
-              <p className="text-sm font-medium text-foreground">{reschedule.client_name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{reschedule.plan_name} · {reschedule.client_email}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Atual: <span className="font-medium text-foreground">{formatDate(reschedule.appointment_date)} às {(reschedule.appointment_time || "").substring(0, 5)}</span>
-              </p>
-            </div>
-
-            <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Nova data</label>
-                  <input type="date" value={newDate} min={new Date().toISOString().split("T")[0]}
-                    onChange={e => setNewDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Novo horário</label>
-                  <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">
-                  Mensagem ao paciente <span className="opacity-50">(opcional)</span>
-                </label>
-                <textarea value={rescheduleMsg} onChange={e => setRescheduleMsg(e.target.value)} rows={3}
-                  placeholder="Ex: Precisamos reagendar devido a um imprevisto..."
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/40" />
-              </div>
-              <p className="text-xs text-muted-foreground bg-muted/30 border border-border/50 rounded-md px-3 py-2">
-                Um email será enviado automaticamente ao paciente.
-              </p>
-            </div>
-
-            <div className="flex gap-2 px-6 pb-5">
-              <Button variant="outline" className="flex-1 rounded-md" onClick={() => setReschedule(null)} disabled={rescheduling}>
-                Cancelar
-              </Button>
-              <Button className="flex-1 rounded-md gap-2" onClick={handleReschedule} disabled={rescheduling || !newDate || !newTime}>
-                {rescheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Nova Consulta Manual Modal ─────────────────────────────────────── */}
-      {newModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 bg-black/60 backdrop-blur-[2px]"
-          onClick={() => setNewModal(false)}>
-          <div className="w-full md:max-w-lg bg-background rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "min(92dvh, 90vh)" }}
-            onClick={e => e.stopPropagation()}>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <CalendarPlus className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Nova consulta</p>
-                  <p className="text-xs text-muted-foreground">Criação manual pelo admin</p>
-                </div>
-              </div>
-              <button onClick={() => setNewModal(false)} className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-
-              {/* Paciente */}
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paciente</p>
-                <button
-                  type="button"
-                  onClick={() => setIsManualEntry(!isManualEntry)}
-                  className="text-xs text-primary font-medium hover:underline"
-                >
-                  {isManualEntry ? "Selecionar existente" : "Preencher manualmente"}
-                </button>
-              </div>
-
-              {!isManualEntry ? (
-                <div className="space-y-1.5">
-                  <select
-                    value={selectedPatientId}
-                    onChange={e => {
-                      const id = e.target.value;
-                      setSelectedPatientId(id);
-                      const p = patients.find(p => p.id === Number(id));
-                      if (p) {
-                        setNewName(p.name);
-                        setNewEmail(p.email || "");
-                        setNewPhone(p.phone || "");
-                      } else {
-                        setNewName("");
-                        setNewEmail("");
-                        setNewPhone("");
-                      }
-                    }}
-                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Selecione um paciente...</option>
-                    {patients.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} {p.email ? `(${p.email})` : ""}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs">Nome completo *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                      <Input value={newName} onChange={e => setNewName(e.target.value)}
-                        placeholder="Nome do paciente" className="pl-8 h-9 text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                      <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                        placeholder="email@exemplo.com" className="pl-8 h-9 text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Telefone</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                      <Input value={newPhone} onChange={e => setNewPhone(e.target.value)}
-                        placeholder="(00) 00000-0000" className="pl-8 h-9 text-sm" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Plano + Tipo */}
-              {(() => {
-                const isOnline     = newPlan === planOptions[0]; // "Consulta Online"
-                const isPresencial = newPlan === planOptions[1]; // "Consulta Clínica Presencial"
-                const isAutoType   = isOnline || isPresencial;
-                const isProtocol   = newPlan !== "" && !isAutoType; // protocolos + custom
-
-                // Auto-set tipo when plan implies it
-                if (isOnline     && newType !== "online")     setNewType("online");
-                if (isPresencial && newType !== "presencial") setNewType("presencial");
-
-                const TypeButtons = ({ label }: { label: string }) => (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{label}</Label>
-                    <div className="flex gap-2 h-9">
-                      {(["online", "presencial"] as const).map(t => (
-                        <button key={t} type="button"
-                          onClick={() => setNewType(t)}
-                          className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border text-xs font-medium transition-all ${
-                            newType === t
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/30"
-                          }`}>
-                          {t === "online" ? <Globe className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-                          {t === "online" ? "Online" : "Presencial"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-
-                return (
-                  <div className="pt-1 border-t border-border/50">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Plano e tipo</p>
-                    <div className={`grid gap-3 ${isAutoType || !newPlan ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-
-                      {/* Plan select */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Plano *</Label>
-                        <select
-                          value={newPlan}
-                          onChange={e => {
-                            const p = e.target.value;
-                            setNewPlan(p);
-                            if (planSessionMap[p]) setNewSessions(planSessionMap[p]);
-                          }}
-                          className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                          <option value="">Selecionar plano…</option>
-                          {planOptions.map(p => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                          <option value="__custom__">Outro (digitar)</option>
-                        </select>
-                      </div>
-
-                      {/* For consultas avulsas: tipo fica ao lado */}
-                      {isAutoType && (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Tipo</Label>
-                          <div className="h-9 flex items-center px-3 rounded-lg border border-border bg-muted/30 gap-2 text-sm text-muted-foreground">
-                            {newType === "online"
-                              ? <><Globe className="h-3.5 w-3.5 text-primary" /><span>Online</span></>
-                              : <><MapPin className="h-3.5 w-3.5 text-primary" /><span>Presencial</span></>
-                            }
-                            <span className="ml-auto text-xs text-muted-foreground/50">definido pelo plano</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Custom plan name */}
-                      {newPlan === "__custom__" && (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Nome do plano</Label>
-                          <Input value={newCustomPlan} onChange={e => setNewCustomPlan(e.target.value)}
-                            placeholder="Ex: Protocolo Personalizado" className="h-9 text-sm" />
-                        </div>
-                      )}
-
-                      {/* For protocols: tipo perguntado abaixo com label diferente */}
-                      {isProtocol && (
-                        <TypeButtons label="Modelo da primeira consulta *" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Agenda — calendário de disponibilidade */}
-              <div className="pt-1 border-t border-border/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Agenda</p>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-muted-foreground">Limite de retornos:</Label>
-                    <input type="number" min={1} max={20} value={newSessions}
-                      onChange={e => setNewSessions(Number(e.target.value))}
-                      className="w-14 h-7 rounded-lg border border-input bg-background px-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-ring" />
-                  </div>
-                </div>
-
-                {loadingModalSlots ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                    {/* Mini calendar */}
-                    <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      {/* Month nav */}
-                      <div className="flex items-center justify-between mb-2">
-                        <button type="button"
-                          onClick={() => { const d = new Date(modalCalYear, modalCalMonth - 1, 1); setModalCalYear(d.getFullYear()); setModalCalMonth(d.getMonth()); }}
-                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="text-xs font-semibold text-foreground capitalize">
-                          {new Date(modalCalYear, modalCalMonth).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                        </span>
-                        <button type="button"
-                          onClick={() => { const d = new Date(modalCalYear, modalCalMonth + 1, 1); setModalCalYear(d.getFullYear()); setModalCalMonth(d.getMonth()); }}
-                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {/* Day headers */}
-                      <div className="grid grid-cols-7 mb-1">
-                        {["D","S","T","Q","Q","S","S"].map((d,i) => (
-                          <div key={i} className="text-center text-[10px] font-medium text-muted-foreground/50 py-0.5">{d}</div>
-                        ))}
-                      </div>
-                      {/* Days */}
-                      {(() => {
-                        const firstDay = new Date(modalCalYear, modalCalMonth, 1).getDay();
-                        const daysInMonth = new Date(modalCalYear, modalCalMonth + 1, 0).getDate();
-                        const cells: React.ReactNode[] = [];
-                        for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
-                        for (let d = 1; d <= daysInMonth; d++) {
-                          const dateStr = `${modalCalYear}-${String(modalCalMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-                          const available = modalCanSelectDate(dateStr);
-                          const selected  = manualDate === dateStr;
-                          const today     = new Date().toISOString().split("T")[0] === dateStr;
-                          cells.push(
-                            <button key={d} type="button"
-                              disabled={!available}
-                              onClick={() => { setManualDate(dateStr); setManualTime(""); }}
-                              className={`relative aspect-square flex items-center justify-center rounded-lg text-[11px] font-medium transition-all
-                                ${selected  ? "bg-primary text-primary-foreground" :
-                                  today     ? "bg-primary/10 text-primary" :
-                                  available ? "hover:bg-muted text-foreground" :
-                                              "text-muted-foreground/30 cursor-default"}`}>
-                              {d}
-                              {available && !selected && (
-                                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary/60" />
-                              )}
-                            </button>
-                          );
-                        }
-                        return <div className="grid grid-cols-7 gap-0.5">{cells}</div>;
-                      })()}
-                      <p className="text-[10px] text-muted-foreground/50 mt-2 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" /> horários disponíveis
-                      </p>
-                    </div>
-
-                    {/* Time slots */}
-                    <div className="rounded-xl border border-border bg-muted/20 p-3">
-                      {!manualDate ? (
-                        <div className="flex flex-col items-center justify-center h-full py-8 gap-2 text-center">
-                          <CalendarCheck className="h-8 w-8 text-muted-foreground/20" />
-                          <p className="text-xs text-muted-foreground/50">Selecione uma data no calendário</p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-xs font-semibold text-foreground mb-1">
-                            {new Date(manualDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mb-3 capitalize">
-                            {newType === "online" ? "Atendimento online" : "Atendimento presencial"}
-                          </p>
-                          {modalTimesForDate().length === 0 ? (
-                            <p className="text-xs text-muted-foreground/50 py-4 text-center">Sem horários para esta data</p>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {modalTimesForDate().map(t => {
-                                const busy     = modalSlotsBusy.includes(t);
-                                const selected = manualTime === t;
-                                return (
-                                  <button key={t} type="button"
-                                    disabled={busy}
-                                    onClick={() => setManualTime(t)}
-                                    className={`py-1.5 rounded-lg text-xs font-medium transition-all border
-                                      ${selected ? "bg-primary text-primary-foreground border-primary" :
-                                        busy    ? "text-muted-foreground/30 border-border/30 line-through cursor-default" :
-                                                  "border-border hover:border-primary/40 hover:bg-primary/5 text-foreground"}`}>
-                                    {t}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {newSessions > 1 && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 shrink-0" />
-                    1 consulta inicial agendada. Os {newSessions - 1} retorno{newSessions - 1 > 1 ? "s" : ""} serão marcados ao concluir cada sessão.
-                  </p>
-                )}
-              </div>
-
-              {/* Observações */}
-              <div className="pt-1 border-t border-border/50 space-y-1.5">
-                <Label className="text-xs">Observações (opcional)</Label>
-                <textarea value={newNotes} onChange={e => setNewNotes(e.target.value)}
-                  placeholder="Objetivo, condições, anotações iniciais…"
-                  rows={3}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border shrink-0 bg-muted/30">
-              <Button variant="ghost" size="sm" onClick={() => setNewModal(false)} disabled={savingNew}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={handleCreateManual} disabled={savingNew} className="gap-1.5">
-                {savingNew ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                {savingNew ? "Criando…" : "Criar consulta"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          ) : null
+        }
+        sessionsPanel={
+          <BookingSessionsTab
+            sessions={detailGroup}
+            updating={updating}
+            confirmAction={confirmAction}
+            setConfirmAction={setConfirmAction}
+            onCloseDetail={() => setDetail(null)}
+            onReschedule={openReschedule}
+            onComplete={openComplete}
+            onScheduleReturn={openScheduleReturn}
+            onChangeStatus={handleStatus}
+            onChangePaymentStatus={handlePaymentStatus}
+          />
+        }
+        recordsPanel={
+          <BookingRecordsTab
+            loading={loadingRecords}
+            records={records}
+            editingRecordId={editingRecordId}
+            confirmDeleteId={confirmDeleteId}
+            editNotes={editNotes}
+            setEditNotes={setEditNotes}
+            editNextSteps={editNextSteps}
+            setEditNextSteps={setEditNextSteps}
+            editNextReturn={editNextReturn}
+            setEditNextReturn={setEditNextReturn}
+            editFiles={editFiles}
+            setEditFiles={setEditFiles}
+            editNewFiles={editNewFiles}
+            setEditNewFiles={setEditNewFiles}
+            savingEdit={savingEdit}
+            onOpenRecord={setViewRecord}
+            onEditRecord={openEditRecord}
+            onCancelEdit={() => setEditingRecordId(null)}
+            onRequestDelete={recordId => { setConfirmDeleteId(recordId); setEditingRecordId(null); }}
+            onCancelDelete={() => setConfirmDeleteId(null)}
+            onConfirmDelete={recordId => handleDeleteRecord(recordId, detail)}
+            onSaveEdit={() => handleSaveEdit(detail)}
+            onInvalidFiles={() => toast({ title: "Limite de 20 MB excedido", variant: "destructive" })}
+          />
+        }
+        mobilePatientPanel={
+          detailFirst ? (
+            <BookingPatientPanel
+              variant="mobile"
+              booking={detailFirst}
+              notes={detailNotes}
+              editing={editingDetail}
+              saving={savingDetailEdit}
+              creatingPatient={creatingPatient}
+              editName={editDName}
+              setEditName={setEditDName}
+              editEmail={editDEmail}
+              setEditEmail={setEditDEmail}
+              editPhone={editDPhone}
+              setEditPhone={setEditDPhone}
+              editGoal={editDGoal}
+              setEditGoal={setEditDGoal}
+              editRestrictions={editDRestrictions}
+              setEditRestrictions={setEditDRestrictions}
+              editAllergies={editDAllergies}
+              setEditAllergies={setEditDAllergies}
+              editHealth={editDHealth}
+              setEditHealth={setEditDHealth}
+              editMeds={editDMeds}
+              setEditMeds={setEditDMeds}
+              editHadNutri={editDHadNutri}
+              setEditHadNutri={setEditDHadNutri}
+              editHowFound={editDHowFound}
+              setEditHowFound={setEditDHowFound}
+              editObs={editDObs}
+              setEditObs={setEditDObs}
+              onOpenEdit={() => openDetailEdit(detailFirst, detailNotes)}
+              onCancelEdit={() => setEditingDetail(false)}
+              onSaveEdit={handleSaveDetailEdit}
+              onOpenPatient={patientId => navigate(`/admin/pacientes/${patientId}`)}
+              onCreatePatient={() => handleCreatePatient(detailFirst, detailNotes as Record<string, string>)}
+            />
+          ) : null
+        }
+      />
+
+      <RecordDetailModal
+        record={viewRecord}
+        onClose={() => setViewRecord(null)}
+        onEdit={openEditRecord}
+        onDeleteRequest={setConfirmDeleteId}
+      />
+
+      <CompleteSessionModal
+        booking={completing}
+        saving={savingRecord}
+        notes={compNotes}
+        setNotes={setCompNotes}
+        nextSteps={compNextSteps}
+        setNextSteps={setCompNextSteps}
+        returnType={returnType}
+        setReturnType={setReturnType}
+        returnCity={returnCity}
+        setReturnCity={setReturnCity}
+        loadingReturnSlots={loadingReturnSlots}
+        returnCalYear={returnCalYear}
+        returnCalMonth={returnCalMonth}
+        setReturnCalYear={setReturnCalYear}
+        setReturnCalMonth={setReturnCalMonth}
+        selectedReturnDate={compNextReturn}
+        setSelectedReturnDate={setCompNextReturn}
+        selectedReturnTime={compNextReturnTime}
+        setSelectedReturnTime={setCompNextReturnTime}
+        bookedTimes={returnBookedTimes}
+        getReturnTimesForDate={getReturnTimesForDate}
+        canSelectReturnDate={canSelectReturnDate}
+        onSelectReturnDate={handleReturnDateSelect}
+        files={compFiles}
+        onAddFiles={addCompletionFiles}
+        onRemoveFile={removeCompletionFile}
+        onClose={() => setCompleting(null)}
+        onSubmit={handleSaveRecord}
+      />
+
+      <SendMaterialModal
+        target={sendTarget}
+        subject={sendSubject}
+        setSubject={setSendSubject}
+        body={sendBody}
+        setBody={setSendBody}
+        files={sendFiles}
+        sending={sending}
+        onAddFiles={handleAddFiles}
+        onRemoveFile={removeSendFile}
+        onClose={() => setSendTarget(null)}
+        onSubmit={handleSendMaterial}
+      />
+
+      <ScheduleReturnModal
+        booking={schedulingReturn}
+        saving={savingReturn}
+        returnType={returnType}
+        setReturnType={setReturnType}
+        returnCity={returnCity}
+        setReturnCity={setReturnCity}
+        loadingReturnSlots={loadingReturnSlots}
+        availableDates={getReturnAvailableDates(returnType)}
+        selectedDate={compNextReturn}
+        selectedTime={compNextReturnTime}
+        bookedTimes={returnBookedTimes}
+        getTimesForDate={getReturnTimesForDate}
+        onSelectDate={handleReturnDateSelect}
+        setSelectedTime={setCompNextReturnTime}
+        resetReturnSelection={resetReturnSelection}
+        onClose={() => setSchedulingReturn(null)}
+        onSubmit={handleScheduleReturn}
+      />
+
+      <RescheduleBookingModal
+        booking={reschedule}
+        newDate={newDate}
+        setNewDate={setNewDate}
+        newTime={newTime}
+        setNewTime={setNewTime}
+        message={rescheduleMsg}
+        setMessage={setRescheduleMsg}
+        rescheduling={rescheduling}
+        onClose={() => setReschedule(null)}
+        onSubmit={handleReschedule}
+      />
+
+      <NewBookingModal
+        open={newModal}
+        saving={savingNew}
+        onClose={() => setNewModal(false)}
+        onCreate={handleCreateManual}
+        isManualEntry={isManualEntry}
+        onToggleManualEntry={() => {
+          const nextManual = !isManualEntry;
+          setIsManualEntry(nextManual);
+          if (!nextManual) {
+            setPatientSearch(newName.trim());
+          } else {
+            setSelectedPatientId("");
+            setIgnoredExactPatientName("");
+          }
+        }}
+        patientSearch={patientSearch}
+        setPatientSearch={setPatientSearch}
+        filteredPatients={filteredPatients}
+        selectedPatientId={selectedPatientId}
+        onSelectPatient={selectPatientForManualBooking}
+        exactNamePatient={exactNamePatient}
+        onIgnoreExactName={() => setIgnoredExactPatientName(normalizePersonName(newName))}
+        newName={newName}
+        setNewName={setNewName}
+        newEmail={newEmail}
+        setNewEmail={setNewEmail}
+        newPhone={newPhone}
+        setNewPhone={setNewPhone}
+        planOptions={planOptions}
+        planSessionMap={planSessionMap}
+        onlinePlanName={onlinePlanName}
+        presencialPlanName={presencialPlanName}
+        newPlan={newPlan}
+        setNewPlan={setNewPlan}
+        newCustomPlan={newCustomPlan}
+        setNewCustomPlan={setNewCustomPlan}
+        newType={newType}
+        setNewType={setNewType}
+        manualCity={manualCity}
+        setManualCity={setManualCity}
+        manualDate={manualDate}
+        setManualDate={setManualDate}
+        manualTime={manualTime}
+        setManualTime={setManualTime}
+        newSessions={newSessions}
+        setNewSessions={setNewSessions}
+        loadingModalSlots={loadingModalSlots}
+        modalSlotsBusy={modalSlotsBusy}
+        modalCalYear={modalCalYear}
+        modalCalMonth={modalCalMonth}
+        setModalCalYear={setModalCalYear}
+        setModalCalMonth={setModalCalMonth}
+        modalCanSelectDate={modalCanSelectDate}
+        modalTimesForDate={modalTimesForDate}
+        newPaymentStatus={newPaymentStatus}
+        setNewPaymentStatus={setNewPaymentStatus}
+        newNotes={newNotes}
+        setNewNotes={setNewNotes}
+      />
 
       {/* ── Duplicate patient modal ──────────────────────────────────────────── */}
       {duplicateModal && (

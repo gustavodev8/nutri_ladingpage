@@ -160,7 +160,10 @@ ${previewText ? `<span style="display:none;max-height:0;overflow:hidden;">${prev
           }).then(r => r.ok ? Promise.resolve() : Promise.reject())
         )
       );
-      for (const r of results) r.status === "fulfilled" ? sent++ : failed++;
+      for (const result of results) {
+        if (result.status === "fulfilled") sent++;
+        else failed++;
+      }
     }
 
     return new Response(JSON.stringify({ sent, failed, total: emails.length }), {

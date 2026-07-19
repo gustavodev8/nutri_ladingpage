@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link, type NavigateFunction } from "react-router-dom";
 import {
   ArrowLeft,
   User,
@@ -23,6 +23,7 @@ import {
   Pencil,
   Download,
   Send,
+  type LucideIcon,
 } from "lucide-react";
 import { ExamProtocolsTab } from "@/components/admin/ExamProtocolsTab";
 import { PrescriptionBuilder } from "@/components/admin/PrescriptionBuilder";
@@ -238,7 +239,19 @@ export default function AdminPaciente() {
     const bmi = calcBMI(m.weight, m.height);
     const bmiInfo = bmi ? bmiClass(parseFloat(bmi)) : null;
 
-    const SummaryCard = ({ label, value, unit, icon: Icon, colorClass = "text-primary" }: any) => (
+    const SummaryCard = ({
+      label,
+      value,
+      unit,
+      icon: Icon,
+      colorClass = "text-primary",
+    }: {
+      label: string;
+      value?: number | string | null;
+      unit?: string;
+      icon: LucideIcon;
+      colorClass?: string;
+    }) => (
       <div className="bg-card border border-border/60 rounded-3xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-3">
           <div className={cn("w-10 h-10 rounded-xl bg-muted flex items-center justify-center", colorClass)}>
@@ -248,12 +261,12 @@ export default function AdminPaciente() {
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-3xl font-black text-foreground tabular-nums">{value ?? "—"}</span>
-          {value && unit && <span className="text-sm font-bold text-muted-foreground">{unit}</span>}
+          {value != null && unit && <span className="text-sm font-bold text-muted-foreground">{unit}</span>}
         </div>
       </div>
     );
 
-    const ComparisonRow = ({ label, right, left }: any) => (
+    const ComparisonRow = ({ label, right, left }: { label: string; right?: number | null; left?: number | null }) => (
       <div className="grid grid-cols-7 gap-2 py-3 border-b border-border/40 items-center last:border-0">
         <div className="col-span-3 text-right">
           <span className="text-sm font-bold text-foreground tabular-nums">{right ?? "—"}</span>
@@ -1479,7 +1492,17 @@ const STRATEGY_LABELS: Record<string, { label: string; cls: string }> = {
   surplus:     { label: "Superávit",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
 };
 
-function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
+function PlanosTab({
+  patientId,
+  patientRouteId,
+  navigate,
+  patient,
+}: {
+  patientId: string;
+  patientRouteId: string;
+  navigate: NavigateFunction;
+  patient: Patient;
+}) {
   const pid = Number(patientId);
   const [plans, setPlans]   = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1530,7 +1553,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
         : {}),
     };
     const np = await upsertMealPlan(payload);
-    if (np && (np as any).id) navigate(`/admin/pacientes/${patientRouteId}/plano/${(np as any).id}`);
+    if (np?.id) navigate(`/admin/pacientes/${patientRouteId}/plano/${np.id}`);
   };
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
@@ -1561,7 +1584,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
             const strategyInfo = p.strategy_type ? STRATEGY_LABELS[p.strategy_type] : null;
             return (
               <div
-                key={(p as any).id}
+                key={p.id ?? `${p.patient_id}-${p.title}`}
                 className="bg-card border border-border/60 rounded-2xl p-5 flex items-center justify-between group"
               >
                 <div className="flex items-center gap-4">
@@ -1583,7 +1606,7 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                       )}
                       {!p.target_calories && (
                         <span className="text-xs text-muted-foreground font-semibold">
-                          Criado em {new Date((p as any).created_at).toLocaleDateString("pt-BR")}
+                          Criado em {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "—"}
                         </span>
                       )}
                     </div>
@@ -1591,7 +1614,8 @@ function PlanosTab({ patientId, patientRouteId, navigate, patient }: any) {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => navigate(`/admin/pacientes/${patientRouteId}/plano/${(p as any).id}`)}
+                  onClick={() => p.id && navigate(`/admin/pacientes/${patientRouteId}/plano/${p.id}`)}
+                  disabled={!p.id}
                   className="rounded-xl font-bold border-border/60 hover:bg-primary hover:text-white hover:border-primary transition-all"
                 >
                   Abrir Plano

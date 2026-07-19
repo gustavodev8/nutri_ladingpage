@@ -170,7 +170,7 @@ export const BUILT_IN_FOODS: FoodItem[] = [
 
   // (Mantendo os outros alimentos inalterados para brevidade, mas você pode aplicar o mesmo padrão a todos)
   // ... resto da lista ...
-] as any;
+];
 
 export function searchFoods(query: string, limit = 20): FoodItem[] {
   if (!query.trim()) return [];

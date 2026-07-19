@@ -9,7 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useContent } from "@/contexts/ContentContext";
-import { fetchAvailabilitySlots, fetchBookingsForDate, insertBooking, confirmBookingsByGroupId, findPatientByCPF, type Booking } from "@/lib/supabase";
+import {
+  fetchAvailabilitySlots,
+  fetchBookingsForDate,
+  insertBooking,
+  confirmBookingsByGroupId,
+  findPatientByCPF,
+  type Booking,
+  type BookingPaymentMethod,
+  type BookingPaymentStatus,
+  type BookingStatus,
+} from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { doesDiscountApply, formatCurrency, getDiscountedAmount } from "@/lib/discountUtils";
 
@@ -192,7 +202,11 @@ const BookingPage = () => {
     return booked.some(b => (b.appointment_time || "").substring(0, 5) === time);
   }, [bookingGroupId]);
 
-  const saveBookings = useCallback(async (status = "pending"): Promise<boolean> => {
+  const saveBookings = useCallback(async (
+    status: BookingStatus = "pending",
+    paymentStatus: BookingPaymentStatus = "pending",
+    paymentMethod?: BookingPaymentMethod
+  ): Promise<boolean> => {
     let allOk = true;
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i];
@@ -228,6 +242,8 @@ const BookingPage = () => {
         appointment_time: s.time,
         type,
         status,
+        payment_status: paymentStatus,
+        payment_method: paymentMethod,
         notes,
       };
       const ok = await insertBooking(booking);
@@ -312,7 +328,7 @@ const BookingPage = () => {
             try {
               // Salva como "pending" antes de enviar ao MP — garante que o booking
               // existe no banco mesmo que algo falhe depois do pagamento ser aprovado
-              await saveBookings("pending");
+              await saveBookings("pending", "pending", "card");
 
               const res = await fetch(`${SUPABASE_URL}/functions/v1/process-consultation-payment`, {
                 method: "POST",
@@ -329,7 +345,7 @@ const BookingPage = () => {
               });
               const data = await res.json();
               if (data.status === "approved") {
-                const saved = await saveBookings("confirmed");
+                const saved = await saveBookings("confirmed", "paid", "card");
                 if (!saved) toast({ title: "Pagamento aprovado, mas erro ao salvar agendamento. Entre em contato.", variant: "destructive" });
                 setStage("approved");
               } else {
@@ -425,7 +441,7 @@ const BookingPage = () => {
     try {
       // Salva o booking como "pending" ANTES de criar o pagamento
       // Garante que o booking existe mesmo que o usuário feche a aba após pagar
-      const saved = await saveBookings("pending");
+      const saved = await saveBookings("pending", "pending", "pix");
       if (!saved) {
         toast({ title: "Aviso: não foi possível salvar o agendamento. Entre em contato após o pagamento.", variant: "destructive" });
       }
@@ -481,7 +497,7 @@ const BookingPage = () => {
         const data = await res.json();
         if (data.status === "approved") {
           clearInterval(pollingRef.current!);
-          await confirmBookingsByGroupId(bookingGroupId);
+          await confirmBookingsByGroupId(bookingGroupId, "pix");
           if (isMounted) setStage("approved");
         }
       } catch {
@@ -500,7 +516,7 @@ const BookingPage = () => {
       return;
     }
     setStage("loading");
-    const ok = await saveBookings("confirmed");
+    const ok = await saveBookings("confirmed", "free", "free");
     if (!ok) {
       setStage("error");
       toast({ title: "Erro ao salvar agendamento. Tente novamente.", variant: "destructive" });

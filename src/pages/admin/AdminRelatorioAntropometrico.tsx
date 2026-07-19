@@ -312,6 +312,9 @@ const ALL_SF_KEYS: SkinfoldKey[] = [
   "sf_subscapular", "sf_suprailiac", "sf_abdominal", "sf_thigh_sf", "sf_calf_sf",
 ];
 
+const getSkinfoldValue = (measurement: Measurement, key: SkinfoldKey): number | null =>
+  measurement[key] ?? null;
+
 export default function AdminRelatorioAntropometrico() {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading]           = useState(true);
@@ -409,7 +412,7 @@ export default function AdminRelatorioAntropometrico() {
     if (!m.sf_protocol) return null;
     const info = PROTOCOLS.find((p) => p.id === m.sf_protocol);
     if (!info) return null;
-    const sum = info.skinfolds.reduce((acc, k) => acc + ((m as any)[k] ?? 0), 0);
+    const sum = info.skinfolds.reduce((acc, k) => acc + (getSkinfoldValue(m, k) ?? 0), 0);
     return sum > 0 ? sum : null;
   });
 
@@ -417,7 +420,7 @@ export default function AdminRelatorioAntropometrico() {
   const hasTronco  = cols.some((m) => [m.neck, m.shoulder, m.chest, m.waist, m.abdomen, m.hip].some((v) => v != null));
   const hasSup     = cols.some((m) => [m.arm_relax_r, m.arm_relax_l, m.arm_contract_r, m.arm_contract_l, m.forearm_r, m.wrist_r].some((v) => v != null));
   const hasInf     = cols.some((m) => [m.thigh_prox_r, m.thigh_r, m.calf_r].some((v) => v != null));
-  const hasDobras  = cols.some((m) => ALL_SF_KEYS.some((k) => (m as any)[k] != null));
+  const hasDobras  = cols.some((m) => ALL_SF_KEYS.some((k) => getSkinfoldValue(m, k) != null));
 
   const mostRecent = cols[cols.length - 1];
 
@@ -724,7 +727,7 @@ export default function AdminRelatorioAntropometrico() {
                       <MetricRow
                         key={key}
                         label={SKINFOLD_LABELS[key]}
-                        values={cols.map((m) => (m as any)[key] ?? null)}
+                        values={cols.map((m) => getSkinfoldValue(m, key))}
                         unit="mm"
                         decimals={1}
                       />

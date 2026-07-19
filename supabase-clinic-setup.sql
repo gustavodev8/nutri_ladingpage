@@ -205,6 +205,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   appointment_time  TIME NOT NULL,
   type              TEXT NOT NULL CHECK (type IN ('online', 'presencial')),
   status            TEXT DEFAULT 'pending',
+  payment_status    TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'cancelled', 'free')),
+  payment_method    TEXT CHECK (payment_method IN ('pix', 'card', 'manual', 'free')),
   notes             TEXT,
   completed_at      TIMESTAMPTZ,
   UNIQUE (booking_group_id, session_number)
