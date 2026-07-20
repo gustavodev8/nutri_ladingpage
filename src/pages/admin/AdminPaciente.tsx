@@ -542,6 +542,7 @@ export default function AdminPaciente() {
               <ExamProtocolsTab
                 patientId={Number(id)}
                 gender={(patient?.gender as "M" | "F" | "outro") ?? "M"}
+                patient={patient}
               />
             )}
             {activeTab === "prescricao" && (
@@ -838,7 +839,7 @@ function ReportTab({
   const [showEmail, setShowEmail] = useState(false);
   const [draft, setDraft] = useState<PatientReport>(() => ({
     patient_id: Number(patient.id ?? 0),
-    title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
+    title: `Relatório ${new Date().toLocaleDateString('pt-BR')}`,
     report_date: todayISO(),
     report_text: patient.report_text ?? '',
   }));
@@ -846,7 +847,7 @@ function ReportTab({
   useEffect(() => {
     setDraft({
       patient_id: Number(patient.id ?? 0),
-      title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
+      title: `Relatório ${new Date().toLocaleDateString('pt-BR')}`,
       report_date: todayISO(),
       report_text: patient.report_text ?? '',
     });
@@ -867,7 +868,7 @@ function ReportTab({
   const createNewReport = () => {
     setDraft({
       patient_id: Number(patient.id ?? 0),
-      title: `Relatorio ${new Date().toLocaleDateString('pt-BR')}`,
+      title: `Relatório ${new Date().toLocaleDateString('pt-BR')}`,
       report_date: todayISO(),
       report_text: '',
     });
@@ -875,11 +876,11 @@ function ReportTab({
 
   const handleSave = async () => {
     if (!draft.title.trim()) {
-      toast.error('Informe um titulo para o relatorio.');
+      toast.error('Informe um título para o relatório.');
       return;
     }
     if (!draft.report_text.trim()) {
-      toast.error('Escreva o conteudo do relatorio.');
+      toast.error('Escreva o conteúdo do relatório.');
       return;
     }
 
@@ -890,14 +891,14 @@ function ReportTab({
         patient_id: Number(patient.id),
       });
       if (!saved) {
-        toast.error('Erro ao salvar relatorio.');
+        toast.error('Erro ao salvar relatório.');
         return;
       }
 
       setDraft(saved);
       const freshList = await fetchPatientReports(Number(patient.id));
       setReports(freshList);
-      toast.success('Relatorio salvo com sucesso!');
+      toast.success('Relatório salvo com sucesso!');
       onSaved({ ...patient, report_text: draft.report_text });
     } catch {
       toast.error('Erro inesperado ao salvar.');
@@ -908,14 +909,14 @@ function ReportTab({
 
   const handleDelete = async () => {
     if (!draft.id) return;
-    const ok = window.confirm(`Excluir o relatorio "${draft.title}"?`);
+    const ok = window.confirm(`Excluir o relatório "${draft.title}"?`);
     if (!ok) return;
     const deleted = await deletePatientReport(draft.id);
     if (!deleted) {
-      toast.error('Erro ao excluir relatorio.');
+      toast.error('Erro ao excluir relatório.');
       return;
     }
-    toast.success('Relatorio excluido.');
+    toast.success('Relatório excluído.');
     const freshList = await fetchPatientReports(Number(patient.id));
     setReports(freshList);
     if (freshList[0]) setDraft(freshList[0]);
@@ -932,7 +933,7 @@ function ReportTab({
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!win) toast.info('Permita pop-ups para abrir a visualizacao do PDF.');
+    if (!win) toast.info('Permita pop-ups para abrir a visualização do PDF.');
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
@@ -944,55 +945,174 @@ function ReportTab({
   const reportWordCount = draft.report_text.trim() ? draft.report_text.trim().split(/\s+/).length : 0;
   const estimatedReadMinutes = Math.max(1, Math.ceil(reportWordCount / 180));
   const latestReport = reports[0];
-  const selectedIndex = draft.id ? reports.findIndex((report) => report.id === draft.id) + 1 : 0;
-  const selectedSummary = draft.report_text.trim()
-    ? draft.report_text.trim().slice(0, 220)
-    : 'Use esse espaco para registrar a evolucao clinica, adesao ao plano e conduta definida.';
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="overflow-hidden rounded-[32px] border border-border/60 bg-card shadow-sm">
-        <div className="border-b border-border/60 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
-          <div className="flex items-start justify-between gap-3">
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+        <div className="border-b border-border bg-muted/10 p-4 md:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Documentos</p>
-              <h3 className="text-xl font-black tracking-tight text-foreground">Relatorios clinicos</h3>
+              <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+                <MessageSquareQuote size={12} />
+                Relatório clínico
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+                {draft.title || 'Novo relatório'}
+              </h2>
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                Registre evolução, adesão ao plano, intercorrências, conduta e observações clínicas importantes.
+                Cada relatório fica salvo como um documento separado por data.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {draft.report_date ? reportDateLabel : 'Sem data definida'}
+                </span>
+                <span className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {reportWordCount} palavras
+                </span>
+                <span className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                  Leitura em aprox. {estimatedReadMinutes} min
+                </span>
+              </div>
+            </div>
+
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto lg:justify-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-lg gap-2 border-border/70 bg-background px-3 text-sm font-medium shadow-none hover:bg-muted/40"
+                  onClick={handlePreviewPdf}
+                >
+                  <Eye size={14} />
+                  Visualizar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-lg gap-2 border-border/70 bg-background px-3 text-sm font-medium shadow-none hover:bg-muted/40"
+                  onClick={handleDownloadPdf}
+                >
+                  <Download size={14} />
+                  PDF
+                </Button>
+                <Button
+                  type="button"
+                  className="h-9 rounded-lg gap-2 bg-primary/90 px-4 text-sm font-medium shadow-none hover:bg-primary"
+                  onClick={() => setShowEmail(true)}
+                  disabled={!patient.email}
+                  title={patient.email ? 'Enviar relatório por e-mail' : 'Cadastre um e-mail no perfil primeiro'}
+                >
+                  <Send size={14} />
+                  Enviar
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 rounded-lg gap-2 px-3 text-sm font-medium text-destructive hover:bg-destructive/8 hover:text-destructive"
+                onClick={handleDelete}
+                disabled={!draft.id}
+              >
+                <Trash2 size={14} />
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-5">
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="space-y-2">
+                <Label htmlFor="report_title" className="text-sm font-semibold text-foreground">
+                  Título do relatório
+                </Label>
+                <Input
+                  id="report_title"
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  className="h-10 rounded-lg border-border bg-background"
+                  placeholder="Ex.: Relatório 22/06/2026"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="report_date" className="text-sm font-semibold text-foreground">
+                  Data do relatório
+                </Label>
+                <Input
+                  id="report_date"
+                  type="date"
+                  value={draft.report_date}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, report_date: e.target.value }))}
+                  className="h-10 rounded-lg border-border bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-border bg-muted/10 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="report_text" className="text-sm font-semibold text-foreground">
+                  Texto do relatório
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {draft.report_text.trim().length > 0 ? `${draft.report_text.trim().length} caracteres` : 'Campo vazio'}
+                </span>
+              </div>
+              <Textarea
+                id="report_text"
+                minRows={8}
+                value={draft.report_text}
+                onChange={(e) => setDraft((prev) => ({ ...prev, report_text: e.target.value }))}
+                placeholder="Ex.: Paciente evoluiu bem, com boa adesão ao plano, redução de compulsão noturna e melhora do padrão intestinal..."
+                className="min-h-[220px] rounded-xl border-border bg-background text-[15px] leading-7 shadow-inner"
+              />
+            </div>
+
+            <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border/60 bg-background/95 pt-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {draft.id ? `Documento aberto: ${draft.title} · ${reportDateLabel}` : 'Novo documento ainda não salvo.'}
+              </p>
+              <Button onClick={handleSave} disabled={saving} className="h-10 rounded-lg px-6 font-semibold">
+                {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
+                Salvar relatório
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+        <div className="border-b border-border bg-muted/20 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Documentos</p>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Relatórios clínicos</h3>
               <p className="text-sm text-muted-foreground">
-                {reports.length} registro{reports.length === 1 ? '' : 's'} disponivel{reports.length === 1 ? '' : 'eis'}
+                {reports.length} registro{reports.length === 1 ? '' : 's'} disponível{reports.length === 1 ? '' : 'eis'}
+                {latestReport ? ` · último em ${new Date(`${latestReport.report_date}T12:00:00`).toLocaleDateString('pt-BR')}` : ''}
               </p>
             </div>
-            <Button type="button" size="sm" variant="outline" className="h-10 rounded-full gap-2" onClick={createNewReport}>
+            <Button type="button" size="sm" variant="outline" className="h-9 rounded-lg gap-2" onClick={createNewReport}>
               <Plus size={14} />
               Novo
             </Button>
           </div>
 
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border/60 bg-background/80 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total</p>
-              <p className="mt-1 text-2xl font-black text-foreground">{reports.length}</p>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-background/80 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Ultimo</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {latestReport ? new Date(`${latestReport.report_date}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data'}
-              </p>
-            </div>
-          </div>
         </div>
 
-        <div className="max-h-[68vh] space-y-3 overflow-y-auto p-4 pr-3">
+        <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
           {loadingReports ? (
-            <div className="flex items-center justify-center rounded-[24px] border border-dashed border-border/70 bg-muted/20 p-8 text-muted-foreground">
+            <div className="flex items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-muted-foreground md:col-span-2 xl:col-span-4">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Carregando relatorios...
+              Carregando relatórios...
             </div>
           ) : reports.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-border/70 bg-muted/20 p-5 text-center">
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 p-5 text-center md:col-span-2 xl:col-span-4">
               <FileText className="mx-auto mb-3 h-9 w-9 text-muted-foreground/40" />
-              <p className="text-sm font-semibold text-foreground">Nenhum relatorio salvo</p>
+              <p className="text-sm font-semibold text-foreground">Nenhum relatório salvo</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Crie o primeiro documento para registrar a evolucao do paciente.
+                Crie o primeiro documento para registrar a evolução do paciente.
               </p>
             </div>
           ) : (
@@ -1005,10 +1125,10 @@ function ReportTab({
                   type="button"
                   onClick={() => selectReport(report)}
                   className={cn(
-                    'group w-full rounded-[24px] border p-4 text-left transition-all',
+                    'group w-full rounded-xl border p-3 text-left transition-colors',
                     isActive
-                      ? 'border-primary/30 bg-primary/8 shadow-[0_10px_30px_rgba(0,0,0,0.06)] ring-1 ring-primary/20'
-                      : 'border-border/60 bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
+                      ? 'border-primary/30 bg-primary/8 ring-1 ring-primary/15'
+                      : 'border-border bg-background hover:border-primary/20 hover:bg-muted/20'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1020,15 +1140,15 @@ function ReportTab({
                       className={cn(
                         'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em]',
                         isActive
-                          ? 'border border-primary/20 bg-primary/12 text-primary'
-                          : 'border border-border/60 bg-muted/30 text-muted-foreground'
+                          ? 'border border-primary/20 bg-primary/10 text-primary'
+                          : 'border border-border bg-muted/30 text-muted-foreground'
                       )}
                     >
                       {isActive ? 'Aberto' : `#${index + 1}`}
                     </span>
                   </div>
-                  <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                    {report.report_text || 'Sem conteudo'}
+                  <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {report.report_text || 'Sem conteúdo'}
                   </p>
                 </button>
               );
@@ -1036,156 +1156,6 @@ function ReportTab({
           )}
         </div>
       </aside>
-
-      <section className="overflow-hidden rounded-[32px] border border-border/60 bg-card shadow-sm">
-        <div className="border-b border-border/60 bg-gradient-to-br from-foreground/5 via-background to-primary/5 p-5 md:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-primary">
-                <MessageSquareQuote size={12} />
-                Relatorio clinico
-              </div>
-              <h2 className="text-3xl font-black tracking-tight text-foreground">{draft.title || 'Novo relatorio'}</h2>
-              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Registre a evolucao, adesao ao plano, intercorrencias, conduta e observacoes clinicas importantes.
-                Cada relatorio fica salvo como um documento separado por data.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {draft.report_date ? reportDateLabel : 'Sem data definida'}
-                </span>
-                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {reportWordCount} palavras
-                </span>
-                <span className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
-                  Leitura em aprox. {estimatedReadMinutes} min
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 xl:justify-end">
-              <Button type="button" variant="outline" className="h-11 rounded-full gap-2" onClick={handlePreviewPdf}>
-                <Eye size={15} />
-                Visualizar
-              </Button>
-              <Button type="button" variant="outline" className="h-11 rounded-full gap-2" onClick={handleDownloadPdf}>
-                <Download size={15} />
-                PDF
-              </Button>
-              <Button
-                type="button"
-                className="h-11 rounded-full gap-2"
-                onClick={() => setShowEmail(true)}
-                disabled={!patient.email}
-                title={patient.email ? 'Enviar relatorio por e-mail' : 'Cadastre um e-mail no perfil primeiro'}
-              >
-                <Send size={15} />
-                Enviar
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                className="h-11 rounded-full gap-2"
-                onClick={handleDelete}
-                disabled={!draft.id}
-              >
-                <Trash2 size={15} />
-                Excluir
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-              <div className="space-y-2">
-                <Label htmlFor="report_title" className="text-sm font-semibold text-foreground">
-                  Titulo do relatorio
-                </Label>
-                <Input
-                  id="report_title"
-                  value={draft.title}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                  className="h-12 rounded-2xl border-border/70 bg-background/80"
-                  placeholder="Ex.: Relatorio 22/06/2026"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="report_date" className="text-sm font-semibold text-foreground">
-                  Data do relatorio
-                </Label>
-                <Input
-                  id="report_date"
-                  type="date"
-                  value={draft.report_date}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, report_date: e.target.value }))}
-                  className="h-12 rounded-2xl border-border/70 bg-background/80"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3 rounded-[28px] border border-border/60 bg-gradient-to-b from-muted/20 to-background p-4 md:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="report_text" className="text-sm font-semibold text-foreground">
-                  Texto do relatorio
-                </Label>
-                <span className="text-xs text-muted-foreground">
-                  {draft.report_text.trim().length > 0 ? `${draft.report_text.trim().length} caracteres` : 'Campo vazio'}
-                </span>
-              </div>
-              <Textarea
-                id="report_text"
-                minRows={16}
-                value={draft.report_text}
-                onChange={(e) => setDraft((prev) => ({ ...prev, report_text: e.target.value }))}
-                placeholder="Ex.: Paciente evoluiu bem, com boa adesao ao plano, reducao de compulsao noturna e melhora do padrao intestinal..."
-                className="min-h-[420px] rounded-[24px] border-border/70 bg-background/95 text-[15px] leading-7 shadow-inner"
-              />
-            </div>
-
-            <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                {draft.id ? `Documento aberto: ${draft.title} · ${reportDateLabel}` : 'Novo documento ainda nao salvo.'}
-              </p>
-              <Button onClick={handleSave} disabled={saving} className="h-11 rounded-full px-8 font-bold">
-                {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
-                Salvar relatorio
-              </Button>
-            </div>
-          </div>
-
-          <aside className="space-y-4 rounded-[28px] border border-border/60 bg-card p-4 md:p-5">
-            <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Resumo rapido</p>
-              <h3 className="text-lg font-bold text-foreground">Visao geral do documento</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Uma referencia visual para conferir se o conteudo esta completo antes de salvar ou enviar.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Palavras</p>
-                <p className="mt-2 text-2xl font-black text-foreground">{reportWordCount}</p>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Leitura</p>
-                <p className="mt-2 text-2xl font-black text-foreground">{estimatedReadMinutes} min</p>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Posicao</p>
-                <p className="mt-2 text-2xl font-black text-foreground">{selectedIndex > 0 ? `#${selectedIndex}` : 'Novo'}</p>
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-border/60 bg-gradient-to-br from-primary/8 via-background to-background p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Previa</p>
-              <p className="mt-3 text-sm leading-7 text-foreground/90">{selectedSummary}</p>
-            </div>
-          </aside>
-        </div>
-      </section>
 
       {showEmail && <EmailPatientReportModal patient={patient} report={draft} onClose={() => setShowEmail(false)} />}
     </div>

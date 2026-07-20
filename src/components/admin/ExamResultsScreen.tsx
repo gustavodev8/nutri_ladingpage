@@ -91,6 +91,7 @@ interface ResultEntry {
   result_value?:  number;
   date_collected?:string;
   notes?:         string;
+  request_notes?: string | null;
 }
 
 function ResultRow({
@@ -163,6 +164,11 @@ function ResultRow({
             {targetRange && (
               <span className="text-[11px] text-primary/80 font-medium">
                 Alvo: {targetRange}
+              </span>
+            )}
+            {entry.request_notes && (
+              <span className="text-[11px] text-muted-foreground italic">
+                Obs: {entry.request_notes}
               </span>
             )}
           </div>
@@ -264,6 +270,7 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
           result_value:   existing?.result_value   ?? undefined,
           date_collected: existing?.date_collected ?? undefined,
           notes:          existing?.notes          ?? undefined,
+          request_notes:  exam.request_notes ?? null,
         };
       });
       setEntries(mapped);
@@ -291,11 +298,9 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
       }));
     const ok = await saveExamResults(request.id, results);
     if (!ok) { toast.error("Erro ao salvar os resultados."); setSaving(false); return; }
-    // Auto-complete if all exams have values
-    if (results.length === entries.length && entries.length > 0) {
-      await updateExamRequestStatus(request.id, "Concluído");
-      setRequest((r) => r ? { ...r, status: "Concluído" } : r);
-    }
+    const nextStatus = results.length === entries.length && entries.length > 0 ? "completed" : "pending";
+    await updateExamRequestStatus(request.id, nextStatus);
+    setRequest((r) => r ? { ...r, status: nextStatus } : r);
     setSaving(false);
     toast.success("Laudos salvos com sucesso.");
     onSaved?.();
@@ -360,9 +365,9 @@ export function ExamResultsScreen({ requestId, gender, onBack, onSaved }: Props)
             {" "}·{" "}
             <span className={cn(
               "font-semibold",
-              request.status === "Concluído" ? "text-green-600" : "text-amber-600",
+              request.status === "completed" ? "text-green-600" : "text-amber-600",
             )}>
-              {request.status}
+              {request.status === "completed" ? "Concluído" : "Pendente"}
             </span>
           </p>
         </div>

@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Alias — todas as operações usam o mesmo cliente anon.
-// A segurança do painel admin é garantida pelo login (AdminLogin + ProtectedRoute).
+// A segurança do painel admin ? garantida pelo login (AdminLogin + ProtectedRoute).
 // service_role key NUNCA deve estar em variáveis VITE_ (ficaria exposta no bundle).
 export const supabaseAdmin = supabase;
 
@@ -57,7 +57,7 @@ export async function saveContent(content: StoredContent): Promise<boolean> {
   return true;
 }
 
-// ─── Image Storage ────────────────────────────────────────────────────────────────
+// ─── Image Storage ───────────────────────────────────────────────────────────────?
 
 const BUCKET = "images";
 
@@ -206,60 +206,62 @@ export async function uploadVideo(file: File): Promise<string | null> {
 
 const FOOD_TABLE = "master_foods";
 
-const MOJIBAKE_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/Ã¡/g, "á"],
-  [/Ã¢/g, "â"],
-  [/Ã£/g, "ã"],
-  [/Ã¤/g, "ä"],
-  [/Ã¥/g, "å"],
-  [/Ã§/g, "ç"],
-  [/Ã©/g, "é"],
-  [/Ãª/g, "ê"],
-  [/Ã¨/g, "è"],
-  [/Ã­/g, "í"],
-  [/Ã¬/g, "ì"],
-  [/Ã³/g, "ó"],
-  [/Ã´/g, "ô"],
-  [/Ãµ/g, "õ"],
-  [/Ã¶/g, "ö"],
-  [/Ãº/g, "ú"],
-  [/Ã¹/g, "ù"],
-  [/Ã¼/g, "ü"],
-  [/Ã/g, "Á"],
-  [/Ã‚/g, "Â"],
-  [/Ãƒ/g, "Ã"],
-  [/Ã„/g, "Ä"],
-  [/Ã‡/g, "Ç"],
-  [/Ã‰/g, "É"],
-  [/ÃŠ/g, "Ê"],
-  [/Ã/g, "Í"],
-  [/Ã“/g, "Ó"],
-  [/Ã”/g, "Ô"],
-  [/Ã•/g, "Õ"],
-  [/Ãš/g, "Ú"],
-  [/Ãœ/g, "Ü"],
-  [/Ã±/g, "ñ"],
-  [/Â·/g, "·"],
-  [/Â°/g, "°"],
-  [/Âª/g, "ª"],
-  [/Âº/g, "º"],
-  [/â€“/g, "–"],
-  [/â€”/g, "—"],
-  [/â€˜/g, "‘"],
-  [/â€™/g, "’"],
-  [/â€œ/g, "“"],
-  [/â€/g, "”"],
-  [/â€¦/g, "…"],
-  [/�/g, ""],
-];
+const CP1252_BYTES: Record<string, number> = {
+  "\u20ac": 0x80,
+  "\u201a": 0x82,
+  "\u0192": 0x83,
+  "\u201e": 0x84,
+  "\u2026": 0x85,
+  "\u2020": 0x86,
+  "\u2021": 0x87,
+  "\u02c6": 0x88,
+  "\u2030": 0x89,
+  "\u0160": 0x8a,
+  "\u2039": 0x8b,
+  "\u0152": 0x8c,
+  "\u017d": 0x8e,
+  "\u2018": 0x91,
+  "\u2019": 0x92,
+  "\u201c": 0x93,
+  "\u201d": 0x94,
+  "\u2022": 0x95,
+  "\u2013": 0x96,
+  "\u2014": 0x97,
+  "\u02dc": 0x98,
+  "\u2122": 0x99,
+  "\u0161": 0x9a,
+  "\u203a": 0x9b,
+  "\u0153": 0x9c,
+  "\u017e": 0x9e,
+  "\u0178": 0x9f,
+};
 
-function repairMojibake(value: string | null | undefined): string {
+function decodeUtf8MojibakeOnce(value: string): string {
+  const bytes: number[] = [];
+
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    const byte = code <= 0xff ? code : CP1252_BYTES[char];
+    if (byte === undefined) return value;
+    bytes.push(byte);
+  }
+
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(bytes));
+  } catch {
+    return value;
+  }
+}
+
+export function repairMojibake(value: string | null | undefined): string {
   if (!value) return "";
   let next = value;
-  for (const [pattern, replacement] of MOJIBAKE_REPLACEMENTS) {
-    next = next.replace(pattern, replacement);
+  for (let i = 0; i < 3 && /[\u00c3\u00c2\u00e2\u00ef\u00bf\ufffd]/.test(next); i++) {
+    const decoded = decodeUtf8MojibakeOnce(next);
+    if (decoded === next) break;
+    next = decoded;
   }
-  return next;
+  return next.replace(/\uFFFD|\u00ef\u00bf\u00bd/g, "").normalize("NFC").trim();
 }
 
 export async function fetchFoodsFromSupabase(query?: string, category?: string): Promise<import("./foodDatabase").FoodItem[]> {
@@ -309,7 +311,7 @@ export async function fetchFoodsFromSupabase(query?: string, category?: string):
 export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase").FoodItem>): Promise<boolean> {
   const { id, ...fields } = food;
   const normalizeFoodKey = (value: string | undefined) =>
-    (value ?? "")
+    repairMojibake(value)
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -319,17 +321,20 @@ export async function upsertFoodInSupabase(food: Partial<import("./foodDatabase"
   // Se tiver ID numérico (ex: do banco), é update. Se for string (ex: custom_...), é novo ou precisa ser tratado.
   // No nosso sistema simplificado, vamos tratar tudo como upsert pelo nome se não tiver id real.
   
+  const cleanName = repairMojibake(fields.name);
+  const cleanCategory = repairMojibake(fields.category) || "Personalizado";
+
   const payload = {
-    name: fields.name,
-    name_key: normalizeFoodKey(fields.name),
-    category: fields.category,
+    name: cleanName,
+    name_key: normalizeFoodKey(cleanName),
+    category: cleanCategory,
     kcal: fields.kcal,
     protein: fields.protein,
     carbs: fields.carbs,
     fat: fields.fat,
     fiber: fields.fiber,
-    source: fields.source,
-    source_ref: fields.source_ref,
+    source: repairMojibake(fields.source) || "custom",
+    source_ref: fields.source_ref ? repairMojibake(fields.source_ref) : undefined,
     source_code: fields.source_code,
   };
 
@@ -388,7 +393,7 @@ export interface PatientReport {
   updated_at?: string;
 }
 
-// ─── Epic 6: Triagem Clínica Estruturada ───────────────────────────────────────────
+// ─── Epic 6: Triagem Clínica Estruturada ──────────────────────────────────────────?
 export interface AnamnesisStructured {
   // OBJETIVO
   goal_primary?: "emagrecimento" | "hipertrofia" | "saude_geral" | "performance" | "recomposicao" | "outro";
@@ -423,7 +428,7 @@ export interface AnamnesisStructured {
   habit_stress?: "baixo" | "moderado" | "alto";
   habit_notes?: string;
 
-  // CLÍNICO / PATOLOGIAS
+  // CL?NICO / PATOLOGIAS
   clinical_treatment?: boolean;
   clinical_medications?: boolean;
   clinical_medications_list?: string;
@@ -433,7 +438,7 @@ export interface AnamnesisStructured {
   clinical_dyslipidemia?: boolean;
   clinical_hypothyroidism?: boolean;
   clinical_pcos?: boolean;
-  clinical_mental_health?: boolean;
+  clinical_mental_healthá: boolean;
   clinical_allergies?: string;
   clinical_food_aversions?: string;
   clinical_notes?: string;
@@ -587,10 +592,10 @@ export interface MealFood {
   // Epic 7: medidas caseiras
   household_measure?: string;   // ex: "colher de sopa", "unidade média"
   measure_amount?: number;      // ex: 1, 2, 0.5
-  food_group?: string;          // ex: "Carboidrato", "Proteína" — para substituições
+  food_group?: string;          // ex: "Carboidrato", "Proteína" ? para substituições
 }
 
-// ─── Clínica – CRUD ───────────────────────────────────────────────────────────────────
+// ─── Clínica ? CRUD ──────────────────────────────────────────────────────────────────?
 
 // Patients
 export async function fetchPatients(): Promise<Patient[]> {
@@ -875,7 +880,7 @@ export async function saveMeals(planId: number, meals: Meal[]): Promise<string |
   return null;
 }
 
-// ─── Booking System ───────────────────────────────────────────────────────────────────
+// ─── Booking System ──────────────────────────────────────────────────────────────────?
 
 export interface AvailabilitySlot {
   id: number;
@@ -1141,7 +1146,7 @@ export async function confirmBookingsByGroupId(
   return !error;
 }
 
-// ─── Blog ────────────────────────────────────────────────────────────────────────────────
+// ─── Blog ──────────────────────────────────────────────────────────────────────────────??
 /*
   SQL para criar a tabela (execute no Supabase SQL Editor):
 
@@ -1218,7 +1223,7 @@ export async function uploadBlogImage(file: File): Promise<string | null> {
   return supabase.storage.from(BUCKET).getPublicUrl(data.path).data.publicUrl;
 }
 
-// ─── Epic 7: Diet Templates ────────────────────────────────────────────────────────────────
+// ─── Epic 7: Diet Templates ───────────────────────────────────────────────────────────────?
 
 export interface DietTemplateFood {
   id:                 number;
@@ -1373,7 +1378,7 @@ async function insertTemplateMealWithFoods(
   return data.id;
 }
 
-/** Apaga e re-insere todas as refeições (+ alimentos) de um template. */
+/** Apaga e re-insere todas as refei??es (+ alimentos) de um template. */
 export async function saveDietTemplateMeals(
   templateId: number,
   meals: TemplateMealInput[],
@@ -1402,7 +1407,7 @@ export async function saveDietTemplateMeals(
   }
 }
 
-// ─── Meal Presets ─────────────────────────────────────────────────────────────
+// ─── Meal Presets ────────────────────────────────────────────────────────────?
 
 export interface MealPresetFood {
   id?: number;
@@ -1542,7 +1547,7 @@ export async function saveMealPresetFoods(presetId: number, foods: MealPresetFoo
   }
 }
 
-// ─── Lab Exams ──────────────────────────────────────────────────────────────────────────
+// ─── Lab Exams ────────────────────────────────────────────────────────────────────────??
 
 export interface LabExam {
   id?: number;
@@ -1605,7 +1610,7 @@ export async function saveLabResults(examId: number, results: LabResult[]): Prom
   return true;
 }
 
-// ─── Epic 10: Protocolo de Exames com Alvos Terapêuticos ──────────────────────
+// ─── Epic 10: Protocolo de Exames com Alvos Terapêuticos ─────────────────────?
 
 export interface ExamCatalogItem {
   id:                number;
@@ -1618,6 +1623,8 @@ export interface ExamCatalogItem {
   target_male_max?:  number;
   target_female_min?:number;
   target_female_max?:number;
+  request_item_id?:  number;
+  request_notes?:    string | null;
 }
 
 export interface ExamProtocol {
@@ -1627,11 +1634,14 @@ export interface ExamProtocol {
   exams?:      ExamCatalogItem[];
 }
 
+export type ExamRequestStatus = "pending" | "completed";
+
 export interface PatientExamRequest {
   id?:         number;
   patient_id:  number;
   protocol_id?:number;
-  status:      "Pendente" | "Concluído";
+  global_protocol_id?: number | null;
+  status:      ExamRequestStatus;
   notes?:      string;
   created_at?: string;
   protocol?:   ExamProtocol;
@@ -1643,31 +1653,141 @@ export interface PatientExamResult {
   id?:            number;
   request_id?:    number;
   exam_id:        number;
+  global_exam_id?: number | null;
+  legacy_exam_id?: number | null;
   result_value?:  number;
   date_collected?:string;
   notes?:         string;
   exam?:          ExamCatalogItem;
 }
 
+export interface ExamRequestItemInput {
+  exam:  ExamCatalogItem;
+  notes?: string | null;
+}
+
+type LegacyExamCatalogRow = ExamCatalogItem;
+type GlobalExamRow = GlobalExam & { id: number };
+type LegacyProtocolRow = ExamProtocol;
+type GlobalProtocolRow = GlobalProtocol & { id: number };
+
+type PatientExamRequestItemRow = {
+  id?: number;
+  notes?: string | null;
+  exam_id?: number | null;
+  global_exam_id?: number | null;
+  exam_name?: string | null;
+  group_category?: string | null;
+  unit?: string | null;
+  ref_min?: number | null;
+  ref_max?: number | null;
+  target_male_min?: number | null;
+  target_male_max?: number | null;
+  target_female_min?: number | null;
+  target_female_max?: number | null;
+  exam?: LegacyExamCatalogRow | null;
+  global_exam?: GlobalExamRow | null;
+};
+
+type PatientExamRequestRow = Omit<PatientExamRequest, "status" | "protocol" | "items"> & {
+  status?: string | null;
+  status_key?: ExamRequestStatus | null;
+  protocol?: LegacyProtocolRow | null;
+  global_protocol?: GlobalProtocolRow | null;
+  items?: PatientExamRequestItemRow[] | null;
+};
+
+function mapGlobalExamToCatalogItem(exam: GlobalExamRow): ExamCatalogItem {
+  return {
+    id: exam.id,
+    name: exam.name,
+    group_category: exam.category,
+    unit: exam.unit ?? undefined,
+    ref_min: exam.lab_ref_min ?? undefined,
+    ref_max: exam.lab_ref_max ?? undefined,
+    target_male_min: exam.target_male_min ?? undefined,
+    target_male_max: exam.target_male_max ?? undefined,
+    target_female_min: exam.target_female_min ?? undefined,
+    target_female_max: exam.target_female_max ?? undefined,
+  };
+}
+
+function mapRequestStatus(row: { status?: string | null; status_key?: ExamRequestStatus | null }): ExamRequestStatus {
+  if (row.status_key === "completed" || row.status === "Concluído" || row.status === "Concluido") {
+    return "completed";
+  }
+  return "pending";
+}
+
+function mapRequestProtocol(row: PatientExamRequestRow): ExamProtocol | undefined {
+  if (row.global_protocol?.id) {
+    return {
+      id: row.global_protocol.id,
+      name: row.global_protocol.name,
+      description: row.global_protocol.description,
+    };
+  }
+  return row.protocol ?? undefined;
+}
+
+function mapRequestItem(row: PatientExamRequestItemRow): ExamCatalogItem | null {
+  const base = row.global_exam
+    ? mapGlobalExamToCatalogItem(row.global_exam)
+    : row.exam ?? null;
+  if (!base && !row.exam_name) return null;
+
+  return {
+    id: row.global_exam_id ?? base?.id ?? row.exam_id ?? 0,
+    name: row.exam_name ?? base?.name ?? "Exame",
+    group_category: row.group_category ?? base?.group_category ?? "Geral",
+    unit: row.unit ?? base?.unit,
+    ref_min: row.ref_min ?? base?.ref_min,
+    ref_max: row.ref_max ?? base?.ref_max,
+    target_male_min: row.target_male_min ?? base?.target_male_min,
+    target_male_max: row.target_male_max ?? base?.target_male_max,
+    target_female_min: row.target_female_min ?? base?.target_female_min,
+    target_female_max: row.target_female_max ?? base?.target_female_max,
+    request_item_id: row.id,
+    request_notes: row.notes ?? null,
+  };
+}
+
+function mapExamRequest(row: PatientExamRequestRow): PatientExamRequest {
+  return {
+    ...row,
+    status: mapRequestStatus(row),
+    protocol: mapRequestProtocol(row),
+    items: (row.items ?? []).map(mapRequestItem).filter((item): item is ExamCatalogItem => Boolean(item)),
+    results: (row.results ?? []).map((result) => ({
+      ...result,
+      legacy_exam_id: result.exam_id ?? null,
+      exam_id: result.global_exam_id ?? result.exam_id,
+    })),
+  };
+}
+
 export async function fetchExamsCatalog(): Promise<ExamCatalogItem[]> {
   const { data, error } = await supabaseAdmin
-    .from("exams_catalog")
+    .from("global_exams_catalog")
     .select("*")
-    .order("group_category")
+    .order("category")
     .order("name");
   if (error) { console.error("[Supabase] fetchExamsCatalog:", error.message); return []; }
-  return data ?? [];
+  return ((data ?? []) as GlobalExamRow[]).map(mapGlobalExamToCatalogItem);
 }
 
 export async function fetchExamProtocols(): Promise<ExamProtocol[]> {
   const { data, error } = await supabaseAdmin
-    .from("exam_protocols")
-    .select("*, exams:protocol_exams(exam:exams_catalog(*))")
+    .from("global_exam_protocols")
+    .select("*, exams:global_protocol_items(sort_order, exam:global_exams_catalog(*))")
     .order("name");
   if (error) { console.error("[Supabase] fetchExamProtocols:", error.message); return []; }
   return (data ?? []).map((p) => ({
     ...p,
-    exams: (p.exams ?? []).map((pe: { exam: ExamCatalogItem }) => pe.exam).filter(Boolean),
+    exams: (p.exams ?? [])
+      .sort((a: { sort_order?: number | null }, b: { sort_order?: number | null }) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((pe: { exam: GlobalExamRow | null }) => pe.exam ? mapGlobalExamToCatalogItem(pe.exam) : null)
+      .filter((exam: ExamCatalogItem | null): exam is ExamCatalogItem => Boolean(exam)),
   }));
 }
 
@@ -1677,16 +1797,30 @@ export async function fetchExamRequests(patientId: number): Promise<PatientExamR
     .select(`
       *,
       protocol:exam_protocols(id, name),
-      items:patient_exam_request_items(exam:exams_catalog(*)),
+      global_protocol:global_exam_protocols(id, name, description),
+      items:patient_exam_request_items(
+        id,
+        notes,
+        exam_id,
+        global_exam_id,
+        exam_name,
+        group_category,
+        unit,
+        ref_min,
+        ref_max,
+        target_male_min,
+        target_male_max,
+        target_female_min,
+        target_female_max,
+        exam:exams_catalog(*),
+        global_exam:global_exams_catalog(*)
+      ),
       results:patient_exam_results(*)
     `)
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
   if (error) { console.error("[Supabase] fetchExamRequests:", error.message); return []; }
-  return (data ?? []).map((r) => ({
-    ...r,
-    items: (r.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
-  }));
+  return ((data ?? []) as PatientExamRequestRow[]).map(mapExamRequest);
 }
 
 export async function fetchExamRequest(requestId: number): Promise<PatientExamRequest | null> {
@@ -1695,34 +1829,69 @@ export async function fetchExamRequest(requestId: number): Promise<PatientExamRe
     .select(`
       *,
       protocol:exam_protocols(id, name),
-      items:patient_exam_request_items(exam:exams_catalog(*)),
+      global_protocol:global_exam_protocols(id, name, description),
+      items:patient_exam_request_items(
+        id,
+        notes,
+        exam_id,
+        global_exam_id,
+        exam_name,
+        group_category,
+        unit,
+        ref_min,
+        ref_max,
+        target_male_min,
+        target_male_max,
+        target_female_min,
+        target_female_max,
+        exam:exams_catalog(*),
+        global_exam:global_exams_catalog(*)
+      ),
       results:patient_exam_results(*)
     `)
     .eq("id", requestId)
     .single();
   if (error) { console.error("[Supabase] fetchExamRequest:", error.message); return null; }
-  return {
-    ...data,
-    items: (data.items ?? []).map((i: { exam: ExamCatalogItem }) => i.exam).filter(Boolean),
-  };
+  return mapExamRequest(data as PatientExamRequestRow);
 }
 
 export async function createExamRequest(
   patientId: number,
   protocolId: number | undefined,
-  examIds: number[],
+  items: ExamRequestItemInput[],
   notes?: string,
 ): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("patient_exam_requests")
-    .insert({ patient_id: patientId, protocol_id: protocolId ?? null, notes: notes ?? null, status: "Pendente" })
+    .insert({
+      patient_id: patientId,
+      protocol_id: null,
+      global_protocol_id: protocolId ?? null,
+      notes: notes ?? null,
+      status: "Pendente",
+      status_key: "pending",
+    })
     .select("id")
     .single();
   if (error || !data?.id) { console.error("[Supabase] createExamRequest:", error?.message); return null; }
   const requestId = data.id as number;
-  if (examIds.length > 0) {
-    const items = examIds.map((examId) => ({ request_id: requestId, exam_id: examId }));
-    const { error: itemErr } = await supabaseAdmin.from("patient_exam_request_items").insert(items);
+  if (items.length > 0) {
+    const rows = items.map(({ exam, notes: itemNotes }) => ({
+      request_id: requestId,
+      exam_id: null,
+      global_exam_id: exam.id,
+      notes: itemNotes?.trim() || null,
+      exam_name: exam.name,
+      group_category: exam.group_category,
+      unit: exam.unit ?? null,
+      ref_min: exam.ref_min ?? null,
+      ref_max: exam.ref_max ?? null,
+      target_male_min: exam.target_male_min ?? null,
+      target_male_max: exam.target_male_max ?? null,
+      target_female_min: exam.target_female_min ?? null,
+      target_female_max: exam.target_female_max ?? null,
+    }));
+    const { error: itemErr } = await supabaseAdmin.from("patient_exam_request_items").insert(rows);
     if (itemErr) { console.error("[Supabase] createExamRequest items:", itemErr.message); return null; }
   }
   return requestId;
@@ -1730,11 +1899,14 @@ export async function createExamRequest(
 
 export async function updateExamRequestStatus(
   requestId: number,
-  status: "Pendente" | "Concluído",
+  status: ExamRequestStatus,
 ): Promise<boolean> {
   const { error } = await supabaseAdmin
     .from("patient_exam_requests")
-    .update({ status })
+    .update({
+      status_key: status,
+      status: status === "completed" ? "Concluído" : "Pendente",
+    })
     .eq("id", requestId);
   if (error) { console.error("[Supabase] updateExamRequestStatus:", error.message); return false; }
   return true;
@@ -1744,18 +1916,27 @@ export async function saveExamResults(
   requestId: number,
   results: PatientExamResult[],
 ): Promise<boolean> {
-  for (const r of results) {
-    const row = {
-      request_id:     requestId,
-      exam_id:        r.exam_id,
-      result_value:   r.result_value ?? null,
-      date_collected: r.date_collected ?? null,
-      notes:          r.notes ?? null,
-    };
-    const { error } = await supabaseAdmin
-      .from("patient_exam_results")
-      .upsert(row, { onConflict: "request_id,exam_id" });
-    if (error) { console.error("[Supabase] saveExamResults upsert:", error.message); return false; }
+  const { error: deleteError } = await supabaseAdmin
+    .from("patient_exam_results")
+    .delete()
+    .eq("request_id", requestId);
+  if (deleteError) { console.error("[Supabase] saveExamResults delete:", deleteError.message); return false; }
+
+  if (results.length === 0) return true;
+
+  const rows = results.map((r) => ({
+    request_id:     requestId,
+    exam_id:        r.legacy_exam_id ?? null,
+    global_exam_id: r.exam_id,
+    result_value:   r.result_value ?? null,
+    date_collected: r.date_collected ?? null,
+    notes:          r.notes ?? null,
+  }));
+
+  const { error } = await supabaseAdmin.from("patient_exam_results").insert(rows);
+  if (error) {
+    console.error("[Supabase] saveExamResults insert:", error.message);
+    return false;
   }
   return true;
 }
@@ -1769,7 +1950,7 @@ export async function deleteExamRequest(requestId: number): Promise<boolean> {
   return true;
 }
 
-// ─── Epic 11: Prescrição Magistral ────────────────────────────────────────────
+// ─── Epic 11: Prescrição Magistral ──────────────────────────────────────────??
 
 export interface Substrate {
   id:           number;
@@ -2081,7 +2262,7 @@ export async function deletePrescription(prescriptionId: number): Promise<boolea
   return true;
 }
 
-// ─── Epic 14: Motor de Substituições Inteligentes ─────────────────────────────
+// ─── Epic 14: Motor de Substitui??es Inteligentes ───────────────────────────??
 
 export async function fetchSmartSubstitutions(): Promise<import("./smartSubstitutions").SubstitutionRule[]> {
   const { BUILTIN_SUBSTITUTION_RULES } = await import("./smartSubstitutions");
@@ -2098,7 +2279,7 @@ export async function fetchSmartSubstitutions(): Promise<import("./smartSubstitu
   }
 }
 
-// ─── Epic: Biblioteca Global de Exames ────────────────────────────────────────
+// ─── Epic: Biblioteca Global de Exames ───────────────────────────────────────?
 
 export interface GlobalExam {
   id?:                   number;
@@ -2183,7 +2364,10 @@ export async function deleteGlobalProtocol(id: number): Promise<boolean> {
 
 export async function fetchProtocolExamIds(protocolId: number): Promise<number[]> {
   const { data, error } = await supabaseAdmin
-    .from("global_protocol_items").select("exam_id").eq("protocol_id", protocolId);
+    .from("global_protocol_items")
+    .select("exam_id")
+    .eq("protocol_id", protocolId)
+    .order("sort_order", { ascending: true });
   if (error) { console.error("[Supabase] fetchProtocolExamIds:", error.message); return []; }
   return (data ?? []).map((r: { exam_id: number }) => r.exam_id);
 }
@@ -2193,7 +2377,7 @@ export async function setProtocolExams(protocolId: number, examIds: number[]): P
     .from("global_protocol_items").delete().eq("protocol_id", protocolId);
   if (delErr) { console.error("[Supabase] setProtocolExams delete:", delErr.message); return false; }
   if (examIds.length === 0) return true;
-  const rows = examIds.map((exam_id) => ({ protocol_id: protocolId, exam_id }));
+  const rows = examIds.map((exam_id, sort_order) => ({ protocol_id: protocolId, exam_id, sort_order }));
   const { error } = await supabaseAdmin.from("global_protocol_items").insert(rows);
   if (error) { console.error("[Supabase] setProtocolExams insert:", error.message); return false; }
   return true;

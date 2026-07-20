@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
-  Search, FileText, Loader2, Trash2, FlaskConical, Printer, Plus,
+  Search, FileText, Loader2, Trash2, FlaskConical, Printer, Plus, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   fetchExamProtocols, fetchExamsCatalog, createExamRequest, fetchPatient,
-  type ExamCatalogItem, type ExamProtocol,
+  type ExamCatalogItem, type ExamProtocol, type Patient,
+  supabase,
 } from "@/lib/supabase";
+import { examRequestPdfFilename, generateExamRequestPdf } from "@/lib/generateExamRequestPdf";
 
 interface CartItem {
   exam:  ExamCatalogItem;
@@ -23,213 +26,21 @@ interface Props {
   onCancel:  () => void;
 }
 
-function printExamOrder(items: CartItem[], patientName: string) {
-  const grouped = items.reduce<Record<string, CartItem[]>>((acc, item) => {
-    (acc[item.exam.group_category] ??= []).push(item);
-    return acc;
-  }, {});
-
-  const today = new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
-
-  const examRows = Object.entries(grouped).map(([category, catItems]) => `
-    <div class="category-block">
-      <div class="category-title">${category}</div>
-      ${catItems.map((item) => `
-        <div class="exam-row">
-          <span class="exam-name">${item.exam.name}${item.exam.unit ? ` <span class="exam-unit">(${item.exam.unit})</span>` : ""}</span>
-          ${item.notes ? `<span class="exam-notes">${item.notes}</span>` : ""}
-        </div>
-      `).join("")}
-    </div>
-  `).join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8"/>
-<title>Pedido de Exames — ${patientName}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    color: #111;
-    background: #fff;
-    padding: 0;
-  }
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0 auto;
-    padding: 20mm 22mm 25mm;
-    display: flex;
-    flex-direction: column;
-  }
-  .header {
-    border-bottom: 2px solid #2c6e4e;
-    padding-bottom: 10px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .header-left .clinic-name {
-    font-size: 18pt;
-    font-weight: bold;
-    color: #2c6e4e;
-    letter-spacing: 0.5px;
-  }
-  .header-left .clinic-sub {
-    font-size: 9pt;
-    color: #555;
-    margin-top: 2px;
-  }
-  .header-right {
-    text-align: right;
-    font-size: 8.5pt;
-    color: #555;
-    line-height: 1.5;
-  }
-  .doc-title {
-    text-align: center;
-    font-size: 13pt;
-    font-weight: bold;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-    color: #2c6e4e;
-    border: 1px solid #c8e6d6;
-    padding: 6px;
-    border-radius: 4px;
-  }
-  .patient-box {
-    display: flex;
-    justify-content: space-between;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 18px;
-    background: #f9fafb;
-    font-size: 10.5pt;
-  }
-  .patient-box .label { color: #666; font-size: 8.5pt; display: block; }
-  .patient-box .value { font-weight: bold; color: #111; }
-  .exams-section { flex: 1; }
-  .section-label {
-    font-size: 8.5pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #2c6e4e;
-    margin-bottom: 10px;
-    border-bottom: 1px dashed #c8e6d6;
-    padding-bottom: 4px;
-  }
-  .category-block { margin-bottom: 14px; }
-  .category-title {
-    font-size: 9pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #444;
-    background: #f0f7f3;
-    padding: 3px 8px;
-    border-left: 3px solid #2c6e4e;
-    margin-bottom: 5px;
-  }
-  .exam-row {
-    padding: 4px 8px 4px 14px;
-    border-bottom: 1px dotted #e5e7eb;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-  .exam-name { flex: 1; font-size: 10.5pt; }
-  .exam-unit { font-size: 9pt; color: #666; font-style: italic; }
-  .exam-notes { font-size: 9pt; color: #888; font-style: italic; white-space: nowrap; }
-  .footer {
-    margin-top: 32px;
-    border-top: 1px solid #ddd;
-    padding-top: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 24px;
-  }
-  .signature-block { flex: 1; text-align: center; }
-  .signature-line { border-top: 1px solid #333; margin-bottom: 5px; margin-top: 40px; }
-  .signature-name { font-size: 10pt; font-weight: bold; }
-  .signature-sub { font-size: 8.5pt; color: #555; }
-  .stamp-box {
-    width: 90px; height: 90px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 8pt; color: #bbb; text-align: center; padding: 6px;
-  }
-  @media print {
-    body { padding: 0; }
-    .page { padding: 15mm 18mm 20mm; }
-  }
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    <div class="header-left">
-      <div class="clinic-name">Dr. Fillipe David</div>
-      <div class="clinic-sub">Nutricionista Clínico e Esportivo &nbsp;·&nbsp; CRN-5 &nbsp;·&nbsp; Alagoinhas / BA</div>
-    </div>
-    <div class="header-right">Emitido em: ${today}</div>
-  </div>
-  <div class="doc-title">Pedido de Exames Laboratoriais</div>
-  <div class="patient-box">
-    <div>
-      <span class="label">Paciente</span>
-      <span class="value">${patientName}</span>
-    </div>
-    <div style="text-align:right">
-      <span class="label">Data</span>
-      <span class="value">${today}</span>
-    </div>
-  </div>
-  <div class="exams-section">
-    <div class="section-label">Exames Solicitados (${items.length})</div>
-    ${examRows}
-  </div>
-  <div class="footer">
-    <div class="signature-block">
-      <div class="signature-line"></div>
-      <div class="signature-name">Dr. Fillipe David</div>
-      <div class="signature-sub">Nutricionista · CRN-5</div>
-    </div>
-    <div class="stamp-box">Carimbo</div>
-  </div>
-</div>
-<script>window.onload = () => { window.print(); }</script>
-</body>
-</html>`;
-
-  const win = window.open("", "_blank");
-  if (!win) { toast.error("Permita popups para gerar o PDF."); return; }
-  win.document.write(html);
-  win.document.close();
-}
-
 export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
   const [protocols,    setProtocols]    = useState<ExamProtocol[]>([]);
   const [catalog,      setCatalog]      = useState<ExamCatalogItem[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [cart,         setCart]         = useState<CartItem[]>([]);
+  const [patient,      setPatient]      = useState<Patient | null>(null);
   const [patientName,  setPatientName]  = useState<string>("Paciente");
+  const [patientEmail, setPatientEmail] = useState<string>("");
   const [search,       setSearch]       = useState("");
   const [dropOpen,     setDropOpen]     = useState(false);
   const [focusIdx,     setFocusIdx]     = useState(-1);
   const [globalNotes,  setGlobalNotes]  = useState("");
+  const [selectedProtocolId, setSelectedProtocolId] = useState<number | undefined>();
   const searchRef = useRef<HTMLInputElement>(null);
   const dropRef   = useRef<HTMLDivElement>(null);
 
@@ -241,7 +52,9 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
     ]).then(([protos, cat, patient]) => {
       setProtocols(protos);
       setCatalog(cat);
+      setPatient(patient);
       if (patient?.name) setPatientName(patient.name);
+      if (patient?.email) setPatientEmail(patient.email);
       setLoading(false);
     });
   }, [patientId]);
@@ -256,7 +69,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const cartIds = new Set(cart.map((c) => c.exam.id));
+  const cartIds = useMemo(() => new Set(cart.map((c) => c.exam.id)), [cart]);
 
   const addExam = useCallback((exam: ExamCatalogItem) => {
     if (cartIds.has(exam.id)) return;
@@ -277,9 +90,21 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
   const addProtocol = (protocolId: number) => {
     const proto = protocols.find((p) => p.id === protocolId);
     if (!proto) return;
-    const toAdd = (proto.exams ?? []).filter((e) => !cartIds.has(e.id));
-    if (toAdd.length === 0) { toast.info(`Todos os exames de "${proto.name}" já estão no pedido.`); return; }
+
+    const protocolExams = proto.exams ?? [];
+    if (protocolExams.length === 0) {
+      toast.warning(`O protocolo "${proto.name}" ainda não tem exames vinculados. Edite em Biblioteca Clínica.`);
+      return;
+    }
+
+    const toAdd = protocolExams.filter((e) => !cartIds.has(e.id));
+    if (toAdd.length === 0) {
+      toast.info(`Todos os exames de "${proto.name}" já estão no pedido.`);
+      return;
+    }
+
     setCart((prev) => [...prev, ...toAdd.map((e) => ({ exam: e, notes: "" }))]);
+    setSelectedProtocolId(protocolId);
     toast.success(`${toAdd.length} exame(s) de "${proto.name}" adicionado(s).`);
   };
 
@@ -288,7 +113,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
         (e) => !cartIds.has(e.id) &&
           (e.name.toLowerCase().includes(search.toLowerCase()) ||
            e.group_category.toLowerCase().includes(search.toLowerCase()))
-      ).slice(0, 8)
+      ).slice(0, 30)
     : [];
 
   const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -304,20 +129,78 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
     return acc;
   }, {});
 
+  const selectedProtocolName =
+    protocols.find((protocol) => protocol.id === selectedProtocolId)?.name ?? null;
+
+  const buildPdfData = () => ({
+    patientName,
+    patientEmail,
+    patientPhone: patient?.phone ?? null,
+    patientCpf: patient?.cpf ?? null,
+    patientBirthDate: patient?.birth_date ?? null,
+    patientGender: patient?.gender ?? null,
+    patientCity: patient?.city ?? null,
+    protocolName: selectedProtocolName,
+    globalNotes,
+    items: cart,
+  });
+
   const handleSave = async () => {
     if (cart.length === 0) { toast.error("Adicione pelo menos um exame ao pedido."); return; }
     setSaving(true);
-    const examIds = cart.map((c) => c.exam.id);
-    const requestId = await createExamRequest(patientId, undefined, examIds, globalNotes);
+    const requestId = await createExamRequest(
+      patientId,
+      selectedProtocolId,
+      cart.map((item) => ({ exam: item.exam, notes: item.notes })),
+      globalNotes,
+    );
     setSaving(false);
     if (!requestId) { toast.error("Erro ao salvar o pedido. Tente novamente."); return; }
     toast.success(`Pedido salvo com ${cart.length} exame(s).`);
     onCreated(requestId);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (cart.length === 0) { toast.error("Adicione pelo menos um exame para imprimir."); return; }
-    printExamOrder(cart, patientName);
+    try {
+      const doc = await generateExamRequestPdf(buildPdfData());
+      doc.autoPrint();
+      window.open(doc.output("bloburl"), "_blank");
+    } catch (error) {
+      toast.error(`Erro ao gerar PDF: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (cart.length === 0) { toast.error("Adicione pelo menos um exame ao pedido."); return; }
+    if (!patientEmail.trim()) { toast.error("Cadastre um e-mail no perfil do paciente antes de enviar."); return; }
+
+    setSendingEmail(true);
+    try {
+      const doc = await generateExamRequestPdf(buildPdfData());
+      const pdfB64 = doc.output("datauristring").split(",")[1];
+      const filename = examRequestPdfFilename(patientName);
+
+      const { data, error } = await supabase.functions.invoke("send-material", {
+        body: {
+          to: patientEmail.trim(),
+          client_name: patientName,
+          subject: `Solicitação de exames — ${patientName}`,
+          body: `Olá${patientName ? `, ${patientName.split(" ")[0]}` : ""}!\n\nSegue em anexo sua solicitação de exames laboratoriais.\n\nLeve este PDF ao laboratório de sua preferência.\n\nQualquer dúvida, fico à disposição.`,
+          attachments: [{ filename, content: pdfB64 }],
+        },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(error?.message ?? data?.error ?? "Falha ao enviar e-mail.");
+      }
+
+      toast.success(`Solicitação enviada para ${patientEmail}.`);
+    } catch (error) {
+      toast.error(`Erro ao enviar: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   if (loading) {
@@ -332,22 +215,44 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
     <div className="space-y-5">
 
       <div className="space-y-2">
-        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Adicionar protocolo
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          {protocols.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => addProtocol(p.id)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center gap-1.5"
-            >
-              <Plus size={11} />
-              {p.name}
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Adicionar protocolo
+          </Label>
+          <Link
+            to="/admin/biblioteca"
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Criar/editar protocolos prontos
+          </Link>
         </div>
+        <div className="flex flex-wrap gap-2">
+          {protocols.map((p) => {
+            const examsCount = p.exams?.length ?? 0;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => addProtocol(p.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5",
+                  examsCount > 0
+                    ? "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
+                )}
+              >
+                <Plus size={11} />
+                {p.name}
+                <span className="text-[10px] opacity-70">{examsCount}</span>
+              </button>
+            );
+          })}
+        </div>
+        {protocols.some((p) => (p.exams?.length ?? 0) === 0) && (
+          <p className="text-[11px] text-amber-700">
+            Protocolos com “0” precisam ser preenchidos em Biblioteca Clínica antes de usar no pedido.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -362,11 +267,11 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
             onChange={(e) => { setSearch(e.target.value); setDropOpen(true); setFocusIdx(-1); }}
             onFocus={() => { if (search) setDropOpen(true); }}
             onKeyDown={handleSearchKey}
-            placeholder="Buscar exame pelo nome ou categoria…"
+            placeholder="Buscar exame pelo nome ou categoria..."
             className="pl-7 h-9 text-sm"
           />
           {dropOpen && searchResults.length > 0 && (
-            <div className="absolute z-50 mt-1 w-full bg-background border border-border rounded-lg shadow-lg overflow-hidden">
+            <div className="absolute z-50 mt-1 w-full max-h-96 overflow-y-auto bg-background border border-border rounded-lg shadow-lg">
               {searchResults.map((exam, i) => (
                 <button
                   key={exam.id}
@@ -414,7 +319,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
             </thead>
             <tbody>
               {Object.entries(cartGrouped).map(([category, items]) => (
-                <>
+                <Fragment key={category}>
                   <tr key={`cat-${category}`} className="bg-muted/10 border-b border-border/20">
                     <td colSpan={3} className="px-3 py-1.5">
                       <div className="flex items-center gap-1.5">
@@ -452,7 +357,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
                       </td>
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -471,7 +376,7 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
         <Input
           value={globalNotes}
           onChange={(e) => setGlobalNotes(e.target.value)}
-          placeholder="Ex: não usar biotina 48h antes, informar uso de medicamentos…"
+          placeholder="Ex: não usar biotina 48h antes, informar uso de medicamentos..."
           className="text-sm"
         />
       </div>
@@ -492,13 +397,24 @@ export function ExamRequestScreen({ patientId, onCreated, onCancel }: Props) {
             Imprimir PDF
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendEmail}
+            disabled={sendingEmail || cart.length === 0 || !patientEmail.trim()}
+            title={patientEmail ? `Enviar para ${patientEmail}` : "Cadastre um e-mail no perfil do paciente"}
+            className="gap-1.5"
+          >
+            {sendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+            {sendingEmail ? "Enviando..." : "Enviar por e-mail"}
+          </Button>
+          <Button
             size="sm"
             onClick={handleSave}
             disabled={saving || cart.length === 0}
             className="gap-1.5"
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-            {saving ? "Salvando…" : `Salvar Pedido (${cart.length})`}
+            {saving ? "Salvando..." : `Salvar Pedido (${cart.length})`}
           </Button>
         </div>
       </div>

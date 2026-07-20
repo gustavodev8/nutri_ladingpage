@@ -1,19 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Loader2, FlaskConical, AlertTriangle, CheckCircle2,
-  Trash2, ChevronDown, ChevronUp, FileText, ClipboardList,
+  Trash2, ChevronDown, ChevronUp, FileText, ClipboardList, Printer, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  fetchExamRequests, deleteExamRequest,
-  type PatientExamRequest,
+  fetchExamRequests, deleteExamRequest, supabase,
+  type Patient, type PatientExamRequest,
 } from "@/lib/supabase";
 import { ExamRequestScreen } from "@/components/admin/ExamRequestScreen";
 import { ExamResultsScreen, calcTherapeuticStatus } from "@/components/admin/ExamResultsScreen";
+import { examRequestPdfFilename, generateExamRequestPdf } from "@/lib/generateExamRequestPdf";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+const requestStatusLabel = (status: PatientExamRequest["status"]) =>
+  status === "completed" ? "Concluído" : "Pendente";
+
+// Types
 
 type View =
   | { kind: "list" }
@@ -23,19 +27,22 @@ type View =
 interface Props {
   patientId: number;
   gender:    "M" | "F" | "outro";
+  patient:   Patient;
 }
 
-// ─── Request card ──────────────────────────────────────────────────────────────
+// Request card
 
 function RequestCard({
-  request, gender, onOpenResults, onDeleted,
+  request, gender, patient, onOpenResults, onDeleted,
 }: {
   request:       PatientExamRequest;
   gender:        "M" | "F" | "outro";
+  patient:       Patient;
   onOpenResults: () => void;
   onDeleted:     () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const results = request.results ?? [];
   const filled  = results.filter((r) => r.result_value != null);
@@ -68,6 +75,75 @@ function RequestCard({
     }
   };
 
+  const buildPdfData = () => ({
+    patientName: patient.name,
+    patientEmail: patient.email ?? null,
+    patientPhone: patient.phone ?? null,
+    patientCpf: patient.cpf ?? null,
+    patientBirthDate: patient.birth_date ?? null,
+    patientGender: patient.gender ?? null,
+    patientCity: patient.city ?? null,
+    protocolName: request.protocol?.name ?? "Seleção manual",
+    globalNotes: request.notes ?? null,
+    items: (request.items ?? []).map((exam) => ({
+      exam,
+      notes: exam.request_notes ?? undefined,
+    })),
+  });
+
+  const handlePrint = async () => {
+    if ((request.items ?? []).length === 0) {
+      toast.error("Este pedido não tem exames para imprimir.");
+      return;
+    }
+
+    try {
+      const doc = await generateExamRequestPdf(buildPdfData());
+      doc.autoPrint();
+      window.open(doc.output("bloburl"), "_blank");
+    } catch (error) {
+      toast.error(`Erro ao gerar PDF: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if ((request.items ?? []).length === 0) {
+      toast.error("Este pedido não tem exames para enviar.");
+      return;
+    }
+    if (!patient.email?.trim()) {
+      toast.error("Cadastre um e-mail no perfil do paciente antes de enviar.");
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const doc = await generateExamRequestPdf(buildPdfData());
+      const pdfB64 = doc.output("datauristring").split(",")[1];
+      const filename = examRequestPdfFilename(patient.name);
+
+      const { data, error } = await supabase.functions.invoke("send-material", {
+        body: {
+          to: patient.email.trim(),
+          client_name: patient.name,
+          subject: `Solicitação de exames — ${patient.name}`,
+          body: `Olá${patient.name ? `, ${patient.name.split(" ")[0]}` : ""}!\n\nSegue em anexo sua solicitação de exames laboratoriais.\n\nLeve este PDF ao laboratório de sua preferência.\n\nQualquer dúvida, fico à disposição.`,
+          attachments: [{ filename, content: pdfB64 }],
+        },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(error?.message ?? data?.error ?? "Falha ao enviar e-mail.");
+      }
+
+      toast.success(`Solicitação enviada para ${patient.email}.`);
+    } catch (error) {
+      toast.error(`Erro ao enviar: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="border border-border/70 rounded-xl overflow-hidden bg-card">
 
@@ -89,11 +165,11 @@ function RequestCard({
             </p>
             <span className={cn(
               "text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border",
-              request.status === "Concluído"
+              request.status === "completed"
                 ? "bg-green-50 text-green-700 border-green-200"
                 : "bg-amber-50 text-amber-700 border-amber-200",
             )}>
-              {request.status}
+              {requestStatusLabel(request.status)}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
@@ -164,6 +240,11 @@ function RequestCard({
                       )} />
                     )}
                     {exam.name}
+                    {exam.request_notes && (
+                      <span className="text-muted-foreground font-normal ml-0.5">
+                        · {exam.request_notes}
+                      </span>
+                    )}
                     {hasValue && (
                       <span className="tabular-nums font-semibold ml-0.5">
                         {result!.result_value} {exam.unit}
@@ -181,7 +262,22 @@ function RequestCard({
           )}
 
           {/* Action */}
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" onClick={handlePrint} className="gap-1.5" variant="outline">
+              <Printer size={13} />
+              Imprimir solicitação
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSendEmail}
+              disabled={sendingEmail || !patient.email}
+              title={patient.email ? `Enviar para ${patient.email}` : "Cadastre um e-mail no perfil do paciente"}
+              className="gap-1.5"
+              variant="outline"
+            >
+              {sendingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+              {sendingEmail ? "Enviando..." : "Enviar por e-mail"}
+            </Button>
             <Button size="sm" onClick={onOpenResults} className="gap-1.5" variant="outline">
               <ClipboardList size={13} />
               {filled.length > 0 ? "Ver / editar laudos" : "Lançar resultados"}
@@ -193,9 +289,9 @@ function RequestCard({
   );
 }
 
-// ─── Main Tab ──────────────────────────────────────────────────────────────────
+// Main tab
 
-export function ExamProtocolsTab({ patientId, gender }: Props) {
+export function ExamProtocolsTab({ patientId, gender, patient }: Props) {
   const [view,     setView]     = useState<View>({ kind: "list" });
   const [requests, setRequests] = useState<PatientExamRequest[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -223,7 +319,7 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     }).length;
   }, 0);
 
-  // ── Results view ──
+  // Results view
   if (view.kind === "results") {
     return (
       <ExamResultsScreen
@@ -235,7 +331,7 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     );
   }
 
-  // ── New request view ──
+  // New request view
   if (view.kind === "new-request") {
     return (
       <ExamRequestScreen
@@ -246,7 +342,7 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
     );
   }
 
-  // ── List view ──
+  // List view
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -305,6 +401,7 @@ export function ExamProtocolsTab({ patientId, gender }: Props) {
               key={req.id ?? `r-${i}`}
               request={req}
               gender={gender}
+              patient={patient}
               onOpenResults={() => setView({ kind: "results", requestId: req.id! })}
               onDeleted={() => setRequests((prev) => prev.filter((_, ri) => ri !== i))}
             />
