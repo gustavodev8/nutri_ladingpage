@@ -15,67 +15,73 @@ import { cn } from "@/lib/utils";
 
 // ─── Grupos de navegação ──────────────────────────────────────────────────────
 
-const NAV_GROUPS = [
+type NavItem = { to: string; icon: React.ElementType; label: string };
+type NavGroup = { label: string; icon: React.ElementType; items: NavItem[] };
+
+const NAV_PRIMARY_GROUPS: NavGroup[] = [
   {
-    label: "Conteúdo do Site",
+    label: "Site",
     icon: FileText,
     items: [
-      { to: "/admin/hero",       icon: Sparkles,          label: "Seção Principal" },
-      { to: "/admin/sobre",      icon: User,              label: "Sobre Mim"       },
-      { to: "/admin/servicos",   icon: Layers,            label: "Serviços"        },
-      { to: "/admin/modalidades",icon: Globe,             label: "Modalidades"     },
-      { to: "/admin/horarios",   icon: Clock,             label: "Horários"        },
-      { to: "/admin/faq",        icon: HelpCircle,        label: "FAQ"             },
-      { to: "/admin/cta",        icon: Megaphone,         label: "Chamada Final"   },
+      { to: "/admin/hero",       icon: Sparkles,   label: "Seção principal" },
+      { to: "/admin/sobre",      icon: User,       label: "Sobre mim" },
+      { to: "/admin/servicos",   icon: Layers,     label: "Serviços" },
+      { to: "/admin/modalidades",icon: Globe,      label: "Modalidades" },
+      { to: "/admin/horarios",   icon: Clock,      label: "Horários" },
+      { to: "/admin/faq",        icon: HelpCircle, label: "FAQ" },
+      { to: "/admin/cta",        icon: Megaphone,  label: "Chamada final" },
     ],
   },
   {
-    label: "Consultas & Produtos",
+    label: "Comercial",
     icon: ShoppingBag,
     items: [
-      { to: "/admin/loja",      icon: Store,       label: "Marketplace"       },
-      { to: "/admin/precos",    icon: ShoppingBag, label: "Loja de Consultas" },
-      { to: "/admin/produtos",  icon: BookOpen,    label: "Produtos Digitais" },
-      { to: "/admin/desconto",  icon: Tag,         label: "Desconto Global"   },
+      { to: "/admin/loja",      icon: Store,       label: "Marketplace" },
+      { to: "/admin/precos",    icon: ShoppingBag, label: "Consultas" },
+      { to: "/admin/produtos",  icon: BookOpen,    label: "Produtos digitais" },
+      { to: "/admin/desconto",  icon: Tag,         label: "Descontos" },
     ],
   },
   {
-    label: "Clínica",
+    label: "Pacientes e clínica",
     icon: Stethoscope,
     items: [
-      { to: "/admin/pacientes",  icon: Users,         label: "Pacientes"        },
-      { to: "/admin/alimentos",  icon: Leaf,           label: "Alimentos"        },
-      { to: "/admin/modelos",    icon: LayoutList,     label: "Modelos de Dieta" },
-      { to: "/admin/biblioteca", icon: FlaskConical,   label: "Biblioteca Clínica"},
+      { to: "/admin/pacientes",  icon: Users,        label: "Pacientes" },
+      { to: "/admin/alimentos",  icon: Leaf,         label: "Alimentos" },
+      { to: "/admin/modelos",    icon: LayoutList,   label: "Modelos de dieta" },
+      { to: "/admin/biblioteca", icon: FlaskConical, label: "Biblioteca clínica" },
     ],
   },
   {
     label: "Agendamentos",
     icon: CalendarCheck,
     items: [
-      { to: "/admin/disponibilidade", icon: CalendarDays,  label: "Disponibilidade"    },
-      { to: "/admin/agendamentos",    icon: CalendarCheck, label: "Agendamentos"        },
-      { to: "/admin/pagamentos",      icon: ReceiptText,   label: "Logs de Pagamento"  },
-      { to: "/admin/disparo",         icon: Send,          label: "Disparo de E-mails"  },
-      { to: "/admin/leads",           icon: UserPlus,      label: "Leads Captados"       },
+      { to: "/admin/disponibilidade", icon: CalendarDays,  label: "Disponibilidade" },
+      { to: "/admin/agendamentos",    icon: CalendarCheck, label: "Agenda" },
+      { to: "/admin/pagamentos",      icon: ReceiptText,   label: "Pagamentos" },
+      { to: "/admin/disparo",         icon: Send,          label: "E-mails" },
+      { to: "/admin/leads",           icon: UserPlus,      label: "Leads" },
     ],
   },
   {
-    label: "Prova Social",
+    label: "Resultados e conteúdo",
     icon: Star,
     items: [
-      { to: "/admin/resultados",  icon: TrendingUp,        label: "Resultados"  },
+      { to: "/admin/resultados",  icon: TrendingUp,         label: "Resultados" },
       { to: "/admin/depoimentos", icon: MessageSquareQuote, label: "Depoimentos" },
-      { to: "/admin/blog",        icon: BookOpen,          label: "Blog"        },
+      { to: "/admin/blog",        icon: BookOpen,           label: "Blog" },
     ],
   },
+];
+
+const NAV_SYSTEM_GROUPS: NavGroup[] = [
   {
-    label: "Conta",
+    label: "Configurações",
     icon: Settings,
     items: [
-      { to: "/admin/perfil",  icon: User,     label: "Perfil & Contato"  },
-      { to: "/admin/contato", icon: MapPin,   label: "Endereço & Redes"  },
-      { to: "/admin/senha",   icon: KeyRound, label: "Alterar Senha"     },
+      { to: "/admin/perfil",  icon: User,     label: "Perfil e contato" },
+      { to: "/admin/contato", icon: MapPin,   label: "Endereço e redes" },
+      { to: "/admin/senha",   icon: KeyRound, label: "Alterar senha" },
     ],
   },
   {
@@ -92,7 +98,7 @@ const NAV_GROUPS = [
 interface NavGroupProps {
   label: string;
   icon: React.ElementType;
-  items: { to: string; icon: React.ElementType; label: string }[];
+  items: NavItem[];
   defaultOpen: boolean;
   onItemClick: () => void;
 }
@@ -166,7 +172,7 @@ const AdminLayout = () => {
   };
 
   // Abre automaticamente o grupo que contém a rota atual
-  const groupDefaultOpen = (items: { to: string }[]) =>
+  const groupDefaultOpen = (items: NavItem[]) =>
     items.some((item) => location.pathname.startsWith(item.to));
 
   return (
@@ -202,37 +208,62 @@ const AdminLayout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {/* Dashboard */}
-          <NavLink
-            to="/admin"
-            end
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 mb-2",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              )
-            }
-          >
-            <Leaf className="h-4 w-4 shrink-0" />
-            Dashboard
-          </NavLink>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <nav className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-1">
+              <NavLink
+                to="/admin"
+                end
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "mb-3 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )
+                }
+              >
+                <Leaf className="h-4 w-4 shrink-0" />
+                Dashboard
+              </NavLink>
 
-          {/* Grupos colapsáveis */}
-          {NAV_GROUPS.map((group) => (
-            <NavGroup
-              key={group.label}
-              label={group.label}
-              icon={group.icon}
-              items={group.items}
-              defaultOpen={groupDefaultOpen(group.items)}
-              onItemClick={() => setSidebarOpen(false)}
-            />
-          ))}
-        </nav>
+              <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+                Principal
+              </div>
+
+              {NAV_PRIMARY_GROUPS.map((group) => (
+                <NavGroup
+                  key={group.label}
+                  label={group.label}
+                  icon={group.icon}
+                  items={group.items}
+                  defaultOpen={groupDefaultOpen(group.items)}
+                  onItemClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </div>
+          </nav>
+
+          <div className="border-t border-border/70 p-3">
+            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+              Sistema
+            </div>
+
+            <div className="space-y-1">
+              {NAV_SYSTEM_GROUPS.map((group) => (
+                <NavGroup
+                  key={group.label}
+                  label={group.label}
+                  icon={group.icon}
+                  items={group.items}
+                  defaultOpen={groupDefaultOpen(group.items)}
+                  onItemClick={() => setSidebarOpen(false)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-border space-y-1">
