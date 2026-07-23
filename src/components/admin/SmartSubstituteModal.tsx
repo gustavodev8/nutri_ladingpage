@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BUILT_IN_FOODS, FOOD_CATEGORIES, type FoodItem } from "@/lib/foodDatabase";
-import { fetchCustomFoods } from "@/components/admin/FoodSearchInput";
+import { fetchCustomFoods } from "@/components/admin/customFoods";
 import type { MealFood } from "@/lib/supabase";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
